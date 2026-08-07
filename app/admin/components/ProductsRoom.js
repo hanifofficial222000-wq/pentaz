@@ -1,21 +1,59 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 export default function ProductsRoom() {
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productImage, setProductImage] = useState('');
   const [productCategory, setProductCategory] = useState('');
+  const [productSubCategory, setProductSubCategory] = useState('');
+  
+  // Database theke categories load korar state
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [subCategoriesList, setSubCategoriesList] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // File select kore Base64 string-e convert korar function
+  // Firestore theke categories fetch kora
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "categories"));
+        const cats = [];
+        querySnapshot.forEach((doc) => {
+          cats.push({ id: doc.id, ...doc.data() });
+        });
+        setCategoriesList(cats);
+      } catch (error) {
+        console.error("Error fetching categories: ", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Main category select korle tar odhinthor sub-categories filter korar handler
+  const handleCategoryChange = (e) => {
+    const selectedCat = e.target.value;
+    setProductCategory(selectedCat);
+    setProductSubCategory(''); // Reset sub-category
+
+    // Selected main category-er sub-categories khuje ber kora
+    const foundCat = categoriesList.find(c => c.name === selectedCat || c.id === selectedCat);
+    if (foundCat && foundCat.subCategories) {
+      setSubCategoriesList(foundCat.subCategories); // Jodi array hoy
+    } else if (foundCat && foundCat.subCategory) {
+      setSubCategoriesList([foundCat.subCategory]);
+    } else {
+      setSubCategoriesList([]);
+    }
+  };
+
+  // Base64 Image Converter
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Image size check (1MB er kom rakha bhalo database-er jonno)
     if (file.size > 1048576) {
       alert("Please select an image smaller than 1MB!");
       return;
@@ -23,7 +61,7 @@ export default function ProductsRoom() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setProductImage(reader.result); // Base64 string
+      setProductImage(reader.result);
     };
     reader.readAsDataURL(file);
   };
@@ -42,6 +80,7 @@ export default function ProductsRoom() {
         price: Number(productPrice),
         image: productImage,
         category: productCategory,
+        subCategory: productSubCategory || "None",
         createdAt: new Date()
       });
       alert("Product Added Successfully to Database!");
@@ -49,6 +88,8 @@ export default function ProductsRoom() {
       setProductPrice('');
       setProductImage('');
       setProductCategory('');
+      setProductSubCategory('');
+      setSubCategoriesList([]);
     } catch (error) {
       alert("Error: " + error.message);
     } finally {
@@ -81,7 +122,7 @@ export default function ProductsRoom() {
           />
         </div>
 
-        {/* Choose File Section */}
+        {/* Image Choose File Section */}
         <div>
           <label className="block text-xs font-bold mb-1 text-gray-600">Select Product Image</label>
           <input 
@@ -99,17 +140,40 @@ export default function ProductsRoom() {
           )}
         </div>
 
+        {/* Main Category Dropdown */}
         <div>
-          <label className="block text-xs font-bold mb-1 text-gray-600">Category Name</label>
-          <input 
-            type="text" 
+          <label className="block text-xs font-bold mb-1 text-gray-600">Select Main Category</label>
+          <select 
             value={productCategory} 
-            onChange={(e) => setProductCategory(e.target.value)} 
-            className="w-full p-2.5 border rounded text-sm outline-none focus:border-teal-600" 
-            placeholder="e.g. Baby" 
-            required 
-          />
+            onChange={handleCategoryChange} 
+            className="w-full p-2.5 border rounded text-sm outline-none focus:border-teal-600 bg-white" 
+            required
+          >
+            <option value="">-- Choose Category --</option>
+            {categoriesList.map((cat) => (
+              <option key={cat.id} value={cat.name || cat.categoryName}>
+                {cat.name || cat.categoryName}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {/* Sub-Category Dropdown (Dynamic) */}
+        {subCategoriesList.length > 0 && (
+          <div>
+            <label className="block text-xs font-bold mb-1 text-gray-600">Select Sub-Category</label>
+            <select 
+              value={productSubCategory} 
+              onChange={(e) => setProductSubCategory(e.target.value)} 
+              className="w-full p-2.5 border rounded text-sm outline-none focus:border-teal-600 bg-white"
+            >
+              <option value="">-- Choose Sub-Category --</option>
+              {subCategoriesList.map((sub, index) => (
+                <option key={index} value={sub}>{sub}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <button 
           type="submit" 

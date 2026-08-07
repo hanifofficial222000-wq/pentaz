@@ -8,45 +8,34 @@ export default function ProductsRoom() {
   const [productPrice, setProductPrice] = useState('');
   const [productImage, setProductImage] = useState('');
   const [productCategory, setProductCategory] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // File select kore automatic ImgBB-e upload korar function
-  const handleImageUpload = async (e) => {
+  // File select kore Base64 string-e convert korar function
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      // Free ImgBB API key use kore upload kora hochche
-      const response = await fetch('https://api.imgbb.com/1/upload?key=6d207e02193a847aa98d0a2a901485a3', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setProductImage(data.data.url);
-        alert("Image Uploaded Successfully!");
-      } else {
-        alert("Image upload failed. Please try again.");
-      }
-    } catch (error) {
-      alert("Error uploading image: " + error.message);
-    } finally {
-      setUploading(false);
+    // Image size check (1MB er kom rakha bhalo database-er jonno)
+    if (file.size > 1048576) {
+      alert("Please select an image smaller than 1MB!");
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProductImage(reader.result); // Base64 string
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
     if (!productImage) {
-      alert("Please upload an image first!");
+      alert("Please select a product image!");
       return;
     }
 
+    setLoading(true);
     try {
       await addDoc(collection(db, "products"), {
         name: productName,
@@ -62,6 +51,8 @@ export default function ProductsRoom() {
       setProductCategory('');
     } catch (error) {
       alert("Error: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,20 +81,20 @@ export default function ProductsRoom() {
           />
         </div>
 
-        {/* Choose File / Image Upload Section */}
+        {/* Choose File Section */}
         <div>
           <label className="block text-xs font-bold mb-1 text-gray-600">Select Product Image</label>
           <input 
             type="file" 
             accept="image/*" 
-            onChange={handleImageUpload} 
+            onChange={handleImageChange} 
             className="w-full p-2 border rounded text-sm bg-gray-50 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700 cursor-pointer" 
+            required
           />
-          {uploading && <p className="text-xs text-teal-600 mt-1 font-semibold">Uploading image, please wait...</p>}
           {productImage && (
             <div className="mt-2 flex items-center space-x-2">
               <img src={productImage} alt="Preview" className="w-12 h-12 object-cover rounded border" />
-              <span className="text-xs text-green-600 font-medium">Image Ready!</span>
+              <span className="text-xs text-green-600 font-medium">Image Loaded Successfully!</span>
             </div>
           )}
         </div>
@@ -115,17 +106,17 @@ export default function ProductsRoom() {
             value={productCategory} 
             onChange={(e) => setProductCategory(e.target.value)} 
             className="w-full p-2.5 border rounded text-sm outline-none focus:border-teal-600" 
-            placeholder="e.g. Jersey" 
+            placeholder="e.g. Baby" 
             required 
           />
         </div>
 
         <button 
           type="submit" 
-          disabled={uploading}
+          disabled={loading}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded text-sm font-bold"
         >
-          Add Product to Live Database
+          {loading ? "Adding..." : "Add Product to Live Database"}
         </button>
       </form>
     </div>

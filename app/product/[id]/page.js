@@ -1,59 +1,583 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
-export default function ProductDetails() {
-  const params = useParams();
-  const { id } = params;
-  const [product, setProduct] = useState(null);
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { db } from '@/lib/firebase'; // firebase.js থেকে db ইমপোর্ট করা হলো
+import { 
+  doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
+} from 'firebase/firestore';
+
+export default function ProductDetailsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('id');
+
+  const [productData, setProductData] = useState(null);
+  const [productCategoryId, setProductCategoryId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [notApproved, setNotApproved] = useState(false);
 
+  // Gallery & Price State
+  const [mainImage, setMainImage] = useState('');
+  const [imageUrls, setImageUrls] = useState([]);
+  const [regularPrice, setRegularPrice] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [finalPrice, setFinalPrice] = useState(0);
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+
+  // Size State
+  const [sizes, setSizes] = useState([]);
+  const [currentSize, setCurrentSize] = useState('N/A');
+  const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+
+  // Coupon State
+  const [couponCode, setCouponCode] = useState('');
+  const [couponMsg, setCouponMsg] = useState({ text: '', color: '' });
+
+  // Order Form State
+  const [cName, setCName] = useState('');
+  const [cNumber, setCNumber] = useState('');
+  const [cAddress, setCAddress] = useState('');
+  const [submittingOrder, setSubmittingOrder] = useState(false);
+
+  // Reviews State
+  const [reviews, setReviews] = useState([]);
+  const [avgRating, setAvgRating] = useState(0);
+  const [revCount, setRevCount] = useState(0);
+  const [selectedRating, setSelectedRating] = useState(5);
+  const [revName, setRevName] = useState('');
+  const [revComment, setRevComment] = useState('');
+
+  // More Products State
+  const [moreProducts, setMoreProducts] = useState([]);
+
+  // Fetch Product Details
   useEffect(() => {
-    async function fetchProductDetails() {
-      if (!id) return;
+    if (!productId) return;
+
+    async function fetchProduct() {
       try {
-        const docRef = doc(db, "products", id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProduct({ id: docSnap.id, ...docSnap.data() });
+        let docRef = doc(db, "products", productId);
+        let docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          docRef = doc(db, "gifts", productId);
+          docSnap = await getDoc(docRef);
         }
-      } catch (error) {
-        console.error("Error fetching product details:", error);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setProductData(data);
+          setProductCategoryId(data.categoryId || data.category || null);
+
+          if (data.approved !== true && docSnap.ref.parent.id === "products") {
+            setNotApproved(true);
+            setLoading(false);
+            return;
+          }
+
+          const regPrice = Number(data.price) || 0;
+          const discPercent = Number(data.discount) || 0;
+          setRegularPrice(regPrice);
+          setDiscountPercent(discPercent);
+
+          let calculated = regPrice;
+          if (discPercent > 0) {
+            calculated = Math.round(regPrice - (regPrice * discPercent) / 100);
+          }
+          setFinalPrice(calculated);
+
+          // Images setup
+          let imgs = [];
+          if (data.imageUrls && data.imageUrls.length > 0) {
+            imgs = data.imageUrls;
+          } else if (data.imageUrl) {
+            imgs = [data.imageUrl];
+          } else if (data.image) {
+            imgs = [data.image];
+          }
+          setImageUrls(imgs);
+          if (imgs.length > 0) setMainImage(imgs[0]);
+
+          // Sizes setup
+          if (data.sizes && data.sizes.length > 0 && !(data.sizes.length === 1 && (data.sizes[0] === 'Standard' || data.sizes[0] === ''))) {
+            setSizes(data.sizes);
+            setCurrentSize(data.sizes[0]);
+          } else {
+            setSizes([]);
+            setCurrentSize('N/A');
+          }
+
+          loadReviews(productId);
+          loadMoreProducts(data.categoryId || data.category || null, productId);
+        } else {
+          setNotFound(true);
+        }
+      } catch (err) {
+        console.error("Error loading product:", err);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
-    fetchProductDetails();
-  }, [id]);
+
+    fetchProduct();
+  }, [productId]);
+
+  // Load Reviews
+  async function loadReviews(prodId) {
+    try {
+      const q = query(collection(db, "reviews"), where("productId", "==", prodId));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        let total = 0;
+        let count = 0;
+        let revList = [];
+
+        querySnapshot.forEach((d) => {
+          const rData = d.data();
+          const ratingNum = Number(rData.rating) || 5;
+          total += ratingNum;
+          count++;
+          revList.push(rData);
+        });
+
+        setReviews(revList);
+        setAvgRating((total / count).toFixed(1));
+        setRevCount(count);
+      }
+    } catch (err) {
+      console.error("Error loading reviews:", err);
+    }
+  }
+
+  // Load More Products
+  async function loadMoreProducts(catId, currentId) {
+    try {
+      let q = collection(db, "products");
+      if (catId) {
+        q = query(collection(db, "products"), where("categoryId", "==", catId));
+      }
+      let snapshot = await getDocs(q);
+
+      if (snapshot.empty && catId) {
+        snapshot = await getDocs(collection(db, "products"));
+      }
+
+      let list = [];
+      snapshot.forEach((d) => {
+        if (d.id === currentId) return;
+        const item = d.data();
+        if (item.approved !== true) return;
+        list.push({ id: d.id, ...item });
+      });
+
+      setMoreProducts(list);
+    } catch (err) {
+      console.error("Error loading more products:", err);
+    }
+  }
+
+  // Apply Coupon
+  const handleApplyCoupon = () => {
+    if (!productData) return;
+    const code = couponCode.trim().toUpperCase();
+
+    let basePrice = Number(productData.price) || 0;
+    if (productData.discount > 0) {
+      basePrice = Math.round(basePrice - (basePrice * productData.discount) / 100);
+    }
+
+    if (code === (productData.coupon || "").toUpperCase()) {
+      const discountVal = Math.round(basePrice * 0.10);
+      setAppliedDiscount(discountVal);
+      setFinalPrice(basePrice - discountVal);
+      setCouponMsg({ text: "🎉 কুপন সফলভাবে গৃহিত হয়েছে! ১০% এক্সট্রা ছাড় দেওয়া হয়েছে।", color: "text-green-600" });
+    } else {
+      setAppliedDiscount(0);
+      setFinalPrice(basePrice);
+      setCouponMsg({ text: "❌ ভুল কুপন কোড! দয়া করে সঠিক কোড দিন।", color: "text-red-600" });
+    }
+  };
+
+  // Add to Cart
+  const handleAddToCart = () => {
+    if (!productData) return;
+
+    let cart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
+    let productImg = imageUrls.length > 0 ? imageUrls[0] : '';
+
+    let cartItem = {
+      id: productId,
+      title: productData.title || productData.name,
+      price: finalPrice,
+      image: productImg,
+      size: currentSize || 'N/A',
+      quantity: 1
+    };
+
+    let existingIndex = cart.findIndex(item => item.id === productId && item.size === cartItem.size);
+    if (existingIndex > -1) {
+      cart[existingIndex].quantity += 1;
+    } else {
+      cart.push(cartItem);
+    }
+
+    localStorage.setItem('ayaat_cart', JSON.stringify(cart));
+    alert("সফলভাবে কার্টে যোগ করা হয়েছে! 🛒");
+  };
+
+  // Submit Review
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!revName.trim() || !revComment.trim()) {
+      alert("দয়া করে আপনার নাম এবং প্রোডাক্ট মতামত লিখুন!");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "reviews"), {
+        productId: productId,
+        name: revName.trim(),
+        rating: Number(selectedRating),
+        comment: revComment.trim(),
+        createdAt: serverTimestamp()
+      });
+
+      alert("ধন্যবাদ! আপনার রিভিউটি সফলভাবে সেভ করা হয়েছে।");
+      setRevName('');
+      setRevComment('');
+      setSelectedRating(5);
+      loadReviews(productId);
+    } catch (err) {
+      console.error(err);
+      alert("রিভিউ জমা দিতে সমস্যা হয়েছে, আবার চেষ্টা করুন!");
+    }
+  };
+
+  // Submit Website Order
+  const handleSubmitOrder = async () => {
+    if (!cName.trim() || !cNumber.trim() || !cAddress.trim()) {
+      alert("দয়া করে আপনার নাম, ফোন নম্বর এবং সম্পূর্ণ ঠিকানা লিখুন!");
+      return;
+    }
+
+    if (!productData) return;
+
+    setSubmittingOrder(true);
+    try {
+      let productImg = imageUrls.length > 0 ? imageUrls[0] : '';
+      let productPin = productData.productPin || productId.slice(0, 6).toUpperCase();
+      let pName = productData.title || productData.name || 'Product';
+
+      localStorage.setItem("userPhone", cNumber.trim());
+
+      await addDoc(collection(db, "orders"), {
+        productId: productId,
+        productPin: productPin,
+        productName: pName,
+        productTitle: pName,
+        price: finalPrice,
+        productPrice: finalPrice,
+        imageUrl: productImg,
+        size: currentSize || 'N/A',
+        customerName: cName.trim(),
+        phone: cNumber.trim(),
+        custPhone: cNumber.trim(),
+        customerPhone: cNumber.trim(),
+        customerAddress: cAddress.trim(),
+        address: cAddress.trim(),
+        status: "Pending",
+        date: new Date().toLocaleDateString('bn-BD'),
+        createdAt: serverTimestamp()
+      });
+
+      alert("অভিনন্দন! আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে।");
+      router.push('/orders');
+    } catch (err) {
+      console.error(err);
+      alert("অর্ডার করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।");
+      setSubmittingOrder(false);
+    }
+  };
 
   if (loading) {
-    return <div className="text-center mt-20 text-xs text-gray-500">Loading details...</div>;
+    return <div className="text-center p-20 font-bold text-gray-500">প্রোডাক্ট লোড হচ্ছে...</div>;
+  }
+
+  if (notApproved) {
+    return (
+      <div className="text-center p-20 font-bold text-[#e63946]">
+        এই প্রোডাক্টটি এখনো অ্যাডমিন কর্তৃক অনুমোদিত (Approved) হয়নি!
+      </div>
+    );
+  }
+
+  if (notFound || !productData) {
+    return (
+      <div className="text-center p-20 font-bold text-gray-600">
+        প্রোডাক্টটি পাওয়া যায়নি!
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-16">
-      <div className="bg-teal-700 text-white p-4 text-center font-bold text-base shadow">
-        Product Details
+    <div className="bg-[#f5f5f5] min-h-screen p-2.5 pb-[100px] font-sans">
+      <div className="max-w-[600px] mx-auto bg-white rounded-[10px] p-[15px]">
+        
+        <Link href="/" className="text-[#333] no-underline text-[14px] inline-block mb-2.5 font-bold hover:text-[#e63946]">
+          ← Back to Shop
+        </Link>
+        
+        {/* Gallery */}
+        <div className="mb-[15px] relative">
+          {discountPercent > 0 && (
+            <div className="absolute top-[15px] right-[15px] bg-[#e63946] text-white p-[8px_12px] text-[14px] font-bold rounded-[6px] z-20 shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+              {discountPercent}% OFF
+            </div>
+          )}
+          <img src={mainImage} className="w-full rounded-[10px] mb-2 h-[400px] object-cover border border-[#eee]" alt="Product" />
+          
+          {imageUrls.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {imageUrls.map((imgUrl, idx) => (
+                <img 
+                  key={idx} 
+                  src={imgUrl} 
+                  onClick={() => setMainImage(imgUrl)}
+                  className={`w-[65px] h-[65px] object-cover rounded-[6px] border-2 cursor-pointer flex-shrink-0 ${mainImage === imgUrl ? 'border-[#e63946]' : 'border-[#ddd]'}`} 
+                  alt="Thumbnail" 
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <h1 className="text-[20px] my-2.5 text-[#222] font-bold">{productData.title || productData.name}</h1>
+        
+        <div className="bg-[#eef2f7] border-l-4 border-[#007bff] p-[8px_12px] my-2.5 rounded-r-[8px] text-[13px] text-[#333] font-bold">
+          📦 প্রোডাক্ট আইডি / পিন: <span>{productData.productPin || productId.slice(0, 6).toUpperCase()}</span>
+        </div>
+
+        <p className="text-[14px] text-[#555] mb-2.5">{productData.description || ''}</p>
+        
+        <ul className="list-none my-[15px] space-y-1">
+          <li className="text-[14px] text-[#444]">✓ Free Delivery in Moheskhali</li>
+          <li className="text-[14px] text-[#444]">✓ Cash On Delivery All Over Bangladesh</li>
+          <li className="text-[14px] text-[#444]">✓ Estimated Delivery: 5-7 Days</li>
+          <li className="text-[14px] text-[#444]">✓ Cox’s Bazar outside Delivery 120.৳</li>
+          <li className="text-[14px] text-[#444]">✓ Cox's Bazar all over delivery 100.৳ single product double product 50.৳</li>
+        </ul>
+
+        {/* Price Box */}
+        <div className="flex items-center gap-3 my-2.5 flex-wrap">
+          <div className="text-[#e63946] text-[24px] font-bold">SAR {finalPrice}</div>
+          {discountPercent > 0 && (
+            <div className="text-[#888] text-[16px] line-through">SAR {regularPrice}</div>
+          )}
+          {discountPercent > 0 && (
+            <div className="bg-[#ffe5e6] text-[#e63946] p-[4px_8px] rounded-[4px] text-[12px] font-bold">
+              {discountPercent}% OFF
+            </div>
+          )}
+        </div>
+
+        {/* Coupon Section */}
+        {productData.coupon && (
+          <div className="bg-[#fff8f8] border border-dashed border-[#e63946] p-3 rounded-[8px] my-4">
+            <p className="text-[13px] font-bold text-[#e63946]">🎟️ আপনার কি কোনো কুপন কোড আছে?</p>
+            <div className="flex gap-2 mt-1.5">
+              <input 
+                type="text" 
+                value={couponCode} 
+                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="কুপন কোড লিখুন (যেমন: EID50)" 
+                className="flex-1 p-2 border border-[#ddd] rounded-[6px] text-[13px] outline-none bg-white text-black"
+              />
+              <button type="button" onClick={handleApplyCoupon} className="bg-[#e63946] text-white border-none px-3.5 py-2 rounded-[6px] font-bold cursor-pointer text-[13px]">
+                প্রয়োগ করুন
+              </button>
+            </div>
+            {couponMsg.text && <p className={`text-[12px] mt-1 font-bold ${couponMsg.color}`}>{couponMsg.text}</p>}
+          </div>
+        )}
+
+        {/* Seller Info */}
+        {productData.sellerName && (
+          <div className="bg-[#f8f9fa] border-l-4 border-[#e63946] p-[10px_12px] my-3 rounded-r-[8px] text-[13px] text-[#333]">
+            <p className="my-0.5">👤 <b>বিক্রেতা:</b> <span>{productData.sellerName}</span></p>
+            <p className="my-0.5">📞 <b>মোবাইল:</b> <a href={`https://wa.me/${productData.sellerPhone}`} target="_blank" rel="noreferrer" className="text-[#007bff] font-bold no-underline">{productData.sellerPhone || 'N/A'}</a></p>
+          </div>
+        )}
+
+        {/* Trust Badges */}
+        <div className="flex justify-between gap-2 my-4">
+          <div className="bg-[#f0f9f0] border border-[#d4f1d4] p-2 rounded-[8px] text-[11px] text-center flex-1 text-[#2e7d32]">
+            <span className="text-[16px] block mb-0.5">✅</span>100% Quality
+          </div>
+          <div className="bg-[#f0f9f0] border border-[#d4f1d4] p-2 rounded-[8px] text-[11px] text-center flex-1 text-[#2e7d32]">
+            <span className="text-[16px] block mb-0.5">🚚</span>Free Delivery
+          </div>
+          <div className="bg-[#f0f9f0] border border-[#d4f1d4] p-2 rounded-[8px] text-[11px] text-center flex-1 text-[#2e7d32]">
+            <span className="text-[16px] block mb-0.5">💵</span>COD Available
+          </div>
+        </div>
+
+        {/* Sizes */}
+        {sizes.length > 0 && (
+          <div className="my-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="font-bold text-[#333]">Select Size:</label>
+              <span className="text-[12px] text-[#007bff] underline cursor-pointer" onClick={() => setIsSizeChartOpen(true)}>📏 Size Chart</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {sizes.map((s, idx) => (
+                <button 
+                  key={idx}
+                  type="button" 
+                  onClick={() => setCurrentSize(s)}
+                  className={`p-[10px_16px] border-2 rounded-[8px] font-bold text-[15px] cursor-pointer transition ${currentSize === s ? 'border-[#e63946] bg-[#e63946] text-white' : 'border-[#ddd] bg-white text-black'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Order Inputs */}
+        <div className="space-y-3.5 my-4">
+          <div>
+            <label className="font-bold block mb-1 text-[14px] text-[#333]">Your Name:</label>
+            <input type="text" value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Enter full name" className="w-full p-3 border border-[#ddd] rounded-[8px] text-[15px] outline-none bg-white text-black focus:border-[#e63946]" />
+          </div>
+          <div>
+            <label className="font-bold block mb-1 text-[14px] text-[#333]">Your Phone Number:</label>
+            <input type="tel" value={cNumber} onChange={(e) => setCNumber(e.target.value)} placeholder="Enter active phone number" className="w-full p-3 border border-[#ddd] rounded-[8px] text-[15px] outline-none bg-white text-black focus:border-[#e63946]" />
+          </div>
+          <div>
+            <label className="font-bold block mb-1 text-[14px] text-[#333]">Delivery Address:</label>
+            <textarea value={cAddress} onChange={(e) => setCAddress(e.target.value)} rows="3" placeholder="Enter full address with landmark" className="w-full p-3 border border-[#ddd] rounded-[8px] text-[15px] outline-none bg-white text-black focus:border-[#e63946]"></textarea>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="bg-[#fafafa] p-4 mt-5 rounded-[10px] border border-[#eee]">
+          <div className="text-[16px] mb-2.5 font-bold text-[#333]">⭐ Customer Reviews ({avgRating}/5 - {revCount}টি রিভিউ)</div>
+          
+          <div className="space-y-2 mb-4">
+            {reviews.length === 0 ? (
+              <div className="text-[#777] text-[13px] py-1">এখনো কোনো রিভিউ দেওয়া হয়নি। প্রথম রিভিউটি আপনিই দিন!</div>
+            ) : (
+              reviews.map((rev, idx) => (
+                <div key={idx} className="border-b border-[#eee] pb-2 mb-2">
+                  <div className="text-[#ffb400] text-[14px]">{"★".repeat(rev.rating || 5)}{"☆".repeat(5 - (rev.rating || 5))}</div>
+                  <p className="text-[13px] my-1 text-[#444]">{rev.comment}</p>
+                  <div className="text-[12px] text-[#777]">- {rev.name}</div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <form onSubmit={handleSubmitReview} className="pt-3.5 border-t border-dashed border-[#ddd]">
+            <h4 className="text-[14px] mb-2.5 text-[#333] font-bold">✍️ প্রোডাক্টের একটি রিভিউ দিন</h4>
+            
+            <div className="flex items-center gap-1.5 mb-3 bg-white p-2.5 rounded-[8px] border border-[#ddd] justify-center">
+              {[1, 2, 3, 4, 5].map((num) => (
+                <span 
+                  key={num} 
+                  onClick={() => setSelectedRating(num)}
+                  className={`text-[28px] cursor-pointer transition select-none ${num <= selectedRating ? 'text-[#ffb400]' : 'text-[#ccc]'}`}
+                >
+                  ★
+                </span>
+              ))}
+              <span className="text-[13px] font-bold text-[#555] ml-2">({['০', '১', '২', '৩', '৪', '৫'][selectedRating]} স্টার)</span>
+            </div>
+
+            <div className="space-y-3 mb-3">
+              <input type="text" value={revName} onChange={(e) => setRevName(e.target.value)} placeholder="আপনার নাম" className="w-full p-3 border border-[#ddd] rounded-[8px] text-[15px] outline-none bg-white text-black" />
+              <textarea value={revComment} onChange={(e) => setRevComment(e.target.value)} rows="2" placeholder="প্রোডাক্ট সম্পর্কে লিখুন..." className="w-full p-3 border border-[#ddd] rounded-[8px] text-[15px] outline-none bg-white text-black"></textarea>
+            </div>
+
+            <button type="submit" className="w-full p-3 bg-[#e63946] hover:bg-[#d62839] text-white border-none rounded-[8px] font-bold text-[15px] cursor-pointer transition">
+              রিভিউ সেভ করুন
+            </button>
+          </form>
+        </div>
+
+        {/* You May Also Like */}
+        <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
+          <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
+          <div className="grid grid-cols-3 gap-2">
+            {moreProducts.length === 0 ? (
+              <div className="col-span-3 text-center text-gray-500 text-[13px]">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
+            ) : (
+              moreProducts.map((item) => {
+                let itemImg = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || item.image);
+                let itemRegPrice = Number(item.price) || 0;
+                let itemDiscount = Number(item.discount) || 0;
+                let finalDispPrice = itemRegPrice;
+                if (itemDiscount > 0) {
+                  finalDispPrice = Math.round(itemRegPrice - (itemRegPrice * itemDiscount) / 100);
+                }
+                let itemPin = item.productPin || item.id.slice(0, 6).toUpperCase();
+
+                return (
+                  <Link key={item.id} href={`/product?id=${item.id}`} className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative">
+                    <div className="relative">
+                      {itemDiscount > 0 && <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">{itemDiscount}% OFF</div>}
+                      <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover" />
+                    </div>
+                    <div className="p-1.5 flex flex-col justify-between flex-grow">
+                      <h3 className="text-[11px] font-bold mb-1 line-clamp-2">{item.title || item.name}</h3>
+                      <div className="text-[10px] text-[#007bff] font-bold mb-1 bg-[#eef2f7] p-[2px_4px] rounded inline-block w-fit">ID: {itemPin}</div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[#e63946] text-[12px] font-bold">SAR {finalDispPrice}</span>
+                        {itemDiscount > 0 && <span className="text-[#888] text-[10px] line-through">SAR {itemRegPrice}</span>}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </div>
+
       </div>
 
-      <div className="p-4 bg-white shadow-sm border-b">
-        <img 
-          src={product?.image || "https://via.placeholder.com/300"} 
-          alt={product?.name || "Product"} 
-          className="w-full h-64 object-cover rounded-lg" 
-        />
-        <h2 className="text-sm font-bold text-gray-800 mt-4">{product?.name || "Sample Jersey"}</h2>
-        <p className="text-base text-teal-600 font-bold mt-1">৳ {product?.price || "550"}</p>
-        <p className="text-xs text-gray-500 mt-2">Category: {product?.category || "Sports"}</p>
-
-        <button 
-          onClick={() => alert("Added to cart successfully!")}
-          className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-3 rounded-lg shadow"
-        >
-          Add to Cart / Buy Now
+      {/* Bottom Sticky Action Buttons */}
+      <div className="fixed bottom-3.5 left-3.5 right-3.5 z-50 max-w-[600px] mx-auto flex gap-2">
+        <button type="button" onClick={handleAddToCart} className="flex-1 bg-[#ff9f43] hover:bg-[#f39c12] text-white text-center p-3.5 rounded-[10px] border-none font-bold text-[15px] cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition">
+          🛒 কার্টে যোগ করুন
+        </button>
+        <button type="button" onClick={handleSubmitOrder} disabled={submittingOrder} className="flex-1 bg-[#e63946] hover:bg-[#d62839] text-white text-center p-3.5 rounded-[10px] border-none font-bold text-[15px] cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition disabled:opacity-50">
+          {submittingOrder ? "অর্ডার সাবমিট হচ্ছে..." : "⚡ সরাসরি অর্ডার"}
         </button>
       </div>
+
+      {/* Size Chart Popup */}
+      {isSizeChartOpen && (
+        <div className="fixed inset-0 bg-black/70 z-[1000] flex justify-center items-center" onClick={() => setIsSizeChartOpen(false)}>
+          <div className="bg-white p-5 rounded-[10px] max-w-[90%] relative" onClick={(e) => e.stopPropagation()}>
+            <span className="absolute top-2.5 right-4 text-[24px] cursor-pointer text-black" onClick={() => setIsSizeChartOpen(false)}>&times;</span>
+            <h3 className="mb-2.5 text-center font-bold">Size Chart</h3>
+            <p className="text-[13px] text-center">Standard Size Chart Applies.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-[#2b2b2b] text-[#e5e5e5] p-[25px_15px] mt-[25px] text-center rounded-t-[12px] max-w-[600px] mx-auto">
+        <h3 className="text-[#ff4d4d] mb-3 text-[17px] font-bold">AYAAT SPORT SHOP</h3>
+        <p className="text-[13px] leading-[1.9] my-1.5 text-[#cccccc]"><b>Owner:</b> Md Hanif Cox</p>
+        <p className="text-[13px] leading-[1.9] my-1.5 text-[#cccccc]"><b>Phone:</b> +8801835302525</p>
+        <p className="mt-[15px] text-[12px] text-[#aaa]">© 2026 AYAAT SPORT SHOP. All Rights Reserved.</p>
+      </footer>
+
     </div>
   );
 }

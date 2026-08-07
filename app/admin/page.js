@@ -199,11 +199,11 @@ export default function AdminControlRoom() {
           </div>
         </Link>
 
-        {/* 7. Home Page Popup Control */}
-        <Link href="/admin/home-page-popup" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-pink-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        {/* 7. Category Room (Linked to categoryroom.js / category-room page) */}
+        <Link href="/admin/categoryroom" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-pink-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">📢</div>
-            <h3 className="text-lg font-bold text-white group-hover:text-pink-400 transition">Home Page Popup</h3>
+            <div className="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">📁</div>
+            <h3 className="text-lg font-bold text-white group-hover:text-pink-400 transition">Category Room</h3>
           </div>
           <div className="mt-6 flex items-center text-xs font-bold text-pink-400 gap-1 group-hover:translate-x-1 transition">
             <span>প্রবেশ করুন</span> ➔

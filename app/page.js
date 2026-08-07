@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD3NXjyFRvir6EjTQz4nrDTQTQ8ESFpF8o",
@@ -94,8 +94,12 @@ export default function HomePage() {
         catSnap.forEach(d => catList.push({ id: d.id, ...d.data() }));
         setCategories(catList);
 
-        // 6. Products
-        const pQuery = query(collection(db, "products"), orderBy("createdAt", "desc"));
+        // 6. Products (Updated with where approved == true to block unapproved/old products)
+        const pQuery = query(
+          collection(db, "products"), 
+          where("approved", "==", true), 
+          orderBy("createdAt", "desc")
+        );
         const pSnap = await getDocs(pQuery);
         const pList = [];
         pSnap.forEach(d => pList.push({ id: d.id, ...d.data() }));
@@ -306,10 +310,10 @@ export default function HomePage() {
       {/* PRODUCT GRID */}
       <div style={{ maxWidth: 600, margin: '0 auto', padding: 8, paddingBottom: 70 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {filteredProducts.filter(p => p.approved === true).length === 0 ? (
+          {filteredProducts.length === 0 ? (
             <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: 30, color: '#666', fontWeight: 'bold' }}>কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
           ) : (
-            filteredProducts.filter(p => p.approved === true).map(item => {
+            filteredProducts.map(item => {
               const isFav = favorites.includes(item.id);
               const pin = item.productPin || item.id.slice(0, 6).toUpperCase();
               const mainImg = item.imageUrls?.[0] || item.imageUrl || 'https://via.placeholder.com/200';

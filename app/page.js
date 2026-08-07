@@ -1,406 +1,429 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD3NXjyFRvir6EjTQz4nrDTQTQ8ESFpF8o",
-  authDomain: "ayaat-shop.firebaseapp.com",
-  projectId: "ayaat-shop",
-  storageBucket: "ayaat-shop.firebasestorage.app",
-  messagingSenderId: "762175348619",
-  appId: "1:762175348619:web:9d547dfe03ebc76e92998e"
-};
+// Mock data replacing Firebase backend
+const mockProducts = [
+  {
+    id: 'prod-1',
+    productPin: 'AYT-01',
+    title: 'Professional Sports Jersey - Red Edition',
+    price: 150,
+    discount: 50,
+    bestseller: true,
+    coupon: true,
+    mainCategory: 'jersey',
+    imageUrls: ['https://via.placeholder.com/300?text=Jersey+1', 'https://via.placeholder.com/300?text=Jersey+2'],
+    approved: true
+  },
+  {
+    id: 'prod-2',
+    productPin: 'AYT-02',
+    title: 'Breathable Running T-Shirt',
+    price: 90,
+    discount: 30,
+    bestseller: false,
+    coupon: false,
+    mainCategory: 't-shirt',
+    imageUrls: ['https://via.placeholder.com/300?text=Tshirt+1'],
+    approved: true
+  },
+  {
+    id: 'prod-3',
+    productPin: 'AYT-03',
+    title: 'Lightweight Sports Shoes',
+    price: 250,
+    discount: 60,
+    bestseller: true,
+    coupon: true,
+    mainCategory: 'shoes',
+    imageUrls: ['https://via.placeholder.com/300?text=Shoes+1', 'https://via.placeholder.com/300?text=Shoes+2'],
+    approved: true
+  },
+  {
+    id: 'prod-4',
+    productPin: 'AYT-04',
+    title: 'Kids Baby Collection Tracksuit',
+    price: 120,
+    discount: 40,
+    bestseller: false,
+    coupon: true,
+    mainCategory: 'baby',
+    imageUrls: ['https://via.placeholder.com/300?text=Baby+1'],
+    approved: true
+  }
+];
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+const mainCategories = [
+  { id: 'jersey', name: 'জার্সি' },
+  { id: 't-shirt', name: 'টি-শার্ট' },
+  { id: 'shoes', name: 'জুতো' },
+  { id: 'baby', name: 'বেবি কালেকশন' }
+];
 
-export default function HomePage() {
-  const [loading, setLoading] = useState(true);
-  const [fullAds, setFullAds] = useState([]);
-  const [showFullModal, setShowFullModal] = useState(false);
-  const [smallPopups, setSmallPopups] = useState([]);
-  const [showWidget, setShowWidget] = useState(false);
-  const [topThinAds, setTopThinAds] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [banners, setBanners] = useState([]);
-  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
+const promoBanners = [
+  { id: 1, imageUrl: 'https://via.placeholder.com/600x150?text=AYAAT+SHOP+Banner+1', link: '#' },
+  { id: 2, imageUrl: 'https://via.placeholder.com/600x150?text=AYAAT+SHOP+Banner+2', link: '#' }
+];
+
+const topThinAds = [
+  { id: 1, imageUrl: 'https://via.placeholder.com/600x60?text=Top+Ad+1', link: '#' },
+  { id: 2, imageUrl: 'https://via.placeholder.com/600x60?text=Top+Ad+2', link: '#' }
+];
+
+export default function AyaatShopHome() {
+  const [products, setProducts] = useState(mockProducts);
+  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+  const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubFilter, setActiveSubFilter] = useState('all');
-  const [activeCat, setActiveCat] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [favorites, setFavorites] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [giftCount, setGiftCount] = useState(0);
+
+  const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
+  const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
+
+  const [showFullScreenPopup, setShowFullScreenPopup] = useState(true);
+  const [showFloatingWidget, setShowFloatingWidget] = useState(true);
   const [isNavHidden, setIsNavHidden] = useState(false);
+  const [lastScrollTop, setLastScrollTop] = useState(0);
 
+  // Load local storage values on mount
   useEffect(() => {
-    // LocalStorage & Referral Setup
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get('ref');
-    if (ref) localStorage.setItem('referred_by', ref);
+    const storedFavs = JSON.parse(localStorage.getItem('ayaat_favorites')) || [];
+    const storedCart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
+    setFavorites(storedFavs);
+    setCartCount(storedCart.length);
+  }, []);
 
-    const favs = JSON.parse(localStorage.getItem('ayaat_favorites')) || [];
-    setFavorites(favs);
-    const cart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
-    setCartCount(cart.length);
+  // Auto slide promo banners
+  useEffect(() => {
+    const promoInterval = setInterval(() => {
+      setCurrentPromoIndex((prev) => (prev + 1) % promoBanners.length);
+    }, 3000);
+    return () => clearInterval(promoInterval);
+  }, []);
 
-    async function fetchData() {
-      try {
-        // 1. Full Page Ads
-        const fullSnap = await getDocs(collection(db, "fullPageAds"));
-        const fullList = [];
-        fullSnap.forEach(d => {
-          const dat = d.data();
-          if (dat.imageUrl && !dat.hidden && dat.isActive) fullList.push(dat);
-        });
-        setFullAds(fullList);
-        if (fullList.length > 0) setShowFullModal(true);
+  // Auto slide top thin ads
+  useEffect(() => {
+    const topAdInterval = setInterval(() => {
+      setCurrentTopAdIndex((prev) => (prev + 1) % topThinAds.length);
+    }, 3500);
+    return () => clearInterval(topAdInterval);
+  }, []);
 
-        // 2. Small Popups
-        const smallSnap = await getDocs(collection(db, "smallPopups"));
-        const smallList = [];
-        smallSnap.forEach(d => {
-          const dat = d.data();
-          if (dat.imageUrl && !dat.hidden) smallList.push(dat);
-        });
-        setSmallPopups(smallList);
-        if (smallList.length > 0) setShowWidget(true);
-
-        // 3. Top Thin Ads
-        const topSnap = await getDocs(collection(db, "topThinAds"));
-        const topList = [];
-        topSnap.forEach(d => {
-          const dat = d.data();
-          if (dat.imageUrl && !dat.hidden) topList.push(dat);
-        });
-        setTopThinAds(topList);
-
-        // 4. Banners
-        const bannerSnap = await getDocs(collection(db, "banners"));
-        const bannerList = [];
-        bannerSnap.forEach(d => {
-          const dat = d.data();
-          if (dat.imageUrl && !dat.hidden) bannerList.push(dat);
-        });
-        setBanners(bannerList);
-
-        // 5. Main Categories
-        const catSnap = await getDocs(collection(db, "mainCategories"));
-        const catList = [];
-        catSnap.forEach(d => catList.push({ id: d.id, ...d.data() }));
-        setCategories(catList);
-
-        // 6. Products (Updated with where approved == true to block unapproved/old products)
-        const pQuery = query(
-          collection(db, "products"), 
-          where("approved", "==", true), 
-          orderBy("createdAt", "desc")
-        );
-        const pSnap = await getDocs(pQuery);
-        const pList = [];
-        pSnap.forEach(d => pList.push({ id: d.id, ...d.data() }));
-        setProducts(pList);
-        setFilteredProducts(pList);
-
-        // 7. User Gift Badge
-        const userId = localStorage.getItem('user_uid');
-        if (userId) {
-          const userDoc = await getDoc(doc(db, "users", userId));
-          if (userDoc.exists()) {
-            const uData = userDoc.data();
-            let gCount = 0;
-            if (uData.giftProduct1?.trim()) gCount++;
-            if (uData.giftProduct2?.trim()) gCount++;
-            if (uData.giftProduct3?.trim()) gCount++;
-            setGiftCount(gCount);
-          }
-        }
-      } catch (err) {
-        console.error("Firebase fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-
-    // Scroll listener for nav bar hide/show
-    let lastScroll = 0;
+  // Scroll listener for auto-hiding bottom navigation
+  useEffect(() => {
     const handleScroll = () => {
-      const st = window.pageYOffset || document.documentElement.scrollTop;
-      if (st > lastScroll && st > 50) {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      if (scrollTop > lastScrollTop && scrollTop > 50) {
         setIsNavHidden(true);
       } else {
         setIsNavHidden(false);
       }
-      lastScroll = st <= 0 ? 0 : st;
+      setLastScrollTop(scrollTop <= 0 ? 0 : scrollTop);
     };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [lastScrollTop]);
 
-  // Promo Banner Auto Slide
+  // Search & Filter Logic
   useEffect(() => {
-    if (banners.length <= 1) return;
-    const timer = setInterval(() => {
-      setActiveBannerIndex(prev => (prev + 1) % banners.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [banners]);
+    let result = products.filter(p => p.approved);
 
-  const toggleFavorite = (e, id) => {
-    e.stopPropagation();
-    let favs = [...favorites];
-    const idx = favs.indexOf(id);
-    if (idx > -1) {
-      favs.splice(idx, 1);
-    } else {
-      favs.push(id);
+    if (activeCategory !== 'all' && activeCategory !== 'special-offers') {
+      result = result.filter(p => p.mainCategory?.toLowerCase().trim() === activeCategory);
     }
-    setFavorites(favs);
-    localStorage.setItem('ayaat_favorites', JSON.stringify(favs));
-  };
 
-  const handleSearch = (e) => {
-    const val = e.target.value.toLowerCase().trim();
-    setSearchQuery(val);
-    filterAndSearch(val, activeSubFilter, activeCat);
-  };
-
-  const applySubFilter = (type) => {
-    setActiveSubFilter(type);
-    filterAndSearch(searchQuery, type, activeCat);
-  };
-
-  const filterCat = (catKey) => {
-    setActiveCat(catKey);
-    if (catKey === 'all') {
-      setFilteredProducts(products);
-    } else {
-      window.location.href = `category.html?cat=${encodeURIComponent(catKey)}`;
-    }
-  };
-
-  const filterAndSearch = (queryVal, subType, catKey) => {
-    let result = [...products];
-    if (catKey !== 'all') {
-      result = result.filter(p => p.mainCategory?.toLowerCase().trim() === catKey);
-    }
-    if (subType === 'bestseller') {
-      result = result.filter(p => p.bestseller === true);
-    } else if (subType === 'discount') {
+    if (activeSubFilter === 'bestseller') {
+      result = result.filter(p => p.bestseller);
+    } else if (activeSubFilter === 'discount') {
       result = result.filter(p => Number(p.discount || 0) >= 50);
-    } else if (subType === 'coupon') {
-      result = result.filter(p => p.coupon === true);
+    } else if (activeSubFilter === 'coupon') {
+      result = result.filter(p => p.coupon);
     }
 
-    if (queryVal) {
-      result = result.filter(p => 
-        p.title?.toLowerCase().includes(queryVal) ||
-        p.id?.toLowerCase().includes(queryVal) ||
-        p.productPin?.toLowerCase().includes(queryVal)
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        p =>
+          p.title.toLowerCase().includes(query) ||
+          p.id.toLowerCase().includes(query) ||
+          p.productPin.toLowerCase().includes(query)
       );
     }
+
     setFilteredProducts(result);
+  }, [activeCategory, activeSubFilter, searchQuery, products]);
+
+  const toggleFavorite = (e, productId) => {
+    e.stopPropagation();
+    let updatedFavs = [...favorites];
+    const index = updatedFavs.indexOf(productId);
+    if (index > -1) {
+      updatedFavs.splice(index, 1);
+    } else {
+      updatedFavs.push(productId);
+    }
+    setFavorites(updatedFavs);
+    localStorage.setItem('ayaat_favorites', JSON.stringify(updatedFavs));
   };
 
   return (
-    <>
-      {/* LOADING SCREEN */}
-      {loading && (
-        <div id="loading-screen" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }}>
-          <div className="loading-container" style={{ position: 'relative', width: 100, height: 100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div className="spinner-ring" style={{ position: 'absolute', width: 90, height: 90, border: '4px solid #f3f3f3', borderTop: '4px solid #e63946', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-            <img src="images/logo.png" alt="Logo" style={{ width: 60, height: 60, objectFit: 'contain', borderRadius: '50%' }} />
-          </div>
-        </div>
-      )}
-
+    <div className="bg-gray-50 min-h-screen pb-36 font-sans text-gray-800">
+      
       {/* TOP THIN AD SLIDER */}
-      {topThinAds.length > 0 && (
-        <div style={{ width: '100%', background: '#000', overflow: 'hidden', position: 'relative', zIndex: 1000 }}>
-          <div style={{ display: 'flex', transition: 'transform 0.5s ease-in-out' }}>
-            {topThinAds.map((ad, i) => (
-              <div key={i} style={{ minWidth: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
-                {ad.link ? (
-                  <a href={ad.link} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100%' }}>
-                    <img src={ad.imageUrl} alt="Top Thin Ad" style={{ width: '100%', maxHeight: 60, objectFit: 'cover', display: 'block' }} />
-                  </a>
-                ) : (
-                  <img src={ad.imageUrl} alt="Top Thin Ad" style={{ width: '100%', maxHeight: 60, objectFit: 'cover', display: 'block' }} />
-                )}
-              </div>
-            ))}
-          </div>
+      <div className="w-full bg-black overflow-hidden relative z-50">
+        <div 
+          className="flex transition-transform duration-500 ease-in-out" 
+          style={{ transform: `translateX(-${currentTopAdIndex * 100}%)` }}
+        >
+          {topThinAds.map((ad) => (
+            <div key={ad.id} className="min-w-full text-center">
+              <a href={ad.link} target="_blank" rel="noopener noreferrer" className="block w-full">
+                <img src={ad.imageUrl} alt="Top Ad" className="w-full max-h-[60px] object-cover mx-auto" />
+              </a>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* CATEGORY BAR */}
-      <header>
-        <div className="category-bar" style={{ display: 'flex', overflowX: 'auto', gap: 8, padding: '12px 10px', background: '#fff', borderBottom: '1px solid #eee', whiteSpace: 'nowrap', marginTop: 10 }}>
-          <button onClick={() => filterCat('all')} className={`cat-btn ${activeCat === 'all' ? 'active' : ''}`} style={{ padding: '8px 18px', border: '1px solid #eee', borderRadius: 20, background: activeCat === 'all' ? '#e63946' : '#f8f9fa', color: activeCat === 'all' ? '#fff' : '#333', fontSize: 13, fontWeight: 'bold', cursor: 'pointer' }}>সব</button>
-          <button onClick={() => filterCat('special-offers')} className="cat-btn" style={{ padding: '8px 18px', border: '1px solid #eee', borderRadius: 20, background: '#ffe5e8', color: '#e63946', fontSize: 13, fontWeight: 'bold', cursor: 'pointer' }}>🔥 স্পেশাল অফার</button>
-          {categories.map(cat => {
-            const key = cat.name.toLowerCase().trim();
-            return (
-              <button key={cat.id} onClick={() => filterCat(key)} className="cat-btn" style={{ padding: '8px 18px', border: '1px solid #eee', borderRadius: 20, background: '#f8f9fa', fontSize: 13, fontWeight: 'bold', cursor: 'pointer' }}>
-                {cat.name}
-              </button>
-            );
-          })}
+      <header className="sticky top-0 bg-white z-40 border-b border-gray-100 shadow-sm">
+        <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
+          <button 
+            onClick={() => setActiveCategory('all')} 
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeCategory === 'all' ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            সব
+          </button>
+          <button 
+            onClick={() => setActiveCategory('special-offers')} 
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeCategory === 'special-offers' ? 'bg-[#e63946] text-white' : 'bg-pink-100 text-[#e63946]'}`}
+          >
+            🔥 স্পেশাল অফার
+          </button>
+          {mainCategories.map((cat) => (
+            <button 
+              key={cat.id} 
+              onClick={() => setActiveCategory(cat.id)} 
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeCategory === cat.id ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
+            >
+              {cat.name}
+            </button>
+          ))}
         </div>
       </header>
 
       {/* SEARCH BOX */}
-      <div style={{ padding: 10, maxWidth: 600, margin: '0 auto' }}>
-        <input type="text" value={searchQuery} onChange={handleSearch} placeholder="🔍 প্রোডাক্টের নাম বা আইডি দিয়ে খুঁজুন..." style={{ width: '100%', padding: '12px 15px', border: '1px solid #eaeaea', borderRadius: 10, fontSize: 14, background: '#fff', outline: 'none' }} />
+      <div className="p-3 max-w-xl mx-auto">
+        <input 
+          type="text" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="🔍 প্রোডাক্টের নাম বা আইডি দিয়ে খুঁজুন..." 
+          className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-white outline-none shadow-sm focus:ring-2 focus:ring-[#e63946]"
+        />
+      </div>
+
+      {/* TOP CATEGORY AUTO SLIDERS */}
+      <div className="flex overflow-x-auto gap-3 px-3 py-2 no-scrollbar max-w-xl mx-auto">
+        {mainCategories.map((cat) => (
+          <div 
+            key={cat.id} 
+            onClick={() => setActiveCategory(cat.id)}
+            className="flex-shrink-0 w-[30%] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer"
+          >
+            <div className="text-center text-xs font-bold bg-[#e63946] text-white py-1 uppercase">
+              {cat.name}
+            </div>
+            <img src="https://via.placeholder.com/150?text=Category" alt={cat.name} className="w-full h-28 object-cover" />
+          </div>
+        ))}
       </div>
 
       {/* PROMO BANNER SECTION */}
-      {banners.length > 0 && (
-        <div style={{ padding: 10, maxWidth: 600, margin: '0 auto' }}>
-          <div style={{ position: 'relative', width: '100%', height: 130, borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-            <div style={{ display: 'flex', width: '100%', height: '100%', transform: `translateX(-${activeBannerIndex * 100}%)`, transition: 'transform 0.4s ease-in-out' }}>
-              {banners.map((b, i) => (
-                <div key={i} style={{ flex: '0 0 100%', width: '100%', height: '100%' }}>
-                  {b.link ? (
-                    <a href={b.link} target="_blank" rel="noreferrer"><img src={b.imageUrl} alt="Promo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></a>
-                  ) : (
-                    <img src={b.imageUrl} alt="Promo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div style={{ position: 'absolute', bottom: 8, right: 12, display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', padding: '3px 6px', borderRadius: 10 }}>
-              {banners.map((_, i) => (
-                <span key={i} onClick={() => setActiveBannerIndex(i)} style={{ width: activeBannerIndex === i ? 14 : 6, height: 6, background: activeBannerIndex === i ? '#fff' : 'rgba(255,255,255,0.5)', borderRadius: activeBannerIndex === i ? 4 : '50%', cursor: 'pointer', transition: '0.2s' }}></span>
-              ))}
-            </div>
+      <div className="p-3 max-w-xl mx-auto">
+        <div className="relative w-full h-[130px] rounded-xl overflow-hidden shadow-md">
+          <div 
+            className="flex h-full transition-transform duration-400 ease-in-out"
+            style={{ transform: `translateX(-${currentPromoIndex * 100}%)` }}
+          >
+            {promoBanners.map((banner) => (
+              <div key={banner.id} className="min-w-full h-full">
+                <a href={banner.link} target="_blank" rel="noopener noreferrer">
+                  <img src={banner.imageUrl} alt="Promo Banner" className="w-full h-full object-cover" />
+                </a>
+              </div>
+            ))}
+          </div>
+          <div className="absolute bottom-2 right-2 flex gap-1 bg-black/30 px-2 py-1 rounded-full">
+            {promoBanners.map((_, idx) => (
+              <span 
+                key={idx} 
+                onClick={() => setCurrentPromoIndex(idx)}
+                className={`h-1.5 rounded-full cursor-pointer transition-all ${currentPromoIndex === idx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}
+              />
+            ))}
           </div>
         </div>
-      )}
+      </div>
 
       {/* VIDEO SECTION */}
-      <div style={{ padding: 10, maxWidth: 600, margin: '0 auto' }}>
-        <div style={{ fontWeight: 'bold', marginBottom: 10, fontSize: 15, color: '#111' }}>🔥 ট্রেন্ডিং ভিডিও</div>
-        <div style={{ display: 'flex', gap: 10, overflowX: 'auto' }}>
-          {['jersey', 't-shirt', 'shoes', 'baby'].map((vidCat, idx) => (
-            <div key={idx} onClick={() => window.location.href = `category.html?cat=${vidCat}`} style={{ flex: '0 0 calc((100% - 20px) / 3)', minWidth: 'calc((100% - 20px) / 3)', textAlign: 'center', cursor: 'pointer', background: '#fff', padding: 5, borderRadius: 12, boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
-              <video src={`videos/video${idx + 1}.mp4`} autoPlay muted loop playsInline style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, display: 'block' }}></video>
-              <p style={{ fontSize: 11, marginTop: 5, fontWeight: 'bold', color: '#444' }}>{vidCat === 'jersey' ? 'জার্সি' : vidCat === 't-shirt' ? 'টি-শার্ট' : vidCat === 'shoes' ? 'জুতো' : 'বেবি কালেকশন'}</p>
+      <div className="p-3 max-w-xl mx-auto">
+        <div className="font-bold mb-2 text-sm text-gray-900">🔥 ট্রেন্ডিং ভিডিও</div>
+        <div className="flex gap-3 overflow-x-auto no-scrollbar">
+          {['জার্সি', 'টি-শার্ট', 'জুতো', 'বেবি কালেকশন'].map((item, idx) => (
+            <div key={idx} className="flex-shrink-0 w-[30%] text-center bg-white p-1 rounded-xl shadow-sm cursor-pointer">
+              <div className="w-full h-28 bg-gray-200 rounded-lg flex items-center justify-center text-xs font-bold text-gray-500">
+                Video {idx + 1}
+              </div>
+              <p className="text-xs font-bold mt-1 text-gray-700">{item}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* SUB-FILTER BAR */}
-      <div style={{ padding: 10, maxWidth: 600, margin: '0 auto' }}>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', whiteSpace: 'nowrap' }}>
-          <button className={`filter-chip ${activeSubFilter === 'all' ? 'active' : ''}`} onClick={() => applySubFilter('all')} style={{ padding: '6px 14px', background: activeSubFilter === 'all' ? '#e63946' : '#f1f3f5', color: activeSubFilter === 'all' ? '#fff' : '#495057', border: '1px solid #dee2e6', borderRadius: 20, fontSize: 13, fontWeight: 'bold', cursor: 'pointer' }}>সকল প্রোডাক্ট</button>
-          <button className={`filter-chip ${activeSubFilter === 'bestseller' ? 'active' : ''}`} onClick={() => applySubFilter('bestseller')} style={{ padding: '6px 14px', background: activeSubFilter === 'bestseller' ? '#e63946' : '#f1f3f5', color: activeSubFilter === 'bestseller' ? '#fff' : '#495057', border: '1px solid #dee2e6', borderRadius: 20, fontSize: 13, fontWeight: 'bold', cursor: 'pointer' }}>🔥 সেরা বিকেশিত</button>
-          <button className={`filter-chip ${activeSubFilter === 'discount' ? 'active' : ''}`} onClick={() => applySubFilter('discount')} style={{ padding: '6px 14px', background: activeSubFilter === 'discount' ? '#e63946' : '#f1f3f5', color: activeSubFilter === 'discount' ? '#fff' : '#495057', border: '1px solid #dee2e6', borderRadius: 20, fontSize: 13, fontWeight: 'bold', cursor: 'pointer' }}>🏷️ ৫০% বা তার বেশি ছাড়</button>
-          <button className={`filter-chip ${activeSubFilter === 'coupon' ? 'active' : ''}`} onClick={() => applySubFilter('coupon')} style={{ padding: '6px 14px', background: activeSubFilter === 'coupon' ? '#e63946' : '#f1f3f5', color: activeSubFilter === 'coupon' ? '#fff' : '#495057', border: '1px solid #dee2e6', borderRadius: 20, fontSize: 13, fontWeight: 'bold', cursor: 'pointer' }}>🎟️ কুপন সহ</button>
+      <div className="p-3 max-w-xl mx-auto">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+          {[
+            { id: 'all', label: 'সকল প্রোডাক্ট' },
+            { id: 'bestseller', label: '🔥 সেরা বিকশিত' },
+            { id: 'discount', label: '🏷️ ৫০% বা তার বেশি ছাড়' },
+            { id: 'coupon', label: '🎟️ কুপন সহ' }
+          ].map((chip) => (
+            <button 
+              key={chip.id}
+              onClick={() => setActiveSubFilter(chip.id)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${activeSubFilter === chip.id ? 'bg-[#e63946] text-white border-[#e63946]' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* PRODUCT GRID */}
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: 8, paddingBottom: 70 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {filteredProducts.length === 0 ? (
-            <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: 30, color: '#666', fontWeight: 'bold' }}>কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
-          ) : (
-            filteredProducts.map(item => {
+      <div className="max-w-xl mx-auto p-2">
+        {filteredProducts.length === 0 ? (
+          <div className="text-center py-10 font-bold text-gray-500">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {filteredProducts.map((item) => {
               const isFav = favorites.includes(item.id);
-              const pin = item.productPin || item.id.slice(0, 6).toUpperCase();
-              const mainImg = item.imageUrls?.[0] || item.imageUrl || 'https://via.placeholder.com/200';
               return (
-                <div key={item.id} style={{ border: '1px solid #eee', borderRadius: 10, overflow: 'hidden', background: '#fff', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
-                  <div style={{ position: 'relative', width: '100%', height: 140, overflow: 'hidden', cursor: 'pointer' }} onClick={() => window.location.href = `product.html?id=${item.id}`}>
+                <div key={item.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm relative">
+                  <div className="relative w-full h-[140px] bg-gray-100 overflow-hidden cursor-pointer">
                     {item.discount && (
-                      <div style={{ position: 'absolute', top: 8, left: 8, background: 'linear-gradient(135deg, #ff416c, #ff4b2b)', color: '#fff', fontSize: 10, fontWeight: 'bold', padding: '3px 7px', borderRadius: 6, zIndex: 11 }}>{item.discount}% ছাড়</div>
+                      <span className="absolute top-2 left-2 bg-gradient-to-r from-[#ff416c] to-[#ff4b2b] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow z-10">
+                        {item.discount}% ছাড়
+                      </span>
                     )}
-                    <button onClick={(e) => toggleFavorite(e, item.id)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.9)', border: 'none', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 11 }}>
+                    <button 
+                      onClick={(e) => toggleFavorite(e, item.id)}
+                      className={`absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-xs shadow z-10 transition-transform hover:scale-110 ${isFav ? 'text-[#e63946]' : 'text-gray-400'}`}
+                    >
                       {isFav ? '❤️' : '🤍'}
                     </button>
-                    <img src={mainImg} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <img src={item.imageUrls[0]} alt={item.title} className="w-full h-full object-cover" />
                   </div>
-                  <div style={{ padding: 6, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexGrow: 1, cursor: 'pointer' }} onClick={() => window.location.href = `product.html?id=${item.id}`}>
-                    <span style={{ fontSize: 10, color: '#e63946', fontWeight: 'bold', background: '#ffe5e6', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginBottom: 4, alignSelf: 'flex-start' }}>📌 {pin}</span>
-                    <h3 style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 4, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.title}</h3>
-                    <div style={{ color: '#e63946', fontSize: 13, fontWeight: 'bold', marginTop: 'auto' }}>SAR {item.price}</div>
+                  <div className="p-2 flex flex-col justify-between flex-grow cursor-pointer">
+                    <span className="text-[10px] text-[#e63946] font-bold bg-[#ffe5e6] px-1.5 py-0.5 rounded w-max mb-1">
+                      📌 {item.productPin}
+                    </span>
+                    <h3 className="text-[11px] font-bold mb-1 line-clamp-2 text-gray-800">{item.title}</h3>
+                    <div className="text-[#e63946] text-xs font-bold mt-auto">SAR {item.price}</div>
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
 
       {/* WHATSAPP FLOAT */}
-      <a href="https://wa.me/8801835302525" target="_blank" rel="noreferrer" style={{ position: 'fixed', bottom: isNavHidden ? 15 : 75, right: 15, background: '#25D366', color: '#fff', width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, textDecoration: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.3)', zIndex: 999, transition: 'bottom 0.3s ease-in-out' }}>💬</a>
+      <a 
+        href="https://wa.me/8801835302525" 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className={`fixed right-4 bg-[#25D366] text-white w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-lg z-50 transition-all duration-300 ${isNavHidden ? 'bottom-4' : 'bottom-20'}`}
+      >
+        💬
+      </a>
 
       {/* FIXED BOTTOM NAVIGATION BAR */}
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', background: '#ffffff', borderTop: '1px solid #eaeaea', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '8px 0', zIndex: 1000, boxShadow: '0 -2px 10px rgba(0,0,0,0.05)', transform: isNavHidden ? 'translateY(100%)' : 'translateY(0)', transition: 'transform 0.3s ease-in-out' }}>
-        <a href="index.html" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: '#e63946', fontSize: 11, fontWeight: 'bold' }}>
-          <svg style={{ width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-          Home
-        </a>
-        <a href="category.html" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: '#666', fontSize: 11, fontWeight: 'bold' }}>
-          <svg style={{ width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          Categories
-        </a>
-        <a href="my-gifts.html" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: '#666', fontSize: 11, fontWeight: 'bold', position: 'relative' }}>
-          <svg style={{ width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line></svg>
-          Gift
-          <span style={{ position: 'absolute', top: -3, right: 4, background: '#e63946', color: '#fff', fontSize: 9, padding: '1px 5px', borderRadius: 10, fontWeight: 'bold' }}>{giftCount}</span>
-        </a>
-        <a href="favorites.html" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: '#666', fontSize: 11, fontWeight: 'bold', position: 'relative' }}>
-          <svg style={{ width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-          Favorites
-          <span style={{ position: 'absolute', top: -3, right: 4, background: '#e63946', color: '#fff', fontSize: 9, padding: '1px 5px', borderRadius: 10, fontWeight: 'bold' }}>{favorites.length}</span>
-        </a>
-        <a href="cart.html" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: '#666', fontSize: 11, fontWeight: 'bold', position: 'relative' }}>
-          <svg style={{ width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-          Cart
-          <span style={{ position: 'absolute', top: -3, right: 4, background: '#e63946', color: '#fff', fontSize: 9, padding: '1px 5px', borderRadius: 10, fontWeight: 'bold' }}>{cartCount}</span>
-        </a>
-        <a href="register.html" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: '#666', fontSize: 11, fontWeight: 'bold' }}>
-          <svg style={{ width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }} viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          Account
-        </a>
+      <nav className={`fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 flex justify-around items-center py-2 z-40 shadow-lg transition-transform duration-300 ${isNavHidden ? 'translate-y-full' : 'translate-y-0'}`}>
+        <Link href="/" className="flex flex-col items-center text-[#e63946] text-[10px] font-bold">
+          🏠 Home
+        </Link>
+        <Link href="/category" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946]">
+          📂 Categories
+        </Link>
+        <Link href="/my-gifts" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946]">
+          🎁 Gift
+          <span className="absolute -top-1 right-0 bg-[#e63946] text-white text-[9px] px-1 rounded-full font-bold">{giftCount}</span>
+        </Link>
+        <Link href="/favorites" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946]">
+          ❤️ Favorites
+          <span className="absolute -top-1 right-0 bg-[#e63946] text-white text-[9px] px-1 rounded-full font-bold">{favorites.length}</span>
+        </Link>
+        <Link href="/cart" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946]">
+          🛒 Cart
+          <span className="absolute -top-1 right-0 bg-[#e63946] text-white text-[9px] px-1 rounded-full font-bold">{cartCount}</span>
+        </Link>
+        <Link href="/register" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946]">
+          👤 Account
+        </Link>
       </nav>
 
       {/* FULL SCREEN POPUP MODAL */}
-      {showFullModal && fullAds.length > 0 && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 15 }}>
-          <div style={{ position: 'relative', maxWidth: 480, width: '100%', background: '#fff', borderRadius: 16, overflow: 'hidden', textAlign: 'center' }}>
-            <button onClick={() => setShowFullModal(false)} style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, background: '#1e293b', color: '#fff', border: '2px solid #fff', width: 34, height: 34, borderRadius: '50%', fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>✕</button>
-            {fullAds.map((ad, idx) => (
-              <div key={idx}>
-                {ad.link ? (
-                  <a href={ad.link} target="_blank" rel="noreferrer"><img src={ad.imageUrl} alt="Ad" style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain', display: 'block', background: '#000' }} /></a>
-                ) : (
-                  <img src={ad.imageUrl} alt="Ad" style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain', display: 'block', background: '#000' }} />
-                )}
-              </div>
-            ))}
+      {showFullScreenPopup && (
+        <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-sm w-full bg-white rounded-2xl overflow-hidden shadow-2xl text-center p-4">
+            <button 
+              onClick={() => setShowFullScreenPopup(false)} 
+              className="absolute top-3 right-3 bg-slate-800 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center z-10"
+            >
+              ✕
+            </button>
+            <img src="https://via.placeholder.com/400x400?text=Special+Flash+Sale" alt="Popup" className="w-full h-auto rounded-lg mb-2" />
+            <h3 className="font-bold text-base mb-1">স্পেশাল ডিসকাউন্ট অফার!</h3>
+            <p className="text-xs text-gray-600 mb-3">আজকের অর্ডারেই উপভোগ করুন আকর্ষণীয় ছাড়।</p>
+            <button 
+              onClick={() => setShowFullScreenPopup(false)} 
+              className="bg-[#e63946] text-white text-xs font-bold py-2.5 px-6 rounded-full w-full"
+            >
+              অফারটি দেখুন
+            </button>
           </div>
         </div>
       )}
 
-      {/* FLOATING ROUND WIDGET */}
-      {showWidget && smallPopups.length > 0 && (
-        <div onClick={() => setShowFullModal(true)} style={{ position: 'fixed', bottom: 85, right: 15, zIndex: 99999, cursor: 'pointer', animation: 'bounce 2s infinite' }}>
-          <div style={{ position: 'relative', width: 95, height: 95, background: 'linear-gradient(135deg, #e63946, #d62828)', borderRadius: '50%', boxShadow: '0 8px 25px rgba(230, 57, 70, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', overflow: 'hidden' }}>
-            <button onClick={(e) => { e.stopPropagation(); setShowWidget(false); }} style={{ position: 'absolute', top: 2, right: 2, zIndex: 10, background: '#1e293b', color: 'white', border: '2px solid white', width: 25, height: 25, borderRadius: '50%', fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>✕</button>
-            <img src={smallPopups[0].imageUrl} alt="Widget" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+      {/* FLOATING WIDGET */}
+      {showFloatingWidget && !showFullScreenPopup && (
+        <div 
+          onClick={() => setShowFullScreenPopup(true)} 
+          className="fixed bottom-20 right-4 z-40 cursor-pointer animate-bounce"
+        >
+          <div className="relative w-20 h-20 bg-gradient-to-tr from-[#e63946] to-[#d62828] rounded-full shadow-lg flex flex-col items-center justify-center text-white border-2 border-white">
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowFloatingWidget(false); }} 
+              className="absolute top-0 right-0 bg-slate-800 text-white w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center"
+            >
+              ✕
+            </button>
+            <span className="text-[9px] font-bold leading-tight">FLASH</span>
+            <span className="text-xs font-black leading-tight">SALE</span>
+            <span className="text-[7px] bg-white text-[#e63946] px-1 rounded-full font-bold mt-0.5">অফার</span>
           </div>
         </div>
       )}
-    </>
+
+    </div>
   );
 }

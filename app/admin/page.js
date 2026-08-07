@@ -8,6 +8,7 @@ export default function AdminPanel() {
   const [user, setUser] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('products');
 
   // Form States for Product Room
@@ -24,8 +25,6 @@ export default function AdminPanel() {
   const [topBannerText, setTopBannerText] = useState('');
   const [popupBannerImage, setPopupBannerImage] = useState('');
 
-  const ADMIN_EMAIL = "admin@ayaatshop.com";
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -35,10 +34,14 @@ export default function AdminPanel() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      alert("Login Successful!");
     } catch (error) {
-      alert("Login Failed: " + error.message);
+      alert("Login Error: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,7 +56,7 @@ export default function AdminPanel() {
         category: productCategory,
         createdAt: new Date()
       });
-      alert("Product Added Successfully to Database!");
+      alert("Product Added Successfully!");
       setProductName('');
       setProductPrice('');
       setProductImage('');
@@ -63,29 +66,41 @@ export default function AdminPanel() {
     }
   };
 
-  // Jodi admin login na thake
-  if (!user || user.email !== ADMIN_EMAIL) {
+  // Login Screen (Jodi user login na thake)
+  if (!user) {
     return (
       <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-lg shadow-lg border">
         <h2 className="text-xl font-bold mb-4 text-center text-slate-800">Admin Control Room Login</h2>
         <form onSubmit={handleLogin} className="space-y-4">
-          <input 
-            type="email" 
-            placeholder="Admin Email" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            className="w-full p-2 border rounded text-sm outline-none focus:border-teal-600"
-            required
-          />
-          <input 
-            type="password" 
-            placeholder="Password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            className="w-full p-2 border rounded text-sm outline-none focus:border-teal-600"
-            required
-          />
-          <button type="submit" className="w-full bg-teal-700 hover:bg-teal-800 text-white p-2 rounded text-sm font-bold">Login to Admin</button>
+          <div>
+            <label className="block text-xs font-bold mb-1 text-gray-600">Admin Email</label>
+            <input 
+              type="email" 
+              placeholder="admin@ayaatshop.com" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              className="w-full p-2 border rounded text-sm outline-none focus:border-teal-600"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold mb-1 text-gray-600">Password</label>
+            <input 
+              type="password" 
+              placeholder="••••••••" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              className="w-full p-2 border rounded text-sm outline-none focus:border-teal-600"
+              required
+            />
+          </div>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-teal-700 hover:bg-teal-800 text-white p-2.5 rounded text-sm font-bold"
+          >
+            {loading ? "Logging in..." : "Login to Admin"}
+          </button>
         </form>
       </div>
     );
@@ -178,7 +193,7 @@ export default function AdminPanel() {
               </div>
               <div>
                 <label className="block text-xs font-bold mb-1 text-gray-600">Popup Banner / Ad Image URL</label>
-                <input type="text" value={popupBannerImage} onChange={(e) => setPopupBannerImage(e.target.value)} className="w-full p-2 border rounded text-sm" />
+                <input type="text" value={popupBannerImage} onChange={(e) => setPopupBannerImage(e.target.value)} className="w-full text-sm border rounded p-2" />
               </div>
               <button onClick={() => alert("Banners Updated!")} className="w-full bg-teal-700 text-white p-2.5 rounded text-sm font-bold">Update Banners</button>
             </div>
@@ -195,7 +210,7 @@ export default function AdminPanel() {
 
         {/* 5. Chat Room */}
         {activeTab === 'chat' && (
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 redesigned p-6 rounded-lg shadow border">
             <h1 className="text-xl font-bold mb-4 text-slate-800">Customer Chat Room</h1>
             <p className="text-sm text-gray-500">Live chat interface jekhane customer-der sathe kotha bola jabe.</p>
           </div>

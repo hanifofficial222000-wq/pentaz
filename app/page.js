@@ -1,13 +1,20 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 
 export default function Home() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Banners State (Top, Middle, Circle Pop-up)
+  const [bannerData, setBannerData] = useState({
+    topBannerText: 'Ayaat Sport Shop Banner',
+    middleBannerImage: '',
+    popupBannerImage: ''
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -21,6 +28,12 @@ export default function Home() {
         const catSnapshot = await getDocs(collection(db, "categories"));
         const catList = catSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setCategories(catList);
+
+        // 3. 3-Banners Data Fetch Kora from Firestore
+        const bannerDoc = await getDoc(doc(db, "settings", "banners"));
+        if (bannerDoc.exists()) {
+          setBannerData(bannerDoc.data());
+        }
       } catch (error) {
         console.error("Error fetching data: ", error);
       }
@@ -36,14 +49,14 @@ export default function Home() {
   });
 
   return (
-    <main className="max-w-md mx-auto bg-gray-50 min-h-screen pb-12 shadow-xl">
+    <main className="max-w-md mx-auto bg-gray-50 min-h-screen pb-16 shadow-xl relative">
       
-      {/* 1. Top Banner */}
-      <div className="bg-teal-700 text-white text-center py-4 font-bold text-lg shadow">
-        Ayaat Sport Shop Banner
+      {/* 1. TOP BANNER */}
+      <div className="bg-teal-700 text-white text-center py-3 px-4 font-bold text-sm md:text-base shadow truncate">
+        {bannerData.topBannerText || "Ayaat Sport Shop Banner"}
       </div>
 
-      {/* 2. Dynamic Category Slider (Firestore theke load hobe) */}
+      {/* 2. Dynamic Category Slider */}
       <div className="flex overflow-x-auto space-x-4 p-4 bg-white shadow-sm no-scrollbar">
         {/* 'All' Category Button */}
         <div 
@@ -106,12 +119,20 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 5. Middle Banner */}
-      <div className="bg-slate-900 text-white text-center py-6 my-5 font-bold text-xl shadow">
-        Special Offer Banner
+      {/* 5. MIDDLE BANNER */}
+      <div className="my-5 px-4">
+        {bannerData.middleBannerImage ? (
+          <div className="rounded-lg overflow-hidden shadow-md border bg-white">
+            <img src={bannerData.middleBannerImage} alt="Special Offer" className="w-full h-36 object-cover" />
+          </div>
+        ) : (
+          <div className="bg-slate-900 text-white text-center py-6 font-bold text-lg shadow rounded-lg">
+            Special Offer Banner
+          </div>
+        )}
       </div>
 
-      {/* 6. All Product Grid (Dynamic Filtered with 3 cols on mobile, 4 on desktop) */}
+      {/* 6. All Product Grid (3 cols on mobile, 4 on desktop) */}
       <div className="px-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-bold text-gray-800">
@@ -153,6 +174,19 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* 7. BOTTOM CIRCLE POP-UP AD (Floating Circular Ad on bottom right/left) */}
+      {bannerData.popupBannerImage && (
+        <div className="fixed bottom-4 right-4 z-50 animate-bounce">
+          <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-teal-600 shadow-xl bg-white flex items-center justify-center cursor-pointer">
+            <img 
+              src={bannerData.popupBannerImage} 
+              alt="Popup Ad" 
+              className="w-full h-full object-cover" 
+            />
+          </div>
+        </div>
+      )}
 
     </main>
   );

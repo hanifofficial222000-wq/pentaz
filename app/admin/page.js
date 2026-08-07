@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 
 export default function AdminPanel() {
   const [user, setUser] = useState(null);
@@ -24,7 +24,7 @@ export default function AdminPanel() {
   const [topBannerText, setTopBannerText] = useState('');
   const [popupBannerImage, setPopupBannerImage] = useState('');
 
-  const ADMIN_EMAIL = "admin@gmail.com"; // Apnar admin email ekhane thakbe
+  const ADMIN_EMAIL = "admin@gmail.com";
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {

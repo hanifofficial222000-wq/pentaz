@@ -24,7 +24,7 @@ export default function AdminPanel() {
   const [topBannerText, setTopBannerText] = useState('');
   const [popupBannerImage, setPopupBannerImage] = useState('');
 
-  const ADMIN_EMAIL = "admin@gmail.com";
+  const ADMIN_EMAIL = "admin@ayaatshop.com";
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {

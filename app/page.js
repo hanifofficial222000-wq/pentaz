@@ -5,25 +5,35 @@ import { collection, getDocs } from 'firebase/firestore';
 
 export default function Home() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchData() {
       try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const productList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // 1. Products Fetch Kora
+        const prodSnapshot = await getDocs(collection(db, "products"));
+        const productList = prodSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProducts(productList);
+
+        // 2. Categories Fetch Kora
+        const catSnapshot = await getDocs(collection(db, "categories"));
+        const catList = catSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCategories(catList);
       } catch (error) {
-        console.error("Error fetching products: ", error);
+        console.error("Error fetching data: ", error);
       }
     }
-    fetchProducts();
+    fetchData();
   }, []);
 
-  // Search filter apply korar jonno
-  const filteredProducts = products.filter(product =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter products based on search term AND selected category
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <main className="max-w-md mx-auto bg-gray-50 min-h-screen pb-12 shadow-xl">
@@ -33,14 +43,34 @@ export default function Home() {
         Ayaat Sport Shop Banner
       </div>
 
-      {/* 2. Category Slider (Horizontal Scroll) */}
+      {/* 2. Dynamic Category Slider (Firestore theke load hobe) */}
       <div className="flex overflow-x-auto space-x-4 p-4 bg-white shadow-sm no-scrollbar">
-        {[1, 2, 3, 4, 5].map((item) => (
-          <div key={item} className="flex-shrink-0 w-20 text-center cursor-pointer">
-            <div className="h-16 w-16 bg-gray-100 rounded-full mx-auto flex items-center justify-center text-xs font-semibold text-gray-600 border shadow-inner">
-              🏷️
+        {/* 'All' Category Button */}
+        <div 
+          onClick={() => setSelectedCategory('All')} 
+          className="flex-shrink-0 w-20 text-center cursor-pointer"
+        >
+          <div className={`h-16 w-16 rounded-full mx-auto flex items-center justify-center text-xs font-semibold border shadow-inner ${selectedCategory === 'All' ? 'bg-teal-700 text-white border-teal-800' : 'bg-gray-100 text-gray-600'}`}>
+            🔥
+          </div>
+          <p className="text-xs mt-1 font-medium text-gray-700">All</p>
+        </div>
+
+        {/* Database Categories */}
+        {categories.map((cat) => (
+          <div 
+            key={cat.id} 
+            onClick={() => setSelectedCategory(cat.name || cat.categoryName)} 
+            className="flex-shrink-0 w-20 text-center cursor-pointer"
+          >
+            <div className={`h-16 w-16 rounded-full mx-auto flex items-center justify-center text-xs font-semibold border shadow-inner overflow-hidden ${selectedCategory === (cat.name || cat.categoryName) ? 'bg-teal-700 text-white border-teal-800' : 'bg-gray-100 text-gray-600'}`}>
+              {cat.image ? (
+                <img src={cat.image} alt={cat.name} className="h-full w-full object-cover" />
+              ) : (
+                '🏷️'
+              )}
             </div>
-            <p className="text-xs mt-1 font-medium text-gray-700">Category {item}</p>
+            <p className="text-xs mt-1 font-medium text-gray-700 truncate">{cat.name || cat.categoryName}</p>
           </div>
         ))}
       </div>
@@ -81,9 +111,19 @@ export default function Home() {
         Special Offer Banner
       </div>
 
-      {/* 6. All Product Grid */}
+      {/* 6. All Product Grid (Dynamic Filtered) */}
       <div className="px-4">
-        <h3 className="text-sm font-bold mb-3 text-gray-800">All Products</h3>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-bold text-gray-800">
+            {selectedCategory === 'All' ? 'All Products' : `${selectedCategory} Products`}
+          </h3>
+          {selectedCategory !== 'All' && (
+            <button onClick={() => setSelectedCategory('All')} className="text-xs text-teal-700 font-bold underline">
+              View All
+            </button>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
@@ -96,30 +136,20 @@ export default function Home() {
                   />
                   <p className="text-xs font-semibold mt-2 text-gray-800 truncate">{product.name}</p>
                   <p className="text-xs text-teal-600 font-bold mt-1">৳ {product.price}</p>
+                  <span className="inline-block bg-gray-100 text-[10px] text-gray-500 px-1.5 py-0.5 rounded mt-1">
+                    {product.category}
+                  </span>
                 </div>
                 
-                {/* Pop-up / Quick Action Button */}
                 <button className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] py-1.5 rounded shadow font-medium">
                   Quick View
                 </button>
               </div>
             ))
           ) : (
-            // Database-e product na thakle ba search-e na mille dummy items dekhabe
-            [1, 2, 3, 4].map((p) => (
-              <div key={p} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 relative flex flex-col justify-between">
-                <div>
-                  <div className="h-36 bg-teal-600 rounded flex items-center justify-center text-white font-bold text-xs shadow-inner">
-                    Jersey {p}
-                  </div>
-                  <p className="text-xs font-semibold mt-2 text-gray-800">Barca Home Kit {p}</p>
-                  <p className="text-xs text-teal-600 font-bold mt-1">৳ 550</p>
-                </div>
-                <button className="mt-3 w-full bg-blue-600 text-white text-[10px] py-1.5 rounded shadow font-medium">
-                  Quick View
-                </button>
-              </div>
-            ))
+            <div className="col-span-2 text-center py-8 text-gray-400 text-xs font-medium">
+              No products found in this category!
+            </div>
           )}
         </div>
       </div>

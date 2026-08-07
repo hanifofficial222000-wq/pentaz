@@ -111,7 +111,7 @@ export default function Home() {
         Special Offer Banner
       </div>
 
-      {/* 6. All Product Grid (Dynamic Filtered) */}
+      {/* 6. All Product Grid (Dynamic Filtered with 3 cols on mobile, 4 on desktop) */}
       <div className="px-4">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-bold text-gray-800">
@@ -124,30 +124,30 @@ export default function Home() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-4">
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
-              <div key={product.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 relative flex flex-col justify-between">
+              <div key={product.id} className="bg-white p-2 md:p-3 rounded-lg shadow-sm border border-gray-100 relative flex flex-col justify-between">
                 <div>
                   <img 
                     src={product.image || "https://via.placeholder.com/150"} 
                     alt={product.name} 
-                    className="h-36 w-full object-cover rounded" 
+                    className="h-28 md:h-36 w-full object-cover rounded" 
                   />
-                  <p className="text-xs font-semibold mt-2 text-gray-800 truncate">{product.name}</p>
-                  <p className="text-xs text-teal-600 font-bold mt-1">৳ {product.price}</p>
-                  <span className="inline-block bg-gray-100 text-[10px] text-gray-500 px-1.5 py-0.5 rounded mt-1">
+                  <p className="text-[11px] md:text-xs font-semibold mt-1.5 text-gray-800 truncate">{product.name}</p>
+                  <p className="text-[11px] md:text-xs text-teal-600 font-bold mt-0.5">৳ {product.price}</p>
+                  <span className="inline-block bg-gray-100 text-[9px] text-gray-500 px-1 py-0.5 rounded mt-1 truncate max-w-full">
                     {product.category}
                   </span>
                 </div>
                 
-                <button className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] py-1.5 rounded shadow font-medium">
+                <button className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-[9px] md:text-[10px] py-1 rounded shadow font-medium">
                   Quick View
                 </button>
               </div>
             ))
           ) : (
-            <div className="col-span-2 text-center py-8 text-gray-400 text-xs font-medium">
+            <div className="col-span-3 lg:col-span-4 text-center py-8 text-gray-400 text-xs font-medium">
               No products found in this category!
             </div>
           )}

@@ -1,219 +1,274 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 
-export default function ProductCustomize() {
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
+export default function ProductManagement() {
+  const cloudName = "b3gsgcpl";
+  const uploadPreset = "tho4ycz8";
+
+  const [allMainCategories, setAllMainCategories] = useState([]);
+  const [allSubCategories, setAllSubCategories] = useState([]);
+  const [filteredSubCategories, setFilteredSubCategories] = useState([]);
+
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [selectedMainCat, setSelectedMainCat] = useState('');
+  const [selectedSubCat, setSelectedSubCat] = useState('');
   const [sizes, setSizes] = useState('');
   const [description, setDescription] = useState('');
-  const [sellerName, setSellerName] = useState('');
-  const [sellerPhone, setSellerPhone] = useState('');
   
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // ফায়ারবেস থেকে ক্যাটাগরি লোড করা
+  const [alert, setAlert] = useState({ show: false, msg: '' });
+  const showAlert = (msg) => {
+    setAlert({ show: true, msg });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
+  };
+
+  // Fetch categories from Firestore to populate dropdowns
   useEffect(() => {
-    async function loadCategories() {
+    const fetchCategories = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "categories"));
-        if (!querySnapshot.empty) {
-          const catList = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setCategories(catList);
-        }
+        const mainSnap = await getDocs(collection(db, "mainCategories"));
+        const mainList = [];
+        mainSnap.forEach(d => mainList.push({ id: d.id, ...d.data() }));
+        setAllMainCategories(mainList);
+
+        const subSnap = await getDocs(collection(db, "subCategories"));
+        const subList = [];
+        subSnap.forEach(d => subList.push({ id: d.id, ...d.data() }));
+        setAllSubCategories(subList);
       } catch (err) {
-        console.error("Categories Load Error:", err);
+        console.error("Error fetching categories:", err);
       }
-    }
-    loadCategories();
+    };
+    fetchCategories();
   }, []);
 
-  // ফর্ম সাবমিশন ও ফায়ারবেসে ডেটা সেভ করা
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Handle Main Category Change to filter subcategories
+  const handleMainCatChange = (e) => {
+    const mainCat = e.target.value;
+    setSelectedMainCat(mainCat);
+    setSelectedSubCat('');
 
-    if (!selectedCategory || !title || !price || !imageUrl || !sellerName || !sellerPhone) {
-      alert("দয়া করে প্রয়োজনীয় সকল তথ্য এবং প্রোডাক্টের ছবির লিংক দিন!");
+    const filtered = allSubCategories.filter(s => s.mainCat === mainCat);
+    setFilteredSubCategories(filtered);
+  };
+
+  // Handle Image Selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    } else {
+      setSelectedImageFile(null);
+      setImagePreviewUrl('');
+    }
+  };
+
+  // Submit Product
+  const handleProductSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedImageFile) {
+      alert("দয়া করে ছবি সিলেক্ট করুন!");
       return;
     }
 
     setLoading(true);
 
     try {
-      const formattedSizes = sizes ? sizes.split(',').map(s => s.trim()) : ['Standard'];
+      const formData = new FormData();
+      formData.append('file', selectedImageFile);
+      formData.append('upload_preset', uploadPreset);
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const cloudData = await res.json();
+      if (!cloudData.secure_url) throw new Error("Image Upload Failed");
+
+      const sizesArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s !== '') : [];
 
       await addDoc(collection(db, "products"), {
-        category: selectedCategory,
-        title: title,
+        title: title.trim(),
         price: Number(price),
-        imageUrl: imageUrl,
-        imageUrls: [imageUrl],
-        sizes: formattedSizes,
-        description: description,
-        sellerName: sellerName,
-        sellerPhone: sellerPhone,
-        approved: false,
+        discount: discount ? Number(discount) : null,
+        mainCategory: selectedMainCat,
+        category: selectedSubCat,
+        sizes: sizesArray,
+        description: description.trim(),
+        imageUrl: cloudData.secure_url,
+        sellerName: 'AYAAT SPORT SHOP',
+        sellerPhone: '01835302525',
+        approved: true,
         createdAt: serverTimestamp()
       });
 
-      alert("🎉 আপনার প্রোডাক্টটি সফলভাবে পোস্ট করা হয়েছে! অ্যাডমিন এপ্রুভ করলে এটি ওয়েবসাইটে দেখা যাবে।");
-      
-      // ফর্ম রিসেট
-      setSelectedCategory('');
+      showAlert("🎉 প্রোডাক্ট সফলভাবে পাবলিশ হয়েছে!");
+      // Reset Form
       setTitle('');
       setPrice('');
-      setImageUrl('');
+      setDiscount('');
+      setSelectedMainCat('');
+      setSelectedSubCat('');
       setSizes('');
       setDescription('');
-      setSellerName('');
-      setSellerPhone('');
-      
+      setSelectedImageFile(null);
+      setImagePreviewUrl('');
+      setFilteredSubCategories([]);
+
     } catch (err) {
       console.error(err);
-      alert("প্রোডাক্ট পোস্ট করতে সমস্যা হয়েছে, আবার চেষ্টা করুন!");
+      alert("⚠️ প্রোডাক্ট সেভ করতে সমস্যা হয়েছে!");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-[#f5f5f5] min-h-screen p-4 pb-12 font-sans">
-      <div className="max-w-[500px] mx-auto bg-white rounded-xl p-5 shadow-md">
+    <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans">
+      <div className="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl space-y-8">
         
-        <Link href="/admin" className="text-[#333] no-underline text-sm inline-block mb-4 font-bold hover:text-[#e63946] transition duration-200">
-          ← Back to Admin Panel
-        </Link>
-
-        <h2 className="text-[20px] mb-4 text-[#222] text-center border-b-2 border-dashed border-[#eee] pb-2 font-bold">
-          🛍️ আপনার প্রোডাক্ট পোস্ট করুন
-        </h2>
-
-        <form onSubmit={handleSubmit}>
-          
-          <div className="mb-4">
-            <label className="font-bold block mb-1 text-sm text-[#333]">ক্যাটাগরি সিলেক্ট করুন:</label>
-            <select 
-              value={selectedCategory} 
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              required
-              className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
-            >
-              <option value="" disabled>-- Select Category --</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.name.toLowerCase().trim()}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+        {/* Success Alert */}
+        {alert.show && (
+          <div className="p-4 rounded-xl text-center font-bold text-sm bg-green-100 text-green-700 border border-green-300">
+            {alert.msg}
           </div>
+        )}
 
-          <div className="mb-4">
-            <label className="font-bold block mb-1 text-sm text-[#333]">প্রোডাক্টের নাম:</label>
-            <input 
-              type="text" 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="যেমন: Bangladesh Cricket Jersey" 
-              required
-              className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
-            />
-          </div>
+        {/* SECTION: ADD PRODUCT */}
+        <div>
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            🛍️ নতুন প্রোডাক্ট যোগ করুন
+          </h3>
 
-          <div className="mb-4">
-            <label className="font-bold block mb-1 text-sm text-[#333]">মূল্য (SAR / ৳):</label>
-            <input 
-              type="number" 
-              value={price} 
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="যেমন: 300" 
-              required
-              className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="font-bold block mb-1 text-sm text-[#333]">প্রোডাক্টের ছবির লিংক (Image URL):</label>
-            <input 
-              type="url" 
-              value={imageUrl} 
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg" 
-              required
-              className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
-            />
-            {imageUrl && (
-              <div className="flex justify-center mt-2.5">
-                <img src={imageUrl} alt="Preview" className="w-[70px] h-[70px] object-cover rounded-md border border-[#ccc]" onError={(e)=>{e.target.style.display='none'}} />
-              </div>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="font-bold block mb-1 text-sm text-[#333]">সাইজ সমুহ (কমা দিয়ে লিখুন):</label>
-            <input 
-              type="text" 
-              value={sizes} 
-              onChange={(e) => setSizes(e.target.value)}
-              placeholder="M, L, XL, XXL"
-              className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="font-bold block mb-1 text-sm text-[#333]">প্রোডাক্টের বিবরণ/ডেসক্রিপশন:</label>
-            <textarea 
-              rows="3" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="প্রোডাক্ট সম্পর্কে বিস্তারিত লিখুন..."
-              className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
-            ></textarea>
-          </div>
-
-          <div className="bg-[#f0f7ff] border border-[#cce5ff] p-4 rounded-lg mb-4">
-            <h3 className="text-sm text-[#004085] mb-2.5 font-bold">👤 বিক্রেতার তথ্য (Seller Info)</h3>
-            <div className="mb-3">
-              <label className="font-bold block mb-1 text-sm text-[#333]">আপনার নাম:</label>
+          <form onSubmit={handleProductSubmit} className="space-y-5">
+            
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">🏷️ প্রোডাক্টের নাম</label>
               <input 
                 type="text" 
-                value={sellerName} 
-                onChange={(e) => setSellerName(e.target.value)}
-                placeholder="বিক্রেতার নাম" 
-                required
-                className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required 
+                placeholder="যেমন: Premium Bangladesh Jersey 2026" 
+                className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 transition text-xs text-black"
               />
             </div>
-            <div className="mb-0">
-              <label className="font-bold block mb-1 text-sm text-[#333]">মোবাইল / ওয়াটসঅ্যাপ নম্বর:</label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">💰 দাম (SAR)</label>
+                <input 
+                  type="number" 
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  required 
+                  placeholder="450" 
+                  className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 transition text-xs text-black"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">🏷️ ডিসকাউন্ট পার্সেন্ট (%)</label>
+                <input 
+                  type="number" 
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="যেমন: 50" 
+                  className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 transition text-xs text-black"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">📁 মেইন ক্যাটাগরি</label>
+                <select 
+                  value={selectedMainCat}
+                  onChange={handleMainCatChange}
+                  required 
+                  className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-xs text-black"
+                >
+                  <option value="" disabled>মেইন ক্যাটাগরি সিলেক্ট করুন</option>
+                  {allMainCategories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">📂 সাব-ক্যাটাগরি</label>
+                <select 
+                  value={selectedSubCat}
+                  onChange={(e) => setSelectedSubCat(e.target.value)}
+                  required 
+                  className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-xs text-black"
+                >
+                  <option value="" disabled>{selectedMainCat ? "সাব-ক্যাটাগরি সিলেক্ট করুন" : "প্রথমে মেইন ক্যাটাগরি সিলেক্ট করুন"}</option>
+                  {filteredSubCategories.map((sub) => (
+                    <option key={sub.id} value={sub.name.toLowerCase().trim()}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">📏 সাইজ (কমা দিয়ে লিখুন)</label>
               <input 
-                type="tel" 
-                value={sellerPhone} 
-                onChange={(e) => setSellerPhone(e.target.value)}
-                placeholder="018XXXXXXXX" 
-                required
-                className="w-full p-3 border border-[#ddd] rounded-lg text-[15px] outline-none bg-white focus:border-[#e63946] text-black"
+                type="text" 
+                value={sizes}
+                onChange={(e) => setSizes(e.target.value)}
+                placeholder="S, M, L, XL, XXL" 
+                className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 transition text-xs text-black"
               />
             </div>
-          </div>
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full p-3.5 bg-[#e63946] text-white border-none rounded-lg font-bold text-base cursor-pointer transition duration-300 hover:bg-[#d62839]"
-          >
-            {loading ? "পোস্ট হচ্ছে..." : "প্রোডাক্ট সাবমিট করুন"}
-          </button>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">📝 প্রোডাক্ট বিবরণ</label>
+              <textarea 
+                rows="3" 
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="প্রোডাক্টের বিবরণ লিখুন..." 
+                className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 transition text-xs text-black"
+              ></textarea>
+            </div>
 
-        </form>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">🖼️ প্রোডাক্টের ছবি</label>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageChange}
+                required 
+                className="w-full text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 border border-slate-300 rounded-xl bg-slate-50 cursor-pointer"
+              />
+              
+              {imagePreviewUrl && (
+                <div className="mt-3 text-center">
+                  <img src={imagePreviewUrl} alt="Preview" className="h-24 w-24 object-cover rounded-xl border shadow-sm mx-auto" />
+                </div>
+              )}
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 cursor-pointer text-xs"
+            >
+              <span>{loading ? "⏳ আপলোড হচ্ছে..." : "🚀 প্রোডাক্ট সেভ ও পাবলিশ করুন"}</span>
+            </button>
+
+          </form>
+        </div>
+
       </div>
     </div>
   );

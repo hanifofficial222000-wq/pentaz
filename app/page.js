@@ -5,18 +5,13 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 
-const mainCategories = [
-  { id: 'jersey', name: 'জার্সি' },
-  { id: 't-shirt', name: 'টি-শার্ট' },
-  { id: 'shoes', name: 'জুতো' },
-  { id: 'baby', name: 'বেবি কালেকশন' }
-];
-
 export default function AyaatShopHome() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [promoBanners, setPromoBanners] = useState([]);
   const [topThinAds, setTopThinAds] = useState([]);
+  const [circlePopups, setCirclePopups] = useState([]);
+  const [mainCategories, setMainCategories] = useState([]);
   
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubFilter, setActiveSubFilter] = useState('all');
@@ -27,7 +22,7 @@ export default function AyaatShopHome() {
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
 
-  // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট এবং ব্যানার ফেচ করা
+  // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট, ক্যাটেগরি, ব্যানার, টপ অ্যাডস এবং সার্কেল পপ-আপ ফেচ করা
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const prodList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -37,34 +32,54 @@ export default function AyaatShopHome() {
       console.error("Error fetching products: ", error);
     });
 
-    const fetchBanners = async () => {
+    const fetchData = async () => {
       try {
+        // ক্যাটেগরি ফেচ (ফায়ারবেসের 'categories' কালেকশন থেকে)
+        const categorySnap = await getDocs(collection(db, 'categories'));
+        if (!categorySnap.empty) {
+          setMainCategories(categorySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } else {
+          // যদি ফায়ারবেসে না থাকে তবে ডিফল্ট ক্যাটেগরি
+          setMainCategories([
+            { id: 'jersey', name: 'জার্সি' },
+            { id: 't-shirt', name: 'টি-শার্ট' },
+            { id: 'shoes', name: 'জুতো' },
+            { id: 'baby', name: 'বেবি কালেকশন' }
+          ]);
+        }
+
+        // প্রমো ব্যানার ফেচ
         const bannerSnap = await getDocs(collection(db, 'banners'));
         if (!bannerSnap.empty) {
           setPromoBanners(bannerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } else {
           setPromoBanners([{ id: 1, imageUrl: 'https://via.placeholder.com/600x150?text=AYAAT+SHOP+Banner', link: '#' }]);
         }
-      } catch (err) {
-        console.error("Banner fetch error:", err);
-      }
-    };
 
-    const fetchTopAds = async () => {
-      try {
+        // টপ অ্যাডস ফেচ
         const adSnap = await getDocs(collection(db, 'topAds'));
         if (!adSnap.empty) {
           setTopThinAds(adSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } else {
           setTopThinAds([{ id: 1, imageUrl: 'https://via.placeholder.com/600x60?text=Top+Ad', link: '#' }]);
         }
+
+        // সার্কেল পপ-আপ বা সার্কেল ব্যানার ফেচ
+        const popupSnap = await getDocs(collection(db, 'circlePopups'));
+        if (!popupSnap.empty) {
+          setCirclePopups(popupSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } else {
+          const altPopupSnap = await getDocs(collection(db, 'circleAds'));
+          if (!altPopupSnap.empty) {
+            setCirclePopups(altPopupSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          }
+        }
       } catch (err) {
-        console.error("Top Ads fetch error:", err);
+        console.error("Fetch error:", err);
       }
     };
 
-    fetchBanners();
-    fetchTopAds();
+    fetchData();
 
     const storedFavs = JSON.parse(localStorage.getItem('ayaat_favorites')) || [];
     setFavorites(storedFavs);
@@ -72,7 +87,7 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // অটো স্লাইড প্রমো ব্যানার
+  // অটো স্লাইড প্রমো ব্যানার (লুপ সিস্টেম)
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const promoInterval = setInterval(() => {
@@ -81,7 +96,7 @@ export default function AyaatShopHome() {
     return () => clearInterval(promoInterval);
   }, [promoBanners]);
 
-  // অটো স্লাইড টপ থিন অ্যাডস
+  // অটো স্লাইড টপ থিন অ্যাডস (লুপ সিস্টেম)
   useEffect(() => {
     if (topThinAds.length <= 1) return;
     const topAdInterval = setInterval(() => {
@@ -97,13 +112,14 @@ export default function AyaatShopHome() {
     if (activeCategory === 'special-offers') {
       result = result.filter(p => p.isSpecialOffer || p.category?.toLowerCase() === 'special-offers');
     } else if (activeCategory !== 'all') {
-      const currentCatObj = mainCategories.find(c => c.id === activeCategory);
+      const currentCatObj = mainCategories.find(c => c.id === activeCategory || c.name === activeCategory);
       const catName = currentCatObj ? currentCatObj.name : '';
+      const catId = currentCatObj ? currentCatObj.id : activeCategory;
 
       result = result.filter(p => {
         const pMain = (p.mainCategory || '').toLowerCase().trim();
         const pCat = (p.category || '').toLowerCase().trim();
-        const targetId = activeCategory.toLowerCase().trim();
+        const targetId = catId.toLowerCase().trim();
         const targetName = catName.toLowerCase().trim();
 
         return pMain === targetId || pCat === targetId || pMain === targetName || pCat === targetName;
@@ -129,7 +145,7 @@ export default function AyaatShopHome() {
     }
 
     setFilteredProducts(result);
-  }, [activeCategory, activeSubFilter, searchQuery, products]);
+  }, [activeCategory, activeSubFilter, searchQuery, products, mainCategories]);
 
   const toggleFavorite = (e, productId) => {
     e.stopPropagation();
@@ -157,7 +173,7 @@ export default function AyaatShopHome() {
             {topThinAds.map((ad) => (
               <div key={ad.id} className="min-w-full text-center">
                 <a href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="block w-full">
-                  <img src={ad.imageUrl || ad.image} alt="Top Ad" className="w-full max-h-[60px] object-cover mx-auto" />
+                  <img src={ad.imageUrl || ad.image || ad.img} alt="Top Ad" className="w-full max-h-[60px] object-cover mx-auto" />
                 </a>
               </div>
             ))}
@@ -165,7 +181,7 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* CATEGORY BAR */}
+      {/* CATEGORY BAR (FROM FIREBASE) */}
       <header className="sticky top-0 bg-white z-40 border-b border-gray-100 shadow-sm">
         <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
           <button 
@@ -192,6 +208,34 @@ export default function AyaatShopHome() {
         </div>
       </header>
 
+      {/* CIRCLE POPUP / STORY STYLE SECTION */}
+      {circlePopups.length > 0 && (
+        <div className="p-3 max-w-xl mx-auto">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar py-1">
+            {circlePopups.map((popup) => (
+              <a 
+                href={popup.link || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                key={popup.id} 
+                className="flex flex-col items-center flex-shrink-0 no-underline"
+              >
+                <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#ff416c] to-[#ff4b2b] shadow-md flex items-center justify-center">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-white border-2 border-white">
+                    <img src={popup.imageUrl || popup.image || popup.img} alt={popup.title || 'Popup'} className="w-full h-full object-cover" />
+                  </div>
+                </div>
+                {popup.title && (
+                  <span className="text-[10px] font-bold text-gray-700 mt-1 max-w-[60px] truncate text-center">
+                    {popup.title}
+                  </span>
+                )}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* SEARCH BOX */}
       <div className="p-3 max-w-xl mx-auto">
         <input 
@@ -208,18 +252,18 @@ export default function AyaatShopHome() {
         <div className="p-3 max-w-xl mx-auto">
           <div className="relative w-full h-[130px] rounded-xl overflow-hidden shadow-md">
             <div 
-              className="flex h-full transition-transform duration-400 ease-in-out"
+              className="flex h-full transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${currentPromoIndex * 100}%)` }}
             >
               {promoBanners.map((banner) => (
                 <div key={banner.id} className="min-w-full h-full">
-                  <a href={banner.link || '#'} target="_blank" rel="noopener noreferrer">
-                    <img src={banner.imageUrl || banner.image} alt="Promo Banner" className="w-full h-full object-cover" />
+                  <a href={banner.link || '#'} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                    <img src={banner.imageUrl || banner.image || banner.img} alt="Promo Banner" className="w-full h-full object-cover" />
                   </a>
                 </div>
               ))}
             </div>
-            <div className="absolute bottom-2 right-2 flex gap-1 bg-black/30 px-2 py-1 rounded-full">
+            <div className="absolute bottom-2 right-2 flex gap-1 bg-black/30 px-2 py-1 rounded-full z-10">
               {promoBanners.map((_, idx) => (
                 <span 
                   key={idx} 

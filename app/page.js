@@ -10,7 +10,8 @@ export default function AyaatShopHome() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [promoBanners, setPromoBanners] = useState([]);
   const [topThinAds, setTopThinAds] = useState([]);
-  const [circlePopups, setCirclePopups] = useState([]);
+  const [fullPageAds, setFullPageAds] = useState([]);
+  const [smallPopups, setSmallPopups] = useState([]);
   const [mainCategories, setMainCategories] = useState([]);
   
   const [activeCategory, setActiveCategory] = useState('all');
@@ -22,7 +23,11 @@ export default function AyaatShopHome() {
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
 
-  // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট, ক্যাটেগরি, ব্যানার, টপ অ্যাডস এবং সার্কেল পপ-আপ ফেচ করা
+  // ফুল-পেজ পপআপ ক্লোজ স্টেট
+  const [showFullPopupModal, setShowFullPopupModal] = useState(false);
+  const [activePopupAd, setActivePopupAd] = useState(null);
+
+  // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট, ক্যাটেগরি ও অ্যাডস ফেচ করা
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const prodList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -34,12 +39,11 @@ export default function AyaatShopHome() {
 
     const fetchData = async () => {
       try {
-        // ক্যাটেগরি ফেচ (ফায়ারবেসের 'categories' কালেকশন থেকে)
+        // ক্যাটেগরি ফেচ
         const categorySnap = await getDocs(collection(db, 'categories'));
         if (!categorySnap.empty) {
           setMainCategories(categorySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } else {
-          // যদি ফায়ারবেসে না থাকে তবে ডিফল্ট ক্যাটেগরি
           setMainCategories([
             { id: 'jersey', name: 'জার্সি' },
             { id: 't-shirt', name: 'টি-শার্ট' },
@@ -48,32 +52,36 @@ export default function AyaatShopHome() {
           ]);
         }
 
-        // প্রমো ব্যানার ফেচ
+        // প্রমো ব্যানার ফেচ (banners)
         const bannerSnap = await getDocs(collection(db, 'banners'));
         if (!bannerSnap.empty) {
-          setPromoBanners(bannerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else {
-          setPromoBanners([{ id: 1, imageUrl: 'https://via.placeholder.com/600x150?text=AYAAT+SHOP+Banner', link: '#' }]);
+          const bList = bannerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(b => !b.hidden);
+          setPromoBanners(bList);
         }
 
-        // টপ অ্যাডস ফেচ
-        const adSnap = await getDocs(collection(db, 'topAds'));
+        // টপ থিন অ্যাডস ফেচ (topThinAds)
+        const adSnap = await getDocs(collection(db, 'topThinAds'));
         if (!adSnap.empty) {
-          setTopThinAds(adSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else {
-          setTopThinAds([{ id: 1, imageUrl: 'https://via.placeholder.com/600x60?text=Top+Ad', link: '#' }]);
+          const tList = adSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(a => !a.hidden);
+          setTopThinAds(tList);
         }
 
-        // সার্কেল পপ-আপ বা সার্কেল ব্যানার ফেচ
-        const popupSnap = await getDocs(collection(db, 'circlePopups'));
-        if (!popupSnap.empty) {
-          setCirclePopups(popupSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else {
-          const altPopupSnap = await getDocs(collection(db, 'circleAds'));
-          if (!altPopupSnap.empty) {
-            setCirclePopups(altPopupSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        // ফুল-পেজ পপআপ ফেচ (fullPageAds)
+        const fullSnap = await getDocs(collection(db, 'fullPageAds'));
+        if (!fullSnap.empty) {
+          const fList = fullSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(f => !f.hidden && f.isActive);
+          if (fList.length > 0) {
+            setActivePopupAd(fList[0]);
+            setShowFullPopupModal(true);
           }
         }
+
+        // ছোট পপআপ ফেচ (smallPopups)
+        const smallSnap = await getDocs(collection(db, 'smallPopups'));
+        if (!smallSnap.empty) {
+          setSmallPopups(smallSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(s => !s.hidden));
+        }
+
       } catch (err) {
         console.error("Fetch error:", err);
       }
@@ -87,7 +95,7 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // অটো স্লাইড প্রমো ব্যানার (লুপ সিস্টেম)
+  // অটো স্লাইড প্রমো ব্যানার (লুপ সিস্টেম - শেষ হলে আবার প্রথম থেকে শুরু হবে)
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const promoInterval = setInterval(() => {
@@ -105,7 +113,7 @@ export default function AyaatShopHome() {
     return () => clearInterval(topAdInterval);
   }, [topThinAds]);
 
-  // উন্নত ক্যাটেগরি এবং সার্চ ফিল্টার লজিক
+  // ফিল্টার লজিক
   useEffect(() => {
     let result = products.filter(p => p.approved !== false);
 
@@ -163,9 +171,34 @@ export default function AyaatShopHome() {
   return (
     <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800">
       
+      {/* FULL PAGE POPUP MODAL */}
+      {showFullPopupModal && activePopupAd && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn">
+            <button 
+              onClick={() => setShowFullPopupModal(false)}
+              className="absolute top-3 right-3 bg-black/60 hover:bg-black text-white w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 cursor-pointer"
+            >
+              ✕
+            </button>
+            <a href={activePopupAd.link || '#'} target="_blank" rel="noopener noreferrer" className="block">
+              <img src={activePopupAd.imageUrl} alt="Popup Ad" className="w-full h-auto max-h-[400px] object-cover" />
+            </a>
+            <div className="p-3 text-center bg-gray-50">
+              <button 
+                onClick={() => setShowFullPopupModal(false)}
+                className="bg-[#e63946] text-white px-6 py-2 rounded-xl text-xs font-bold w-full cursor-pointer"
+              >
+                পাস করুন / বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TOP THIN AD SLIDER */}
       {topThinAds.length > 0 && (
-        <div className="w-full bg-black overflow-hidden relative z-50">
+        <div className="w-full bg-black overflow-hidden relative z-40">
           <div 
             className="flex transition-transform duration-500 ease-in-out" 
             style={{ transform: `translateX(-${currentTopAdIndex * 100}%)` }}
@@ -173,7 +206,7 @@ export default function AyaatShopHome() {
             {topThinAds.map((ad) => (
               <div key={ad.id} className="min-w-full text-center">
                 <a href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="block w-full">
-                  <img src={ad.imageUrl || ad.image || ad.img} alt="Top Ad" className="w-full max-h-[60px] object-cover mx-auto" />
+                  <img src={ad.imageUrl} alt="Top Ad" className="w-full max-h-[60px] object-cover mx-auto" />
                 </a>
               </div>
             ))}
@@ -181,18 +214,18 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* CATEGORY BAR (FROM FIREBASE) */}
-      <header className="sticky top-0 bg-white z-40 border-b border-gray-100 shadow-sm">
+      {/* CATEGORY BAR */}
+      <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
           <button 
             onClick={() => setActiveCategory('all')} 
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeCategory === 'all' ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'all' ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
           >
             সব
           </button>
           <button 
             onClick={() => setActiveCategory('special-offers')} 
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeCategory === 'special-offers' ? 'bg-[#e63946] text-white' : 'bg-pink-100 text-[#e63946]'}`}
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'special-offers' ? 'bg-[#e63946] text-white' : 'bg-pink-100 text-[#e63946]'}`}
           >
             🔥 স্পেশাল অফার
           </button>
@@ -200,7 +233,7 @@ export default function AyaatShopHome() {
             <button 
               key={cat.id} 
               onClick={() => setActiveCategory(cat.id)} 
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeCategory === cat.id ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === cat.id ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               {cat.name}
             </button>
@@ -208,11 +241,11 @@ export default function AyaatShopHome() {
         </div>
       </header>
 
-      {/* CIRCLE POPUP / STORY STYLE SECTION */}
-      {circlePopups.length > 0 && (
+      {/* SMALL POPUPS / STORY STYLE SECTION */}
+      {smallPopups.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">
           <div className="flex gap-3 overflow-x-auto no-scrollbar py-1">
-            {circlePopups.map((popup) => (
+            {smallPopups.map((popup) => (
               <a 
                 href={popup.link || '#'} 
                 target="_blank" 
@@ -222,14 +255,9 @@ export default function AyaatShopHome() {
               >
                 <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#ff416c] to-[#ff4b2b] shadow-md flex items-center justify-center">
                   <div className="w-full h-full rounded-full overflow-hidden bg-white border-2 border-white">
-                    <img src={popup.imageUrl || popup.image || popup.img} alt={popup.title || 'Popup'} className="w-full h-full object-cover" />
+                    <img src={popup.imageUrl} alt="Popup" className="w-full h-full object-cover" />
                   </div>
                 </div>
-                {popup.title && (
-                  <span className="text-[10px] font-bold text-gray-700 mt-1 max-w-[60px] truncate text-center">
-                    {popup.title}
-                  </span>
-                )}
               </a>
             ))}
           </div>
@@ -258,7 +286,7 @@ export default function AyaatShopHome() {
               {promoBanners.map((banner) => (
                 <div key={banner.id} className="min-w-full h-full">
                   <a href={banner.link || '#'} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                    <img src={banner.imageUrl || banner.image || banner.img} alt="Promo Banner" className="w-full h-full object-cover" />
+                    <img src={banner.imageUrl} alt="Promo Banner" className="w-full h-full object-cover" />
                   </a>
                 </div>
               ))}
@@ -288,7 +316,7 @@ export default function AyaatShopHome() {
             <button 
               key={chip.id}
               onClick={() => setActiveSubFilter(chip.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${activeSubFilter === chip.id ? 'bg-[#e63946] text-white border-[#e63946]' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${activeSubFilter === chip.id ? 'bg-[#e63946] text-white border-[#e63946]' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
             >
               {chip.label}
             </button>
@@ -324,7 +352,7 @@ export default function AyaatShopHome() {
                         e.stopPropagation();
                         toggleFavorite(e, item.id);
                       }}
-                      className={`absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-xs shadow z-10 transition-transform hover:scale-110 ${isFav ? 'text-[#e63946]' : 'text-gray-400'}`}
+                      className={`absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-xs shadow z-10 transition-transform hover:scale-110 cursor-pointer ${isFav ? 'text-[#e63946]' : 'text-gray-400'}`}
                     >
                       {isFav ? '❤️' : '🤍'}
                     </button>

@@ -1,10 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// ১. মূল পেজ কম্পোনেন্ট যা Suspense বাউন্ডারি দিয়ে র‍্যাপ করা
 export default function UserDashboardPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-20 text-xs text-slate-400">লোডিং হচ্ছে...</div>}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+// ২. মূল লজিক এবং ইউজার ইন্টারফেস সমৃদ্ধ সাব-কম্পোনেন্ট
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -103,7 +112,7 @@ export default function UserDashboardPage() {
     setIsSubmitting(false);
   };
 
-  // Subpage Navigation Helper
+  // Subpage Navigation Helper (Fixed .html extension issue)
   const openSubPage = (pageName) => {
     const route = pageName.replace('.html', '');
     router.push(`/${route}`);
@@ -294,20 +303,6 @@ export default function UserDashboardPage() {
         )}
 
       </div>
-
-      {/* WhatsApp Floating Icon */}
-      <a href="https://wa.me/8801835302525" className="fixed bottom-5 right-5 bg-[#25D366] text-white w-[45px] h-[45px] rounded-full flex items-center justify-center text-[22px] no-underline shadow-[0_4px_10px_rgba(0,0,0,0.3)] z-[1000]" target="_blank" rel="noreferrer">
-        💬
-      </a>
-
-      {/* Footer */}
-      <footer className="bg-[#2b2b2b] text-[#e5e5e5] p-[25px_15px] mt-[40px] text-center rounded-t-[12px] max-w-[500px] mx-auto">
-        <h3 className="text-[#ff4d4d] mb-3 text-[18px] font-bold">AYAAT SPORT SHOP</h3>
-        <p className="text-[13px] leading-[1.9] my-1.5 text-[#cccccc]"><b>প্রতিষ্ঠাতা:</b> Md Hanif Cox</p>
-        <p className="text-[13px] leading-[1.9] my-1.5 text-[#cccccc]"><b>ঠিকানা:</b> মাইজপাড়া, কালারমারছড়া, মহেশখালী | বাংলাদেশ</p>
-        <p className="text-[13px] leading-[1.9] my-1.5 text-[#cccccc]"><b>ফোন:</b> +8801835302525</p>
-        <p className="mt-[15px] text-[12px] text-[#aaa]">© ২০২৬ AYAAT SPORT SHOP. সর্বস্বত্ব সংরক্ষিত।</p>
-      </footer>
     </div>
   );
 }

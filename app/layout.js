@@ -7,16 +7,16 @@ import "./globals.css";
 // গ্লোবাল ট্রান্সলেশন অবজেক্ট
 const globalTranslations = {
   bn: {
-    shopName: "AYAAT SPORT SHOP"
+    shopName: "AYAAT SHOP LTD"
   },
   en: {
-    shopName: "AYAAT SPORT SHOP"
+    shopName: "AYAAT SHOP LTD"
   },
   ar: {
-    shopName: "متجر آيات الرياضي"
+    shopName: "متجر آيات المحدودة"
   },
   ur: {
-    shopName: "آیات سپورٹس شاپ"
+    shopName: "آیات شاپ لمیٹڈ"
   }
 };
 
@@ -89,7 +89,7 @@ export default function RootLayout({ children }) {
             💬
           </a>
 
-          {/* গ্লোবাল বটম নেভবার (শুধুমাত্র আইকন) */}
+          {/* গ্লোবাল বটম নেভবার (কার্ট বাটন সহ) */}
           <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center py-3 z-40 shadow-lg">
             <Link href="/" className="flex items-center justify-center text-xl text-gray-600 hover:text-[#e63946] no-underline transition-transform hover:scale-110">
               🏠

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
@@ -27,6 +27,57 @@ export default function AyaatShopHome() {
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
+  // ড্রেজেবল স্মল পপআপ স্টেট (WhatsApp এর উপরে)
+  const [popupPosition, setPopupPosition] = useState({ x: 20, y: 100 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
+
+  // ড্র্যাগ হ্যান্ডলার (মাউস এবং টাচ)
+  const handleTouchStart = (e) => {
+    setIsDragging(true);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initialX: popupPosition.x,
+      initialY: popupPosition.y
+    };
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    const dx = dragRef.current.startX - clientX;
+    const dy = dragRef.current.startY - clientY;
+
+    setPopupPosition({
+      x: dragRef.current.initialX + dx,
+      y: dragRef.current.initialY + dy
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleTouchMove);
+      window.addEventListener('mouseup', handleTouchEnd);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleTouchEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleTouchMove);
+      window.removeEventListener('mouseup', handleTouchEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isDragging]);
+
   // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট, ক্যাটেগরি ও অ্যাডস ফেচ করা
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
@@ -39,7 +90,6 @@ export default function AyaatShopHome() {
 
     const fetchData = async () => {
       try {
-        // ক্যাটেগরি ফেচ
         const categorySnap = await getDocs(collection(db, 'categories'));
         if (!categorySnap.empty) {
           setMainCategories(categorySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -52,21 +102,18 @@ export default function AyaatShopHome() {
           ]);
         }
 
-        // প্রমো ব্যানার ফেচ (banners)
         const bannerSnap = await getDocs(collection(db, 'banners'));
         if (!bannerSnap.empty) {
           const bList = bannerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(b => !b.hidden);
           setPromoBanners(bList);
         }
 
-        // টপ থিন অ্যাডস ফেচ (topThinAds)
         const adSnap = await getDocs(collection(db, 'topThinAds'));
         if (!adSnap.empty) {
           const tList = adSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(a => !a.hidden);
           setTopThinAds(tList);
         }
 
-        // ফুল-পেজ পপআপ ফেচ (fullPageAds)
         const fullSnap = await getDocs(collection(db, 'fullPageAds'));
         if (!fullSnap.empty) {
           const fList = fullSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(f => !f.hidden && f.isActive);
@@ -76,7 +123,6 @@ export default function AyaatShopHome() {
           }
         }
 
-        // ছোট পপআপ ফেচ (smallPopups)
         const smallSnap = await getDocs(collection(db, 'smallPopups'));
         if (!smallSnap.empty) {
           setSmallPopups(smallSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(s => !s.hidden));
@@ -104,7 +150,7 @@ export default function AyaatShopHome() {
     return () => clearInterval(promoInterval);
   }, [promoBanners]);
 
-  // অটো স্লাইড টপ থিন অ্যাডস (লুপ সিস্টেম)
+  // অটো স্লাইড টপ থিন অ্যাডস (লুপ সিস্টেম - শেষ হলে প্রথম থেকে শুরু হবে)
   useEffect(() => {
     if (topThinAds.length <= 1) return;
     const topAdInterval = setInterval(() => {
@@ -169,7 +215,7 @@ export default function AyaatShopHome() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800">
+    <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800 relative">
       
       {/* FULL PAGE POPUP MODAL */}
       {showFullPopupModal && activePopupAd && (
@@ -193,6 +239,41 @@ export default function AyaatShopHome() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* FLOATING & DRAGGABLE SMALL POPUPS (WhatsApp এর ঠিক ওপরে) */}
+      {smallPopups.length > 0 && (
+        <div 
+          style={{ right: `${popupPosition.x}px`, bottom: `${popupPosition.y}px` }}
+          className="fixed z-45 flex flex-col items-end gap-2 cursor-grab active:cursor-grabbing"
+          onMouseDown={handleTouchStart}
+          onTouchStart={handleTouchStart}
+        >
+          {smallPopups.map((popup) => (
+            <div key={popup.id} className="relative group">
+              {/* ক্রস বাটন */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSmallPopups(prev => prev.filter(item => item.id !== popup.id));
+                }}
+                className="absolute -top-1 -left-1 bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md z-20 cursor-pointer hover:scale-110 transition-transform"
+              >
+                ✕
+              </button>
+              <a 
+                href={popup.link || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="block w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#ff416c] to-[#ff4b2b] shadow-lg flex items-center justify-center no-underline"
+              >
+                <div className="w-full h-full rounded-full overflow-hidden bg-white border-2 border-white">
+                  <img src={popup.imageUrl} alt="Popup" className="w-full h-full object-cover pointer-events-none" />
+                </div>
+              </a>
+            </div>
+          ))}
         </div>
       )}
 
@@ -240,29 +321,6 @@ export default function AyaatShopHome() {
           ))}
         </div>
       </header>
-
-      {/* SMALL POPUPS / STORY STYLE SECTION */}
-      {smallPopups.length > 0 && (
-        <div className="p-3 max-w-xl mx-auto">
-          <div className="flex gap-3 overflow-x-auto no-scrollbar py-1">
-            {smallPopups.map((popup) => (
-              <a 
-                href={popup.link || '#'} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                key={popup.id} 
-                className="flex flex-col items-center flex-shrink-0 no-underline"
-              >
-                <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#ff416c] to-[#ff4b2b] shadow-md flex items-center justify-center">
-                  <div className="w-full h-full rounded-full overflow-hidden bg-white border-2 border-white">
-                    <img src={popup.imageUrl} alt="Popup" className="w-full h-full object-cover" />
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* SEARCH BOX */}
       <div className="p-3 max-w-xl mx-auto">

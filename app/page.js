@@ -12,7 +12,9 @@ export default function AyaatShopHome() {
   const [topThinAds, setTopThinAds] = useState([]);
   const [fullPageAds, setFullPageAds] = useState([]);
   const [smallPopups, setSmallPopups] = useState([]);
+  
   const [mainCategories, setMainCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubCategory, setActiveSubCategory] = useState('all');
@@ -98,7 +100,7 @@ export default function AyaatShopHome() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // ফায়ারবেস থেকে ডাটা ফেচ করা
+  // ফায়ারবেস থেকে প্রোডাক্ট, ক্যাটাগরি ও অ্যাডস ফেচ করা
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const prodList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -110,30 +112,33 @@ export default function AyaatShopHome() {
 
     const fetchData = async () => {
       try {
-        const categorySnap = await getDocs(collection(db, 'categories'));
-        if (!categorySnap.empty) {
-          setMainCategories(categorySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } else {
-          setMainCategories([
-            { id: 'jersey', name: 'জার্সি' },
-            { id: 't-shirt', name: 'টি-শার্ট' },
-            { id: 'shoes', name: 'জুতো' },
-            { id: 'baby', name: 'বেবি কালেকশন' }
-          ]);
+        // ১. মেইন ক্যাটেগরি ফেচ
+        const mainCatSnap = await getDocs(collection(db, 'mainCategories'));
+        if (!mainCatSnap.empty) {
+          setMainCategories(mainCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         }
 
+        // ২. সাব-ক্যাটেগরি ফেচ
+        const subCatSnap = await getDocs(collection(db, 'subCategories'));
+        if (!subCatSnap.empty) {
+          setSubCategories(subCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
+
+        // ৩. ব্যানার ফেচ
         const bannerSnap = await getDocs(collection(db, 'banners'));
         if (!bannerSnap.empty) {
           const bList = bannerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(b => !b.hidden);
           setPromoBanners(bList);
         }
 
+        // ৪. টপ থিন অ্যাডস ফেচ
         const adSnap = await getDocs(collection(db, 'topThinAds'));
         if (!adSnap.empty) {
           const tList = adSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(a => !a.hidden);
           setTopThinAds(tList);
         }
 
+        // ৫. ফুল পেজ অ্যাডস ফেচ
         const fullSnap = await getDocs(collection(db, 'fullPageAds'));
         if (!fullSnap.empty) {
           const fList = fullSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(f => !f.hidden && f.isActive);
@@ -143,6 +148,7 @@ export default function AyaatShopHome() {
           }
         }
 
+        // ৬. স্মল পপআপ ফেচ
         const smallSnap = await getDocs(collection(db, 'smallPopups'));
         if (!smallSnap.empty) {
           setSmallPopups(smallSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(s => !s.hidden));
@@ -161,7 +167,7 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // প্রমো ব্যানার ইনফিনিট লুপ অটো-স্লাইড
+  // প্রমো ব্যানার অটো-স্লাইড
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const promoInterval = setInterval(() => {
@@ -170,7 +176,7 @@ export default function AyaatShopHome() {
     return () => clearInterval(promoInterval);
   }, [promoBanners]);
 
-  // টপ থিন অ্যাডস ইনফিনিট লুপ অটো-স্লাইড
+  // টপ থিন অ্যাডস অটো-স্লাইড
   useEffect(() => {
     if (topThinAds.length <= 1) return;
     const topAdInterval = setInterval(() => {
@@ -179,36 +185,31 @@ export default function AyaatShopHome() {
     return () => clearInterval(topAdInterval);
   }, [topThinAds]);
 
-  // মেইন ক্যাটেগরি পরিবর্তনের হ্যান্ডলার (সাব-ক্যাটেগরি 'all' এ রিসেট হবে)
-  const handleMainCategoryClick = (catId) => {
-    setActiveCategory(catId);
+  // মেইন ক্যাটেগরি সিলেক্ট হ্যান্ডলার (সাব ক্যাটেগরি রিসেট হবে)
+  const handleMainCategoryClick = (catName) => {
+    setActiveCategory(catName);
     setActiveSubCategory('all');
   };
 
-  // বর্তমান সিলেক্ট করা ক্যাটেগরির অবজেক্ট খুঁজে বের করা
-  const currentCategoryObj = mainCategories.find(c => c.id === activeCategory || c.name === activeCategory);
+  // বর্তমান সিলেক্ট করা মেইন ক্যাটেগরির আন্ডারে থাকা সাব-ক্যাটেগরিগুলো ফিল্টার করা
+  const currentSubCategoriesList = subCategories.filter(
+    sub => sub.mainCat?.toLowerCase().trim() === activeCategory.toLowerCase().trim()
+  );
 
-  // ফিল্টার লজিক
+  // প্রোডাক্ট ফিল্টারিং লজিক
   useEffect(() => {
     let result = products.filter(p => p.approved !== false);
 
     if (activeCategory === 'special-offers') {
       result = result.filter(p => p.isSpecialOffer || p.category?.toLowerCase() === 'special-offers');
     } else if (activeCategory !== 'all') {
-      const catName = currentCategoryObj ? currentCategoryObj.name : '';
-      const catId = currentCategoryObj ? currentCategoryObj.id : activeCategory;
-
-      // মেইন ক্যাটেগরি ফিল্টার
+      // মেইন ক্যাটেগরি অনুযায়ী ফিল্টার
       result = result.filter(p => {
-        const pMain = (p.mainCategory || '').toLowerCase().trim();
-        const pCat = (p.category || '').toLowerCase().trim();
-        const targetId = catId.toLowerCase().trim();
-        const targetName = catName.toLowerCase().trim();
-
-        return pMain === targetId || pCat === targetId || pMain === targetName || pCat === targetName;
+        const pMain = (p.mainCategory || p.category || '').toLowerCase().trim();
+        return pMain === activeCategory.toLowerCase().trim();
       });
 
-      // সাব-ক্যাটেগরি ফিল্টার (যদি 'all' না থাকে)
+      // সাব-ক্যাটেগরি অনুযায়ী ফিল্টার (যদি নির্দিষ্ট সাব-ক্যাটেগরি সিলেক্ট করা থাকে)
       if (activeSubCategory !== 'all') {
         result = result.filter(p => {
           const pSub = (p.subCategory || p.subcat || '').toLowerCase().trim();
@@ -236,7 +237,7 @@ export default function AyaatShopHome() {
     }
 
     setFilteredProducts(result);
-  }, [activeCategory, activeSubCategory, activeSubFilter, searchQuery, products, mainCategories]);
+  }, [activeCategory, activeSubCategory, activeSubFilter, searchQuery, products]);
 
   const toggleFavorite = (e, productId) => {
     e.stopPropagation();
@@ -337,43 +338,43 @@ export default function AyaatShopHome() {
         <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
           <button 
             onClick={() => handleMainCategoryClick('all')} 
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'all' ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'all' ? 'bg-[#e63946] text-white shadow-md' : 'bg-gray-100 text-gray-700'}`}
           >
             সব
           </button>
           <button 
             onClick={() => handleMainCategoryClick('special-offers')} 
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'special-offers' ? 'bg-[#e63946] text-white' : 'bg-pink-100 text-[#e63946]'}`}
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'special-offers' ? 'bg-[#e63946] text-white shadow-md' : 'bg-pink-100 text-[#e63946]'}`}
           >
             🔥 স্পেশাল অফার
           </button>
           {mainCategories.map((cat) => (
             <button 
               key={cat.id} 
-              onClick={() => handleMainCategoryClick(cat.id)} 
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === cat.id ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
+              onClick={() => handleMainCategoryClick(cat.name)} 
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === cat.name ? 'bg-[#e63946] text-white shadow-md' : 'bg-gray-100 text-gray-700'}`}
             >
               {cat.name}
             </button>
           ))}
         </div>
 
-        {/* সাব-ক্যাটেগরি বার (যদি নির্দিষ্ট মেইন ক্যাটেগরির আন্ডারে সাব-ক্যাটেগরি থাকে) */}
-        {currentCategoryObj && currentCategoryObj.subCategories && currentCategoryObj.subCategories.length > 0 && (
+        {/* সাব-ক্যাটেগরি বার (যদি বর্তমান মেইন ক্যাটেগরির কোনো সাব-ক্যাটেগরি থাকে) */}
+        {currentSubCategoriesList.length > 0 && (
           <div className="bg-gray-50 border-t border-gray-100 px-3 py-2 flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
             <button
               onClick={() => setActiveSubCategory('all')}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
             >
-              সব ({currentCategoryObj.name})
+              সব ({activeCategory})
             </button>
-            {currentCategoryObj.subCategories.map((sub, index) => (
+            {currentSubCategoriesList.map((sub) => (
               <button
-                key={index}
-                onClick={() => setActiveSubCategory(sub)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === sub ? 'bg-[#e63946] text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+                key={sub.id}
+                onClick={() => setActiveSubCategory(sub.name)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === sub.name ? 'bg-[#e63946] text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
               >
-                {sub}
+                {sub.name}
               </button>
             ))}
           </div>

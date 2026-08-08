@@ -89,25 +89,25 @@ export default function RootLayout({ children }) {
             💬
           </a>
 
-          {/* গ্লোবাল বটম নেভবার (সব পেজে শো করবে) */}
-          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center py-2.5 z-40 shadow-lg">
-            <Link href="/" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946] no-underline">
-              🏠 Home
+          {/* গ্লোবাল বটম নেভবার (শুধুমাত্র আইকন) */}
+          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center py-3 z-40 shadow-lg">
+            <Link href="/" className="flex items-center justify-center text-xl text-gray-600 hover:text-[#e63946] no-underline transition-transform hover:scale-110">
+              🏠
             </Link>
-            <Link href="/category" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946] no-underline">
-              📂 Categories
+            <Link href="/category" className="flex items-center justify-center text-xl text-gray-600 hover:text-[#e63946] no-underline transition-transform hover:scale-110">
+              📂
             </Link>
-            <Link href="/my-gifts" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946] no-underline">
-              🎁 Gift
+            <Link href="/my-gifts" className="flex items-center justify-center text-xl text-gray-600 hover:text-[#e63946] no-underline transition-transform hover:scale-110">
+              🎁
             </Link>
-            <Link href="/favorites" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946] no-underline">
-              ❤️ Favorites
+            <Link href="/favorites" className="flex items-center justify-center text-xl text-gray-600 hover:text-[#e63946] no-underline transition-transform hover:scale-110">
+              ❤️
             </Link>
-            <Link href="/cart" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946] no-underline">
-              🛒 Cart
+            <Link href="/cart" className="flex items-center justify-center text-xl text-gray-600 hover:text-[#e63946] no-underline transition-transform hover:scale-110">
+              🛒
             </Link>
-            <Link href="/register" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946] no-underline">
-              👤 Account
+            <Link href="/register" className="flex items-center justify-center text-xl text-gray-600 hover:text-[#e63946] no-underline transition-transform hover:scale-110">
+              👤
             </Link>
           </nav>
 

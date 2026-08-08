@@ -118,7 +118,7 @@ export default function AdminControlRoom() {
         </div>
         
         <div className="flex items-center gap-3 shrink-0">
-          <Link href="/" className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 px-4 rounded-xl border border-white/20 backdrop-blur-md transition duration-200 flex items-center gap-2 shadow-lg">
+          <Link href="/" className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 px-4 rounded-xl border border-white/20 backdrop-blur-md transition duration-200 flex items-center gap-2 shadow-lg no-underline">
             <span>🌐 মূল সাইট ভিজিট</span>
           </Link>
           <button 
@@ -134,7 +134,7 @@ export default function AdminControlRoom() {
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
 
         {/* 1. Product Customize */}
-        <Link href="/admin/product-costumize" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-red-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/product-costumize" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-red-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">⚙️</div>
             <h3 className="text-lg font-bold text-white group-hover:text-red-400 transition">Product Customize</h3>
@@ -145,7 +145,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 2. Product Approval */}
-        <Link href="/admin/product-approval" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-amber-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/product-approval" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-amber-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">⏳</div>
             <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition">Product Approval</h3>
@@ -156,7 +156,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 3. Banner Management */}
-        <Link href="/admin/banner" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-purple-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/banner" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-purple-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🖼️</div>
             <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition">Banner Management</h3>
@@ -167,7 +167,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 4. Customer Support */}
-        <Link href="/admin/costumer-spurt" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-indigo-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/costumer-spurt" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-indigo-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">💬</div>
             <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition">Customer Support</h3>
@@ -178,7 +178,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 5. Orders Management */}
-        <Link href="/admin/order" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-blue-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/order" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-blue-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">📦</div>
             <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition">Orders Management</h3>
@@ -189,7 +189,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 6. Product Offers */}
-        <Link href="/admin/product-offer" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-emerald-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/product-offer" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-emerald-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🏷️</div>
             <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition">Product Offers</h3>
@@ -199,8 +199,8 @@ export default function AdminControlRoom() {
           </div>
         </Link>
 
-        {/* 7. Category Room (Linked to categoryroom.js / category-room page) */}
-        <Link href="/admin/categoryroom" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-pink-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        {/* 7. Category Room */}
+        <Link href="/admin/categoryroom" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-pink-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">📁</div>
             <h3 className="text-lg font-bold text-white group-hover:text-pink-400 transition">Category Room</h3>
@@ -211,7 +211,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 8. Admin Users */}
-        <Link href="/admin/admin-users" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-yellow-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/admin-users" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-yellow-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-yellow-500/10 text-yellow-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🛡️</div>
             <h3 className="text-lg font-bold text-white group-hover:text-yellow-400 transition">Admin Users</h3>
@@ -222,7 +222,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 9. Gift & Award Management */}
-        <Link href="/admin/my-gift" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-orange-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/my-gift" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-orange-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🎁</div>
             <h3 className="text-lg font-bold text-white group-hover:text-orange-400 transition">Gift & Award Management</h3>
@@ -233,7 +233,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 10. Special Offer Management */}
-        <Link href="/admin/special-offer-manage" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-rose-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/special-offer-manage" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-rose-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🔥</div>
             <h3 className="text-lg font-bold text-white group-hover:text-rose-400 transition">Special Offer Management</h3>
@@ -244,7 +244,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 11. Return Approval */}
-        <Link href="/admin/return-approval" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-amber-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/return-approval" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-amber-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🔄</div>
             <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition">Return Approval</h3>
@@ -255,7 +255,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 12. Coupon Management */}
-        <Link href="/admin/manage-coupon" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-teal-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/manage-coupon" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-teal-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🎟️</div>
             <h3 className="text-lg font-bold text-white group-hover:text-teal-400 transition">Coupon Management</h3>
@@ -266,7 +266,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 13. Question & Answer */}
-        <Link href="/admin/question-anser" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer">
+        <Link href="/admin/question-anser" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">❓</div>
             <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition">Question & Answer</h3>

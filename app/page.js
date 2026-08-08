@@ -23,6 +23,10 @@ export default function AyaatShopHome() {
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
 
+  // স্ক্রল করে নেভবার লুকানোর ও দেখানোর স্টেট
+  const [showNavbar, setShowNavbar] = useState(true);
+  const lastScrollY = useRef(0);
+
   // ফুল-পেজ পপআপ ক্লোজ স্টেট
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
@@ -76,6 +80,22 @@ export default function AyaatShopHome() {
       window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isDragging]);
+
+  // পেজ স্ক্রল ডিটেকশন (ওপরে তুললে হাইড, নিচে নামালে বা ওপরে স্ক্রল করলে শো)
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+        setShowNavbar(false);
+      } else {
+        setShowNavbar(true);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট, ক্যাটেগরি ও অ্যাডস ফেচ করা
   useEffect(() => {
@@ -293,8 +313,8 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* CATEGORY BAR */}
-      <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
+      {/* CATEGORY BAR (SCROLL HIDE & SHOW APPLIED) */}
+      <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
           <button 
             onClick={() => setActiveCategory('all')} 

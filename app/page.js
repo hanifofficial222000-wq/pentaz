@@ -160,7 +160,7 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // প্রমো ব্যানার ইনফিনিট লুপ অটো-স্লাইড (শেষ থেকে সরাসরি প্রথমটিতে ফিরে আসবে)
+  // প্রমো ব্যানার ইনফিনিট লুপ অটো-স্লাইড (শেষ থেকে সরাসরি প্রথমটিতে ফিরে আসার জন্য রিং কাউন্টার লজিক)
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const promoInterval = setInterval(() => {
@@ -169,7 +169,7 @@ export default function AyaatShopHome() {
     return () => clearInterval(promoInterval);
   }, [promoBanners]);
 
-  // টপ থিন অ্যাডস ইনফিনিট লুপ অটো-স্লাইড (শেষ থেকে সরাসরি প্রথমটিতে ফিরে আসবে)
+  // টপ থিন অ্যাডস ইনফিনিট লুপ অটো-স্লাইড
   useEffect(() => {
     if (topThinAds.length <= 1) return;
     const topAdInterval = setInterval(() => {
@@ -295,7 +295,7 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* TOP THIN AD SLIDER (INFINITE LOOP FIXED) */}
+      {/* TOP THIN AD SLIDER */}
       {topThinAds.length > 0 && (
         <div className="w-full bg-black overflow-hidden relative z-40">
           <div 
@@ -351,7 +351,7 @@ export default function AyaatShopHome() {
         />
       </div>
 
-      {/* PROMO BANNER SECTION (INFINITE LOOP FIXED) */}
+      {/* PROMO BANNER SECTION (SEAMLESS INFINITE LOOP) */}
       {promoBanners.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">
           <div className="relative w-full h-[130px] rounded-xl overflow-hidden shadow-md">
@@ -360,7 +360,7 @@ export default function AyaatShopHome() {
               style={{ transform: `translateX(-${currentPromoIndex * 100}%)` }}
             >
               {promoBanners.map((banner) => (
-                <div key={banner.id} className="min-w-full h-full">
+                <div key={banner.id} className="min-w-full h-full flex-shrink-0">
                   <a href={banner.link || '#'} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
                     <img src={banner.imageUrl} alt="Promo Banner" className="w-full h-full object-cover" />
                   </a>

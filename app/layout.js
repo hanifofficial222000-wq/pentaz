@@ -7,32 +7,16 @@ import "./globals.css";
 // গ্লোবাল ট্রান্সলেশন অবজেক্ট
 const globalTranslations = {
   bn: {
-    shopName: "AYAAT SPORT SHOP",
-    founder: "প্রতিষ্ঠাতা: Md Hanif Cox",
-    address: "ঠিকানা: মাইজপাড়া, কালারমারছড়া, মহেশখালী",
-    phone: "ফোন: +8801835302525",
-    rights: "© ২০২৬ AYAAT SPORT SHOP. সর্বস্বত্ব সংরক্ষিত।"
+    shopName: "AYAAT SPORT SHOP"
   },
   en: {
-    shopName: "AYAAT SPORT SHOP",
-    founder: "Founder: Md Hanif Cox",
-    address: "Address: Maizpara, Kalamarkhara, Maheshkhali",
-    phone: "Phone: +8801835302525",
-    rights: "© 2026 AYAAT SPORT SHOP. All rights reserved."
+    shopName: "AYAAT SPORT SHOP"
   },
   ar: {
-    shopName: "متجر آيات الرياضي",
-    founder: "المؤسس: محمد حنيف كوكس",
-    address: "العنوان: مايزبارا، كالاماركهارا، ماهيشخالي",
-    phone: "الهاتف: +8801835302525",
-    rights: "© 2026 متجر آيات الرياضي. جميع الحقوق محفوظة."
+    shopName: "متجر آيات الرياضي"
   },
   ur: {
-    shopName: "آیات سپورٹس شاپ",
-    founder: "بانی: محمد حنیف کاکس",
-    address: "پتہ: میزپارہ، کلارمارچھڑا، مہیشখালী",
-    phone: "فون: +8801835302525",
-    rights: "© 2026 آیات سپورٹس شاپ۔ جملہ حقوق محفوظ ہیں۔"
+    shopName: "آیات سپورٹس شاپ"
   }
 };
 
@@ -68,12 +52,12 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang={currentLang} dir={direction}>
-      <body className="bg-gray-100 flex justify-center font-sans">
-        <div className="w-full max-w-md min-h-screen bg-white shadow-2xl overflow-hidden flex flex-col justify-between">
+      <body className="bg-gray-100 flex justify-center font-sans pb-20">
+        <div className="w-full max-w-md min-h-screen bg-white shadow-2xl overflow-hidden flex flex-col justify-between relative">
           
-          <div>
+          <div className="flex-grow">
             {/* টপ ল্যাঙ্গুয়েজ বার */}
-            <div className="bg-white border-b border-gray-200 py-2 px-4 flex items-center justify-between sticky top-0 z-50">
+            <div className="bg-white border-b border-gray-200 py-2 px-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
               <Link href="/" className="font-extrabold text-[#e63946] text-xs no-underline">
                 {t.shopName}
               </Link>
@@ -90,30 +74,42 @@ export default function RootLayout({ children }) {
             </div>
 
             {/* মূল পেজের কনটেন্ট */}
-            <main>
+            <main className="pb-16">
               {children}
             </main>
           </div>
 
-          {/* ফুটার এবং হোয়াটসঅ্যাপ বাটন */}
-          <div>
-            <a 
-              href="https://wa.me/8801835302525" 
-              className="fixed bottom-5 right-5 bg-[#25D366] text-white w-10 h-10 rounded-full flex items-center justify-center text-lg no-underline shadow-lg z-50 hover:scale-105 transition" 
-              target="_blank" 
-              rel="noreferrer"
-            >
-              💬
-            </a>
+          {/* হোয়াটসঅ্যাপ ফ্লোটিং বাটন */}
+          <a 
+            href="https://wa.me/8801835302525" 
+            className="fixed bottom-16 right-5 bg-[#25D366] text-white w-11 h-11 rounded-full flex items-center justify-center text-xl no-underline shadow-lg z-50 hover:scale-105 transition" 
+            target="_blank" 
+            rel="noreferrer"
+          >
+            💬
+          </a>
 
-            <footer className="bg-[#2b2b2b] text-[#e5e5e5] p-5 text-center rounded-t-xl mt-8">
-              <h3 className="text-[#ff4d4d] mb-2 text-sm font-bold">{t.shopName}</h3>
-              <p className="text-[11px] leading-relaxed my-0.5 text-[#cccccc]"><b>{t.founder}</b></p>
-              <p className="text-[11px] leading-relaxed my-0.5 text-[#cccccc]"><b>{t.address}</b></p>
-              <p className="text-[11px] leading-relaxed my-0.5 text-[#cccccc]"><b>{t.phone}</b></p>
-              <p className="mt-3 text-[10px] text-[#aaa]">{t.rights}</p>
-            </footer>
-          </div>
+          {/* গ্লোবাল বটম নেভবার (সব পেজে শো করবে) */}
+          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center py-2.5 z-40 shadow-lg">
+            <Link href="/" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946] no-underline">
+              🏠 Home
+            </Link>
+            <Link href="/category" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946] no-underline">
+              📂 Categories
+            </Link>
+            <Link href="/my-gifts" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946] no-underline">
+              🎁 Gift
+            </Link>
+            <Link href="/favorites" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946] no-underline">
+              ❤️ Favorites
+            </Link>
+            <Link href="/cart" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946] no-underline">
+              🛒 Cart
+            </Link>
+            <Link href="/register" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946] no-underline">
+              👤 Account
+            </Link>
+          </nav>
 
         </div>
       </body>

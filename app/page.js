@@ -160,7 +160,7 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // অটো স্লাইড প্রমো ব্যানার (লুপ সিস্টেম)
+  // প্রমো ব্যানার ইনফিনিট লুপ অটো-স্লাইড (শেষ থেকে সরাসরি প্রথমটিতে ফিরে আসবে)
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const promoInterval = setInterval(() => {
@@ -169,7 +169,7 @@ export default function AyaatShopHome() {
     return () => clearInterval(promoInterval);
   }, [promoBanners]);
 
-  // অটো স্লাইড টপ থিন অ্যাডস (লুপ সিস্টেম)
+  // টপ থিন অ্যাডস ইনফিনিট লুপ অটো-স্লাইড (শেষ থেকে সরাসরি প্রথমটিতে ফিরে আসবে)
   useEffect(() => {
     if (topThinAds.length <= 1) return;
     const topAdInterval = setInterval(() => {
@@ -261,7 +261,7 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* FLOATING & DRAGGABLE SMALL POPUPS (সর্বোচ্চ z-index [z-9999] দেওয়া হয়েছে যাতে কখনো নিচে না যায়) */}
+      {/* FLOATING & DRAGGABLE SMALL POPUPS */}
       {smallPopups.length > 0 && (
         <div 
           style={{ right: `${popupPosition.x}px`, bottom: `${popupPosition.y}px` }}
@@ -295,11 +295,11 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* TOP THIN AD SLIDER */}
+      {/* TOP THIN AD SLIDER (INFINITE LOOP FIXED) */}
       {topThinAds.length > 0 && (
         <div className="w-full bg-black overflow-hidden relative z-40">
           <div 
-            className="flex transition-transform duration-500 ease-in-out" 
+            className="flex transition-transform duration-700 ease-in-out" 
             style={{ transform: `translateX(-${currentTopAdIndex * 100}%)` }}
           >
             {topThinAds.map((ad) => (
@@ -313,7 +313,7 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* CATEGORY BAR (SCROLL HIDE & SHOW APPLIED) */}
+      {/* CATEGORY BAR */}
       <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
           <button 
@@ -351,12 +351,12 @@ export default function AyaatShopHome() {
         />
       </div>
 
-      {/* PROMO BANNER SECTION */}
+      {/* PROMO BANNER SECTION (INFINITE LOOP FIXED) */}
       {promoBanners.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">
           <div className="relative w-full h-[130px] rounded-xl overflow-hidden shadow-md">
             <div 
-              className="flex h-full transition-transform duration-500 ease-in-out"
+              className="flex h-full transition-transform duration-700 ease-in-out"
               style={{ transform: `translateX(-${currentPromoIndex * 100}%)` }}
             >
               {promoBanners.map((banner) => (

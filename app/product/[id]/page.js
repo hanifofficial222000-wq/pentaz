@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { db } from '@/lib/firebase'; // firebase.js থেকে db ইমপোর্ট করা হলো
+import { db } from '@/lib/firebase';
 import { 
   doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
 } from 'firebase/firestore';
@@ -11,10 +11,11 @@ import {
 export default function ProductDetailsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const productId = searchParams.get('id');
+  
+  // কুয়েরি প্যারামিটার (?id=...) অথবা উইন্ডো পাথ থেকে আইডি বের করার ব্যবস্থা
+  const [productId, setProductId] = useState(null);
 
   const [productData, setProductData] = useState(null);
-  const [productCategoryId, setProductCategoryId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [notApproved, setNotApproved] = useState(false);
@@ -53,6 +54,20 @@ export default function ProductDetailsPage() {
   // More Products State
   const [moreProducts, setMoreProducts] = useState([]);
 
+  // আইডি সেট করার ইফেক্ট
+  useEffect(() => {
+    let id = searchParams.get('id');
+    if (!id) {
+      // যদি কুয়েরি প্যারাম না থাকে, তবে URL পাথ থেকে আইডি বের করার চেষ্টা করবে (যেমন: /product/xyz)
+      const pathSegments = window.location.pathname.split('/');
+      const lastSegment = pathSegments[pathSegments.length - 1];
+      if (lastSegment && lastSegment !== 'product') {
+        id = lastSegment;
+      }
+    }
+    setProductId(id);
+  }, [searchParams]);
+
   // Fetch Product Details
   useEffect(() => {
     if (!productId) return;
@@ -70,7 +85,6 @@ export default function ProductDetailsPage() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setProductData(data);
-          setProductCategoryId(data.categoryId || data.category || null);
 
           if (data.approved !== true && docSnap.ref.parent.id === "products") {
             setNotApproved(true);
@@ -325,7 +339,7 @@ export default function ProductDetailsPage() {
   }
 
   return (
-    <div className="bg-[#f5f5f5] min-h-screen p-2.5 pb-[100px] font-sans">
+    <div className="bg-[#f5f5f5] min-h-screen p-2.5 pb-[100px] font-sans text-black">
       <div className="max-w-[600px] mx-auto bg-white rounded-[10px] p-[15px]">
         
         <Link href="/" className="text-[#333] no-underline text-[14px] inline-block mb-2.5 font-bold hover:text-[#e63946]">
@@ -359,7 +373,7 @@ export default function ProductDetailsPage() {
         <h1 className="text-[20px] my-2.5 text-[#222] font-bold">{productData.title || productData.name}</h1>
         
         <div className="bg-[#eef2f7] border-l-4 border-[#007bff] p-[8px_12px] my-2.5 rounded-r-[8px] text-[13px] text-[#333] font-bold">
-          📦 প্রোডাক্ট আইডি / পিন: <span>{productData.productPin || productId.slice(0, 6).toUpperCase()}</span>
+          📦 প্রোডাক্ট আইডি / পিন: <span>{productData.productPin || (productId ? productId.slice(0, 6).toUpperCase() : '')}</span>
         </div>
 
         <p className="text-[14px] text-[#555] mb-2.5">{productData.description || ''}</p>
@@ -412,19 +426,6 @@ export default function ProductDetailsPage() {
             <p className="my-0.5">📞 <b>মোবাইল:</b> <a href={`https://wa.me/${productData.sellerPhone}`} target="_blank" rel="noreferrer" className="text-[#007bff] font-bold no-underline">{productData.sellerPhone || 'N/A'}</a></p>
           </div>
         )}
-
-        {/* Trust Badges */}
-        <div className="flex justify-between gap-2 my-4">
-          <div className="bg-[#f0f9f0] border border-[#d4f1d4] p-2 rounded-[8px] text-[11px] text-center flex-1 text-[#2e7d32]">
-            <span className="text-[16px] block mb-0.5">✅</span>100% Quality
-          </div>
-          <div className="bg-[#f0f9f0] border border-[#d4f1d4] p-2 rounded-[8px] text-[11px] text-center flex-1 text-[#2e7d32]">
-            <span className="text-[16px] block mb-0.5">🚚</span>Free Delivery
-          </div>
-          <div className="bg-[#f0f9f0] border border-[#d4f1d4] p-2 rounded-[8px] text-[11px] text-center flex-1 text-[#2e7d32]">
-            <span className="text-[16px] block mb-0.5">💵</span>COD Available
-          </div>
-        </div>
 
         {/* Sizes */}
         {sizes.length > 0 && (
@@ -558,25 +559,6 @@ export default function ProductDetailsPage() {
           {submittingOrder ? "অর্ডার সাবমিট হচ্ছে..." : "⚡ সরাসরি অর্ডার"}
         </button>
       </div>
-
-      {/* Size Chart Popup */}
-      {isSizeChartOpen && (
-        <div className="fixed inset-0 bg-black/70 z-[1000] flex justify-center items-center" onClick={() => setIsSizeChartOpen(false)}>
-          <div className="bg-white p-5 rounded-[10px] max-w-[90%] relative" onClick={(e) => e.stopPropagation()}>
-            <span className="absolute top-2.5 right-4 text-[24px] cursor-pointer text-black" onClick={() => setIsSizeChartOpen(false)}>&times;</span>
-            <h3 className="mb-2.5 text-center font-bold">Size Chart</h3>
-            <p className="text-[13px] text-center">Standard Size Chart Applies.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="bg-[#2b2b2b] text-[#e5e5e5] p-[25px_15px] mt-[25px] text-center rounded-t-[12px] max-w-[600px] mx-auto">
-        <h3 className="text-[#ff4d4d] mb-3 text-[17px] font-bold">AYAAT SPORT SHOP</h3>
-        <p className="text-[13px] leading-[1.9] my-1.5 text-[#cccccc]"><b>Owner:</b> Md Hanif Cox</p>
-        <p className="text-[13px] leading-[1.9] my-1.5 text-[#cccccc]"><b>Phone:</b> +8801835302525</p>
-        <p className="mt-[15px] text-[12px] text-[#aaa]">© 2026 AYAAT SPORT SHOP. All Rights Reserved.</p>
-      </footer>
 
     </div>
   );

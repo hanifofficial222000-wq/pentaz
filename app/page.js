@@ -23,16 +23,11 @@ export default function AyaatShopHome() {
   const [searchQuery, setSearchQuery] = useState('');
   
   const [favorites, setFavorites] = useState([]);
-  const [cartCount, setCartCount] = useState(0);
-  const [giftCount, setGiftCount] = useState(0);
 
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
 
-  const [isNavHidden, setIsNavHidden] = useState(false);
-  const [lastScrollTop, setLastScrollTop] = useState(0);
-
-  // ১. ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট এবং ব্যানার ফেচ করা
+  // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট এবং ব্যানার ফেচ করা
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const prodList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -72,9 +67,7 @@ export default function AyaatShopHome() {
     fetchTopAds();
 
     const storedFavs = JSON.parse(localStorage.getItem('ayaat_favorites')) || [];
-    const storedCart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
     setFavorites(storedFavs);
-    setCartCount(storedCart.length);
 
     return () => unsubscribeProducts();
   }, []);
@@ -97,33 +90,24 @@ export default function AyaatShopHome() {
     return () => clearInterval(topAdInterval);
   }, [topThinAds]);
 
-  // স্ক্রল করলে নেভবার হাইড হওয়া
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      if (scrollTop > lastScrollTop && scrollTop > 50) {
-        setIsNavHidden(true);
-      } else {
-        setIsNavHidden(false);
-      }
-      setLastScrollTop(scrollTop <= 0 ? 0 : scrollTop);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollTop]);
-
-  // সার্চ এবং ফিল্টার লজিক (ক্যাটেগরি ম্যাচিং উন্নত করা হয়েছে)
+  // উন্নত ক্যাটেগরি এবং সার্চ ফিল্টার লজিক
   useEffect(() => {
     let result = products.filter(p => p.approved !== false);
 
     if (activeCategory === 'special-offers') {
       result = result.filter(p => p.isSpecialOffer || p.category?.toLowerCase() === 'special-offers');
     } else if (activeCategory !== 'all') {
-      result = result.filter(p => 
-        p.mainCategory?.toLowerCase().trim() === activeCategory.toLowerCase().trim() ||
-        p.category?.toLowerCase().trim() === activeCategory.toLowerCase().trim()
-      );
+      const currentCatObj = mainCategories.find(c => c.id === activeCategory);
+      const catName = currentCatObj ? currentCatObj.name : '';
+
+      result = result.filter(p => {
+        const pMain = (p.mainCategory || '').toLowerCase().trim();
+        const pCat = (p.category || '').toLowerCase().trim();
+        const targetId = activeCategory.toLowerCase().trim();
+        const targetName = catName.toLowerCase().trim();
+
+        return pMain === targetId || pCat === targetId || pMain === targetName || pCat === targetName;
+      });
     }
 
     if (activeSubFilter === 'bestseller') {
@@ -161,7 +145,7 @@ export default function AyaatShopHome() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-36 font-sans text-gray-800">
+    <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800">
       
       {/* TOP THIN AD SLIDER */}
       {topThinAds.length > 0 && (
@@ -317,41 +301,6 @@ export default function AyaatShopHome() {
           </div>
         )}
       </div>
-
-      {/* WHATSAPP FLOAT */}
-      <a 
-        href="https://wa.me/8801835302525" 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        className={`fixed right-4 bg-[#25D366] text-white w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-lg z-50 transition-all duration-300 ${isNavHidden ? 'bottom-4' : 'bottom-20'}`}
-      >
-        💬
-      </a>
-
-      {/* FIXED BOTTOM NAVIGATION BAR */}
-      <nav className={`fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 flex justify-around items-center py-2 z-40 shadow-lg transition-transform duration-300 ${isNavHidden ? 'translate-y-full' : 'translate-y-0'}`}>
-        <Link href="/" className="flex flex-col items-center text-[#e63946] text-[10px] font-bold">
-          🏠 Home
-        </Link>
-        <Link href="/category" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946]">
-          📂 Categories
-        </Link>
-        <Link href="/my-gifts" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946]">
-          🎁 Gift
-          <span className="absolute -top-1 right-0 bg-[#e63946] text-white text-[9px] px-1 rounded-full font-bold">{giftCount}</span>
-        </Link>
-        <Link href="/favorites" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946]">
-          ❤️ Favorites
-          <span className="absolute -top-1 right-0 bg-[#e63946] text-white text-[9px] px-1 rounded-full font-bold">{favorites.length}</span>
-        </Link>
-        <Link href="/cart" className="flex flex-col items-center text-gray-500 text-[10px] font-bold relative hover:text-[#e63946]">
-          🛒 Cart
-          <span className="absolute -top-1 right-0 bg-[#e63946] text-white text-[9px] px-1 rounded-full font-bold">{cartCount}</span>
-        </Link>
-        <Link href="/register" className="flex flex-col items-center text-gray-500 text-[10px] font-bold hover:text-[#e63946]">
-          👤 Account
-        </Link>
-      </nav>
 
     </div>
   );

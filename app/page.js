@@ -15,6 +15,7 @@ export default function AyaatShopHome() {
   const [mainCategories, setMainCategories] = useState([]);
   
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeSubCategory, setActiveSubCategory] = useState('all');
   const [activeSubFilter, setActiveSubFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -31,7 +32,7 @@ export default function AyaatShopHome() {
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
-  // ড্র্যাগেবল স্মল পপআপ স্টেট (সর্বোচ্চ z-index সহ)
+  // ড্র্যাগেবল স্মল পপআপ স্টেট
   const [popupPosition, setPopupPosition] = useState({ x: 20, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
@@ -81,7 +82,7 @@ export default function AyaatShopHome() {
     };
   }, [isDragging]);
 
-  // পেজ স্ক্রল ডিটেকশন (ওপরে তুললে হাইড, নিচে নামালে বা ওপরে স্ক্রল করলে শো)
+  // পেজ স্ক্রল ডিটেকশন
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -97,7 +98,7 @@ export default function AyaatShopHome() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // ফায়ারবেস থেকে রিয়েল-টাইম প্রোডাক্ট, ক্যাটেগরি ও অ্যাডস ফেচ করা
+  // ফায়ারবেস থেকে ডাটা ফেচ করা
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const prodList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -160,7 +161,7 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // প্রমো ব্যানার ইনফিনিট লুপ অটো-স্লাইড (শেষ থেকে সরাসরি প্রথমটিতে ফিরে আসার জন্য রিং কাউন্টার লজিক)
+  // প্রমো ব্যানার ইনফিনিট লুপ অটো-স্লাইড
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const promoInterval = setInterval(() => {
@@ -178,6 +179,15 @@ export default function AyaatShopHome() {
     return () => clearInterval(topAdInterval);
   }, [topThinAds]);
 
+  // মেইন ক্যাটেগরি পরিবর্তনের হ্যান্ডলার (সাব-ক্যাটেগরি 'all' এ রিসেট হবে)
+  const handleMainCategoryClick = (catId) => {
+    setActiveCategory(catId);
+    setActiveSubCategory('all');
+  };
+
+  // বর্তমান সিলেক্ট করা ক্যাটেগরির অবজেক্ট খুঁজে বের করা
+  const currentCategoryObj = mainCategories.find(c => c.id === activeCategory || c.name === activeCategory);
+
   // ফিল্টার লজিক
   useEffect(() => {
     let result = products.filter(p => p.approved !== false);
@@ -185,10 +195,10 @@ export default function AyaatShopHome() {
     if (activeCategory === 'special-offers') {
       result = result.filter(p => p.isSpecialOffer || p.category?.toLowerCase() === 'special-offers');
     } else if (activeCategory !== 'all') {
-      const currentCatObj = mainCategories.find(c => c.id === activeCategory || c.name === activeCategory);
-      const catName = currentCatObj ? currentCatObj.name : '';
-      const catId = currentCatObj ? currentCatObj.id : activeCategory;
+      const catName = currentCategoryObj ? currentCategoryObj.name : '';
+      const catId = currentCategoryObj ? currentCategoryObj.id : activeCategory;
 
+      // মেইন ক্যাটেগরি ফিল্টার
       result = result.filter(p => {
         const pMain = (p.mainCategory || '').toLowerCase().trim();
         const pCat = (p.category || '').toLowerCase().trim();
@@ -197,6 +207,14 @@ export default function AyaatShopHome() {
 
         return pMain === targetId || pCat === targetId || pMain === targetName || pCat === targetName;
       });
+
+      // সাব-ক্যাটেগরি ফিল্টার (যদি 'all' না থাকে)
+      if (activeSubCategory !== 'all') {
+        result = result.filter(p => {
+          const pSub = (p.subCategory || p.subcat || '').toLowerCase().trim();
+          return pSub === activeSubCategory.toLowerCase().trim();
+        });
+      }
     }
 
     if (activeSubFilter === 'bestseller') {
@@ -218,7 +236,7 @@ export default function AyaatShopHome() {
     }
 
     setFilteredProducts(result);
-  }, [activeCategory, activeSubFilter, searchQuery, products, mainCategories]);
+  }, [activeCategory, activeSubCategory, activeSubFilter, searchQuery, products, mainCategories]);
 
   const toggleFavorite = (e, productId) => {
     e.stopPropagation();
@@ -313,17 +331,18 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* CATEGORY BAR */}
+      {/* MAIN CATEGORY & SUB-CATEGORY HEADER */}
       <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
+        {/* মেইন ক্যাটেগরি বার */}
         <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
           <button 
-            onClick={() => setActiveCategory('all')} 
+            onClick={() => handleMainCategoryClick('all')} 
             className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'all' ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
           >
             সব
           </button>
           <button 
-            onClick={() => setActiveCategory('special-offers')} 
+            onClick={() => handleMainCategoryClick('special-offers')} 
             className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'special-offers' ? 'bg-[#e63946] text-white' : 'bg-pink-100 text-[#e63946]'}`}
           >
             🔥 স্পেশাল অফার
@@ -331,13 +350,34 @@ export default function AyaatShopHome() {
           {mainCategories.map((cat) => (
             <button 
               key={cat.id} 
-              onClick={() => setActiveCategory(cat.id)} 
+              onClick={() => handleMainCategoryClick(cat.id)} 
               className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === cat.id ? 'bg-[#e63946] text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               {cat.name}
             </button>
           ))}
         </div>
+
+        {/* সাব-ক্যাটেগরি বার (যদি নির্দিষ্ট মেইন ক্যাটেগরির আন্ডারে সাব-ক্যাটেগরি থাকে) */}
+        {currentCategoryObj && currentCategoryObj.subCategories && currentCategoryObj.subCategories.length > 0 && (
+          <div className="bg-gray-50 border-t border-gray-100 px-3 py-2 flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+            <button
+              onClick={() => setActiveSubCategory('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+            >
+              সব ({currentCategoryObj.name})
+            </button>
+            {currentCategoryObj.subCategories.map((sub, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveSubCategory(sub)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === sub ? 'bg-[#e63946] text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* SEARCH BOX */}
@@ -351,7 +391,7 @@ export default function AyaatShopHome() {
         />
       </div>
 
-      {/* PROMO BANNER SECTION (SEAMLESS INFINITE LOOP) */}
+      {/* PROMO BANNER SECTION */}
       {promoBanners.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">
           <div className="relative w-full h-[130px] rounded-xl overflow-hidden shadow-md">

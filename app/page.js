@@ -27,12 +27,11 @@ export default function AyaatShopHome() {
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
-  // ড্রেজেবল স্মল পপআপ স্টেট (WhatsApp এর উপরে)
+  // ড্র্যাগেবল স্মল পপআপ স্টেট (সর্বোচ্চ z-index সহ)
   const [popupPosition, setPopupPosition] = useState({ x: 20, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
 
-  // ড্র্যাগ হ্যান্ডলার (মাউস এবং টাচ)
   const handleTouchStart = (e) => {
     setIsDragging(true);
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -141,7 +140,7 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // অটো স্লাইড প্রমো ব্যানার (লুপ সিস্টেম - শেষ হলে আবার প্রথম থেকে শুরু হবে)
+  // অটো স্লাইড প্রমো ব্যানার (লুপ সিস্টেম)
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const promoInterval = setInterval(() => {
@@ -150,7 +149,7 @@ export default function AyaatShopHome() {
     return () => clearInterval(promoInterval);
   }, [promoBanners]);
 
-  // অটো স্লাইড টপ থিন অ্যাডস (লুপ সিস্টেম - শেষ হলে প্রথম থেকে শুরু হবে)
+  // অটো স্লাইড টপ থিন অ্যাডস (লুপ সিস্টেম)
   useEffect(() => {
     if (topThinAds.length <= 1) return;
     const topAdInterval = setInterval(() => {
@@ -242,17 +241,16 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* FLOATING & DRAGGABLE SMALL POPUPS (WhatsApp এর ঠিক ওপরে) */}
+      {/* FLOATING & DRAGGABLE SMALL POPUPS (সর্বোচ্চ z-index [z-9999] দেওয়া হয়েছে যাতে কখনো নিচে না যায়) */}
       {smallPopups.length > 0 && (
         <div 
           style={{ right: `${popupPosition.x}px`, bottom: `${popupPosition.y}px` }}
-          className="fixed z-45 flex flex-col items-end gap-2 cursor-grab active:cursor-grabbing"
+          className="fixed z-[9999] flex flex-col items-end gap-2 cursor-grab active:cursor-grabbing touch-none"
           onMouseDown={handleTouchStart}
           onTouchStart={handleTouchStart}
         >
           {smallPopups.map((popup) => (
             <div key={popup.id} className="relative group">
-              {/* ক্রস বাটন */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -266,7 +264,7 @@ export default function AyaatShopHome() {
                 href={popup.link || '#'} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="block w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#ff416c] to-[#ff4b2b] shadow-lg flex items-center justify-center no-underline"
+                className="block w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#ff416c] to-[#ff4b2b] shadow-2xl flex items-center justify-center no-underline"
               >
                 <div className="w-full h-full rounded-full overflow-hidden bg-white border-2 border-white">
                   <img src={popup.imageUrl} alt="Popup" className="w-full h-full object-cover pointer-events-none" />

@@ -198,7 +198,9 @@ function ProductDetailsContent() {
           setAppliedDiscount(0);
 
           loadReviews(productId);
-          loadMoreProducts(data.categoryId, data.category, productId);
+          
+          // ক্যাটাগরি নাম দিয়ে সম্পর্কিত প্রোডাক্ট লোড করা হচ্ছে
+          loadMoreProducts(data.category, productId);
         } else {
           setNotFound(true);
         }
@@ -244,17 +246,11 @@ function ProductDetailsContent() {
     }
   }
 
-  async function loadMoreProducts(catId, categoryName, currentId) {
+  // ক্যাটাগরি নাম অনুযায়ী কুয়েরি করার আপডেট ফাংশন
+  async function loadMoreProducts(categoryName, currentId) {
     try {
       let q;
-      if (catId) {
-        q = query(
-          collection(db, "products"),
-          where("categoryId", "==", catId),
-          where("approved", "==", true),
-          limit(7)
-        );
-      } else if (categoryName) {
+      if (categoryName) {
         q = query(
           collection(db, "products"),
           where("category", "==", categoryName),

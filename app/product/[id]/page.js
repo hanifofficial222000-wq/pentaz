@@ -202,7 +202,7 @@ function ProductDetailsContent() {
     }
 
     fetchProduct();
-  }, [productId, searchParams]);
+  }, [productId]);
 
   async function loadReviews(prodId) {
     try {
@@ -683,11 +683,23 @@ function ProductDetailsContent() {
   );
 }
 
-// মূল এক্সপোর্টে Suspense বাউন্ডারি যুক্ত করা হয়েছে
+// আলাদা র‍্যাপার কম্পোনেন্ট তৈরি করা হয়েছে যাতে searchParams পরিবর্তন হলে কী (key) এর মাধ্যমে পেজটি সঠিকভাবে রিমাউন্ড হয়
+function ProductDetailsWrapper() {
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('id');
+
+  return (
+    <Suspense key={productId || 'default'} fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>
+      <ProductDetailsContent />
+    </Suspense>
+  );
+}
+
+// মূল এক্সপোর্ট
 export default function ProductDetailsPage() {
   return (
     <Suspense fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>
-      <ProductDetailsContent />
+      <ProductDetailsWrapper />
     </Suspense>
   );
 }

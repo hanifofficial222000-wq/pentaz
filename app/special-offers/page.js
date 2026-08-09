@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function SpecialOffersPage() {
   const [products, setProducts] = useState([]);
@@ -15,27 +17,22 @@ export default function SpecialOffersPage() {
   });
   const [loading, setLoading] = useState(false);
 
-  // ডামি স্পেশাল অফার প্রডাক্ট (ফায়ারবেস মুক্ত)
+  // ফায়ারবেস থেকে স্পেশাল অফার প্রডাক্ট লোড করা
+  const fetchProducts = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "specialOffers"));
+      const list = [];
+      querySnapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setProducts(list);
+    } catch (err) {
+      console.error("Error loading products:", err);
+    }
+  };
+
   useEffect(() => {
-    const dummyOffers = [
-      {
-        id: 'special_1',
-        title: 'অফিসিয়াল প্রিমিয়াম ফুটবল জার্সি (স্পেশাল এডিশন)',
-        description: 'উন্নত মানের সুতি কাপড়ের তৈরি প্রিমিয়াম জার্সি। সীমিত সময়ের জন্য বিশেষ ছাড়ে উপলব্ধ।',
-        regularPrice: '1200',
-        discountPrice: '799',
-        imageUrl: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=600&q=80'
-      },
-      {
-        id: 'special_2',
-        title: 'প্রফেশনাল স্পোর্টস রানিং শু',
-        description: 'হাঁটাহাঁটি এবং দৌড়ানোর জন্য অত্যন্ত আরামদায়ক ও টেকসই স্নিকার্স।',
-        regularPrice: '2500',
-        discountPrice: '1699',
-        imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'
-      }
-    ];
-    setProducts(dummyOffers);
+    fetchProducts();
   }, []);
 
   // অর্ডার মডাল ওপেন করা
@@ -56,12 +53,12 @@ export default function SpecialOffersPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // অর্ডার সাবমিট হ্যান্ডলার (লোকালস্টোরেজে সেভ হবে)
-  const handleSubmitOrder = (e) => {
+  // অর্ডার সাবমিট হ্যান্ডলার (ফায়ারবেসের specialOrders কালেকশনে সেভ হবে)
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
+    try {
       const newOrder = {
         orderId: 'ORD_' + Math.floor(100000 + Math.random() * 900000),
         productId: selectedProduct.id,
@@ -72,23 +69,24 @@ export default function SpecialOffersPage() {
         customerAddress: formData.address,
         customerSize: formData.size || 'N/A',
         status: 'Pending',
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       };
 
-      // লোকালস্টোরেজে অর্ডার সংরক্ষণ
-      const existingOrders = JSON.parse(localStorage.getItem('ayaat_special_orders') || '[]');
-      localStorage.setItem('ayaat_special_orders', JSON.stringify([newOrder, ...existingOrders]));
+      // ফায়ারবেসে অর্ডার সংরক্ষণ
+      await addDoc(collection(db, "specialOrders"), newOrder);
 
       alert("🎉 আপনার স্পেশাল অফার অর্ডারটি সফলভাবে সাবমিট হয়েছে!");
       setLoading(false);
       closeOrderModal();
-    }, 1000);
+    } catch (err) {
+      console.error("Error submitting order:", err);
+      alert("⚠️ অর্ডার সাবমিট করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      setLoading(false);
+    }
   };
 
   return (
     <div className="bg-slate-50 min-h-screen pb-12 font-sans text-slate-800">
-
-      {/* Header */}
       <header className="bg-gradient-to-r from-pink-600 to-slate-900 text-white p-4 shadow-md sticky top-0 z-40">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -101,19 +99,15 @@ export default function SpecialOffersPage() {
         </div>
       </header>
 
-      {/* Main Container */}
       <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
-        
-        {/* Banner / Notice */}
         <div className="bg-pink-100 border border-pink-300 p-4 rounded-2xl text-center space-y-1 shadow-sm">
           <h2 className="text-pink-900 font-extrabold text-sm md:text-base">সীমিত সময়ের জন্য বিশেষ ছাড়!</h2>
           <p className="text-pink-700 text-xs">আপনার পছন্দের প্রডাক্টটি লুফে নিন এবং ঘরে বসেই অর্ডার করুন।</p>
         </div>
 
-        {/* Product Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {products.length === 0 ? (
-            <div className="text-center col-span-full py-10 text-slate-400 text-xs">অফার প্রডাক্ট লোড হচ্ছে...</div>
+            <div className="text-center col-span-full py-10 text-slate-400 text-xs">কোনো অফার প্রডাক্ট পাওয়া যায়নি।</div>
           ) : (
             products.map((p) => (
               <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
@@ -125,7 +119,7 @@ export default function SpecialOffersPage() {
                     <p className="text-xs text-slate-600 line-clamp-2">{p.description}</p>
                     <div className="flex items-center gap-2 pt-1">
                       <span className="text-pink-600 font-extrabold text-sm">৳{p.discountPrice}</span>
-                      <span className="text-slate-400 line-through text-xs">৳{p.regularPrice}</span>
+                      {p.regularPrice && <span className="text-slate-400 line-through text-xs">৳{p.regularPrice}</span>}
                     </div>
                   </div>
                 </div>
@@ -141,10 +135,8 @@ export default function SpecialOffersPage() {
             ))
           )}
         </div>
-
       </main>
 
-      {/* Order Modal */}
       {isModalOpen && selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 relative space-y-4">
@@ -224,7 +216,6 @@ export default function SpecialOffersPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

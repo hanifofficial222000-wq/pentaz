@@ -348,6 +348,17 @@ export default function AyaatShopHome() {
 
       <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
         
+        {/* 🟢 SEARCH BAR (লাল দাগ চিহ্নিত একদম উপরে হেডার বা লোগোর ঠিক নিচে বসানো হয়েছে) */}
+        <div className="max-w-xl mx-auto px-3 pt-3 pb-1 bg-white">
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="🔍 প্রোডাক্টের নাম বা আইডি দিয়ে খুঁজুন..." 
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-full text-xs bg-gray-50 outline-none shadow-xs focus:ring-2 focus:ring-[#e63946] text-black"
+          />
+        </div>
+
         {/* 🟢 TRENDYOL STYLE CIRCULAR CATEGORIES SECTION */}
         <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
           <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
@@ -364,17 +375,18 @@ export default function AyaatShopHome() {
               <span className="text-[11px] font-bold text-gray-800 mt-1.5">সকল</span>
             </button>
 
-            <button 
-              onClick={() => handleMainCategoryClick('special-offers')}
-              className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
+            {/* 🟢 SPECIAL OFFER BUTTON LINKED TO /special-offers */}
+            <Link 
+              href="/special-offer"
+              className="flex flex-col items-center flex-shrink-0 group cursor-pointer no-underline"
             >
-              <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'special-offers' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
-                <div className="w-full h-full rounded-full bg-pink-50 flex items-center justify-center text-[#e63946] font-bold text-xs">
+              <div className="w-[70px] h-[70px] rounded-full p-[2px] border-2 border-pink-300 hover:border-pink-500 transition-all">
+                <div className="w-full h-full rounded-full bg-pink-50 flex items-center justify-center text-[#e63946] font-bold text-xl">
                   🔥
                 </div>
               </div>
               <span className="text-[11px] font-bold text-gray-800 mt-1.5">অফার</span>
-            </button>
+            </Link>
 
             {mainCategories.map((cat) => (
               <button
@@ -418,16 +430,6 @@ export default function AyaatShopHome() {
           </div>
         )}
       </header>
-
-      <div className="p-3 max-w-xl mx-auto">
-        <input 
-          type="text" 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="🔍 প্রোডাক্টের নাম বা আইডি দিয়ে খুঁজুন..." 
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-white outline-none shadow-sm focus:ring-2 focus:ring-[#e63946] text-black"
-        />
-      </div>
 
       {promoBanners.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">

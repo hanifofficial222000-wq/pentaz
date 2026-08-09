@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
-  doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
+  doc, getDoc, collection, getDocs, addDoc, query, where, limit, serverTimestamp 
 } from 'firebase/firestore';
 
 // ⏱️ রিয়েল-টাইম ফ্ল্যাশ সেল কাউন্টডাউন টাইমার কম্পোনেন্ট
@@ -102,7 +102,7 @@ function ProductDetailsContent() {
   // More Products State
   const [moreProducts, setMoreProducts] = useState([]);
 
-  // URL থেকে আইডি রিড করার জন্য হুক
+  // URL থেকে আইডি রিড করার হুক
   useEffect(() => {
     let id = searchParams.get('id');
     if (!id) {
@@ -115,7 +115,7 @@ function ProductDetailsContent() {
     setProductId(id);
   }, [searchParams]);
 
-  // productId অথবা searchParams পরিবর্তন হলেই নতুন প্রোডাক্ট ফেচ করবে
+  // প্রোডাক্ট ফেচ করার ইফেক্ট
   useEffect(() => {
     if (!productId) return;
 
@@ -184,7 +184,6 @@ function ProductDetailsContent() {
             setCurrentSize('N/A');
           }
 
-          // ইনপুট ফিল্ড ও কুপন রিসেট
           setCouponCode('');
           setCouponMsg({ text: '', color: '' });
           setAppliedDiscount(0);
@@ -236,26 +235,41 @@ function ProductDetailsContent() {
     }
   }
 
+  // অপ্টিমাইজড কুয়েরি ব্যবহার করে রিলেটেড প্রোডাক্ট ফেচ করা (সার্ভার সাইড ফিল্টারিং)
   async function loadMoreProducts(catId, categoryName, currentId) {
     try {
-      const snapshot = await getDocs(collection(db, "products"));
+      let q;
+      if (catId) {
+        q = query(
+          collection(db, "products"),
+          where("categoryId", "==", catId),
+          where("approved", "==", true),
+          limit(7)
+        );
+      } else if (categoryName) {
+        q = query(
+          collection(db, "products"),
+          where("category", "==", categoryName),
+          where("approved", "==", true),
+          limit(7)
+        );
+      } else {
+        q = query(
+          collection(db, "products"),
+          where("approved", "==", true),
+          limit(7)
+        );
+      }
+
+      const snapshot = await getDocs(q);
       let list = [];
 
       snapshot.forEach((d) => {
         if (d.id === currentId) return;
-        const item = d.data();
-        if (item.approved !== true) return;
-
-        const isMatchingCategory = 
-          (catId && item.categoryId === catId) || 
-          (categoryName && item.category && item.category.trim().toLowerCase() === categoryName.trim().toLowerCase());
-
-        if (isMatchingCategory) {
-          list.push({ id: d.id, ...item });
-        }
+        list.push({ id: d.id, ...d.data() });
       });
 
-      setMoreProducts(list);
+      setMoreProducts(list.slice(0, 6));
     } catch (err) {
       console.error("Error loading more products:", err);
     }
@@ -417,7 +431,7 @@ function ProductDetailsContent() {
           <img src={mainImage} className="w-full rounded-[10px] mb-2 h-[400px] object-cover border border-[#eee]" alt="Product" />
           
           {imageUrls.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar">
+            <div className="flex gap-2 overflow-x-auto pb-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               {imageUrls.map((imgUrl, idx) => (
                 <img 
                   key={idx} 
@@ -450,15 +464,15 @@ function ProductDetailsContent() {
           <li className="text-[14px] text-[#444]">✓ Free Delivery in Moheskhali</li>
           <li className="text-[14px] text-[#444]">✓ Cash On Delivery All Over Bangladesh</li>
           <li className="text-[14px] text-[#444]">✓ Estimated Delivery: 5-7 Days</li>
-          <li className="text-[14px] text-[#444]">✓ Cox’s Bazar outside Delivery 120.৳</li>
-          <li className="text-[14px] text-[#444]">✓ Cox's Bazar all over delivery 100.৳ single product double product 50.৳</li>
+          <li className="text-[14px] text-[#444]">✓ Cox’s Bazar outside Delivery 120 ৳</li>
+          <li className="text-[14px] text-[#444]">✓ Cox&apos;s Bazar all over delivery 100 ৳ single product double product 50 ৳</li>
         </ul>
 
-        {/* Price Box */}
+        {/* Price Box (Standardized to ৳ BDT currency for Bangladesh market context) */}
         <div className="flex items-center gap-3 my-2.5 flex-wrap">
-          <div className="text-[#e63946] text-[24px] font-bold">SAR {finalPrice}</div>
+          <div className="text-[#e63946] text-[24px] font-bold">৳ {finalPrice}</div>
           {discountPercent > 0 && (
-            <div className="text-[#888] text-[16px] line-through">SAR {regularPrice}</div>
+            <div className="text-[#888] text-[16px] line-through">৳ {regularPrice}</div>
           )}
           {discountPercent > 0 && (
             <div className="bg-[#ffe5e6] text-[#e63946] p-[4px_8px] rounded-[4px] text-[12px] font-bold">
@@ -493,7 +507,7 @@ function ProductDetailsContent() {
         {colorVariants.length > 0 && (
           <div className="my-4">
             <label className="font-bold block mb-2 text-[#333]">Select Color: <span className="text-[#e63946]">{selectedColor}</span></label>
-            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               {colorVariants.map((col, idx) => (
                 <div 
                   key={idx}
@@ -640,9 +654,9 @@ function ProductDetailsContent() {
                         ID: {itemPin}
                       </div>
                       <div className="flex items-center gap-1 mt-auto">
-                        <span className="text-[#e63946] text-[12px] font-bold">SAR {finalDispPrice}</span>
+                        <span className="text-[#e63946] text-[12px] font-bold">৳ {finalDispPrice}</span>
                         {itemDiscount > 0 && (
-                          <span className="text-[#888] text-[10px] line-through">SAR {itemRegPrice}</span>
+                          <span className="text-[#888] text-[10px] line-through">৳ {itemRegPrice}</span>
                         )}
                       </div>
                     </div>
@@ -669,7 +683,7 @@ function ProductDetailsContent() {
   );
 }
 
-// মূল এক্সপোর্টে Suspense বাউন্ডারি যুক্ত করা হয়েছে যাতে সাদা স্ক্রিন না আসে
+// মূল এক্সপোর্টে Suspense বাউন্ডারি যুক্ত করা হয়েছে
 export default function ProductDetailsPage() {
   return (
     <Suspense fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>

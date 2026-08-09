@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 
-// ⏱️ কাউন্টডাউন টাইমার কম্পোনেন্ট (ফ্ল্যাশ সেলের জন্য রিয়েল-টাইম কাউন্টডাউন)
+// ⏱️ ক্লিন ও কম্প্যাক্ট রিয়েল-টাইম কাউন্টডাউন টাইমার
 function FlashSaleTimer({ endsAt }) {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
 
@@ -36,17 +36,17 @@ function FlashSaleTimer({ endsAt }) {
   }, [endsAt]);
 
   if (timeLeft.isExpired) {
-    return <span className="text-red-500 font-bold text-xs">অফার শেষ!</span>;
+    return <span className="text-red-500 font-bold text-[10px]">অফার শেষ</span>;
   }
 
   return (
-    <div className="flex items-center gap-1 text-[11px] font-extrabold text-white bg-red-600 px-2 py-1 rounded-md shadow-sm">
-      <span>⏰ সময় বাকি:</span>
-      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}ঘণ্টা</span>
+    <div className="flex items-center justify-center gap-0.5 text-[10px] font-bold text-white bg-red-600 px-1.5 py-0.5 rounded shadow-xs w-full">
+      <span>⏰</span>
+      <span>{String(timeLeft.hours).padStart(2, '0')}</span>
       <span>:</span>
-      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}মি</span>
+      <span>{String(timeLeft.minutes).padStart(2, '0')}</span>
       <span>:</span>
-      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}সে</span>
+      <span>{String(timeLeft.seconds).padStart(2, '0')}</span>
     </div>
   );
 }
@@ -150,7 +150,6 @@ export default function AyaatShopHome() {
       const now = new Date();
       const prodList = snapshot.docs.map(doc => {
         const data = doc.data();
-        // অটো-এক্সপায়ার চেক: যদি ফ্ল্যাশ সেলের সময় পার হয়ে যায়, তবে প্রডাক্টের ফ্ল্যাশ সেল স্ট্যাটাস ফলস করে দেওয়া
         if (data.flashSaleEndsAt) {
           const endTime = data.flashSaleEndsAt?.toDate ? data.flashSaleEndsAt.toDate() : new Date(data.flashSaleEndsAt);
           if (endTime <= now) {
@@ -432,7 +431,6 @@ export default function AyaatShopHome() {
               <span className="text-[11px] font-bold text-gray-800 mt-1.5">সকল</span>
             </button>
 
-            {/* ⚡ ফ্ল্যাশ সেল বাটন */}
             <button 
               onClick={() => handleMainCategoryClick('flash-sale')}
               className="flex flex-col items-center flex-shrink-0 group cursor-pointer"

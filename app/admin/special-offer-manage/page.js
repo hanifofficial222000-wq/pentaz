@@ -26,12 +26,16 @@ export default function SpecialOfferManagePage() {
     setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
   };
 
+  // প্রোডাক্ট লোড করা (Products কালেকশন থেকে যেখানে isSpecialOffer: true বা category: special-offers)
   const loadProducts = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "specialOffers"));
+      const querySnapshot = await getDocs(collection(db, "products"));
       const list = [];
       querySnapshot.forEach((docSnap) => {
-        list.push({ id: docSnap.id, ...docSnap.data() });
+        const data = docSnap.data();
+        if (data.isSpecialOffer || data.category?.toLowerCase() === 'special-offers') {
+          list.push({ id: docSnap.id, ...data });
+        }
       });
       setProducts(list);
     } catch (err) {
@@ -79,12 +83,17 @@ export default function SpecialOfferManagePage() {
         }
       }
 
-      await addDoc(collection(db, "specialOffers"), {
+      // 🟢 Fix: সরাসরি "products" কালেকশনে সেভ করা হলো যাতে হোম ও স্পেশাল পেজ উভয় জায়গায় শো করে
+      await addDoc(collection(db, "products"), {
         title: prodTitle.trim(),
         discountPrice: prodDiscountPrice.trim(),
         regularPrice: prodRegularPrice.trim(),
+        price: prodDiscountPrice.trim(),
         description: prodDesc.trim(),
         imageUrl: imageUrl,
+        category: "special-offers",
+        isSpecialOffer: true,
+        approved: true,
         createdAt: serverTimestamp()
       });
 
@@ -106,7 +115,7 @@ export default function SpecialOfferManagePage() {
   const deleteProduct = async (id) => {
     if (confirm("আপনি কি নিশ্চিতভাবে এই স্পেশাল প্রডাক্টটি ডিলিট করতে চান?")) {
       try {
-        await deleteDoc(doc(db, "specialOffers", id));
+        await deleteDoc(doc(db, "products", id));
         showAlert("🗑️ প্রডাক্ট সফলভাবে ডিলিট করা হয়েছে!");
         loadProducts();
       } catch (err) {
@@ -233,7 +242,7 @@ export default function SpecialOfferManagePage() {
                     <img src={p.imageUrl || 'https://via.placeholder.com/60'} className="w-12 h-12 object-cover rounded-lg border" alt="" />
                     <div className="space-y-0.5 text-xs">
                       <p className="font-bold text-slate-800">{p.title}</p>
-                      <p className="text-pink-600 font-semibold">মূল্য: ৳{p.discountPrice} <span className="line-through text-slate-400 font-normal">৳{p.regularPrice}</span></p>
+                      <p className="text-pink-600 font-semibold">মূল্য: ৳{p.discountPrice || p.price} <span className="line-through text-slate-400 font-normal">৳{p.regularPrice}</span></p>
                     </div>
                   </div>
                   <button onClick={() => deleteProduct(p.id)} className="bg-red-500 hover:bg-red-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition cursor-pointer shrink-0">

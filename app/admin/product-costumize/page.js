@@ -20,9 +20,18 @@ export default function ProductManagement() {
   const [sizes, setSizes] = useState('');
   const [description, setDescription] = useState('');
   
-  const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  // Multiple Product Images State
+  const [productImageFiles, setProductImageFiles] = useState([]);
+  const [productImagePreviews, setProductImagePreviews] = useState([]);
+
+  // Color Variants State [{colorName: '', imageFile: null, preview: ''}]
+  const [colors, setColors] = useState([]);
+  const [newColorName, setNewColorName] = useState('');
+  const [newColorFile, setNewColorFile] = useState(null);
+  const [newColorPreview, setNewColorPreview] = useState('');
+
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
 
   const [alert, setAlert] = useState({ show: false, msg: '' });
   const showAlert = (msg) => {
@@ -54,42 +63,84 @@ export default function ProductManagement() {
     const mainCat = e.target.value;
     setSelectedMainCat(mainCat);
     setSelectedSubCat('');
-
     const filtered = allSubCategories.filter(s => s.mainCat === mainCat);
     setFilteredSubCategories(filtered);
   };
 
-  const handleImageChange = (e) => {
+  // Handle Multiple Product Images Selection
+  const handleProductImagesChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setProductImageFiles(files);
+      const previews = files.map(file => URL.createObjectURL(file));
+      setProductImagePreviews(previews);
+    }
+  };
+
+  // Handle New Color Image Selection
+  const handleNewColorImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedImageFile(file);
-      setImagePreviewUrl(URL.createObjectURL(file));
-    } else {
-      setSelectedImageFile(null);
-      setImagePreviewUrl('');
+      setNewColorFile(file);
+      setNewColorPreview(URL.createObjectURL(file));
     }
+  };
+
+  // Add Color Variant to List
+  const handleAddColorVariant = () => {
+    if (!newColorName.trim() || !newColorFile) {
+      alert("দয়া করে কালারের নাম এবং ছবি দিন!");
+      return;
+    }
+    setColors([...colors, { name: newColorName.trim(), file: newColorFile, preview: newColorPreview }]);
+    setNewColorName('');
+    setNewColorFile(null);
+    setNewColorPreview('');
+  };
+
+  // Remove Color Variant
+  const handleRemoveColor = (index) => {
+    const updated = colors.filter((_, i) => i !== index);
+    setColors(updated);
+  };
+
+  // Cloudinary Upload Helper
+  const uploadToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("Image Upload Failed");
+    return data.secure_url;
   };
 
   const handleProductSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedImageFile) {
-      alert("দয়া করে ছবি সিলেক্ট করুন!");
+    if (productImageFiles.length === 0) {
+      alert("দয়া করে কমপক্ষে একটি প্রোডাক্টের ছবি সিলেক্ট করুন!");
       return;
     }
 
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedImageFile);
-      formData.append('upload_preset', uploadPreset);
+      setUploadProgress("প্রোডাক্টের ছবি আপলোড হচ্ছে...");
+      let imageUrls = [];
+      for (let file of productImageFiles) {
+        const url = await uploadToCloudinary(file);
+        imageUrls.push(url);
+      }
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: formData
-      });
-      const cloudData = await res.json();
-      if (!cloudData.secure_url) throw new Error("Image Upload Failed");
+      setUploadProgress("কালার ভ্যারিয়েন্ট ছবি আপলোড হচ্ছে...");
+      let colorVariants = [];
+      for (let col of colors) {
+        const colUrl = await uploadToCloudinary(col.file);
+        colorVariants.push({ name: col.name, imageUrl: colUrl });
+      }
 
       const sizesArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s !== '') : [];
 
@@ -98,11 +149,13 @@ export default function ProductManagement() {
         price: Number(price),
         discount: discount ? Number(discount) : null,
         mainCategory: selectedMainCat,
-        category: selectedSubCat, // সাব-ক্যাটাগরির আসল নাম সেভ হবে
-        subCategory: selectedSubCat, // ব্যাকআপের জন্য উভয় ফিল্ড রাখা হলো
+        category: selectedSubCat,
+        subCategory: selectedSubCat,
         sizes: sizesArray,
         description: description.trim(),
-        imageUrl: cloudData.secure_url,
+        imageUrls: imageUrls,
+        imageUrl: imageUrls[0], // Main fallback image
+        colorVariants: colorVariants,
         sellerName: 'AYAAT SPORT SHOP',
         sellerPhone: '01835302525',
         approved: true,
@@ -117,8 +170,9 @@ export default function ProductManagement() {
       setSelectedSubCat('');
       setSizes('');
       setDescription('');
-      setSelectedImageFile(null);
-      setImagePreviewUrl('');
+      setProductImageFiles([]);
+      setProductImagePreviews([]);
+      setColors([]);
       setFilteredSubCategories([]);
 
     } catch (err) {
@@ -126,6 +180,7 @@ export default function ProductManagement() {
       alert("⚠️ প্রোডাক্ট সেভ করতে সমস্যা হয়েছে!");
     } finally {
       setLoading(false);
+      setUploadProgress('');
     }
   };
 
@@ -141,7 +196,7 @@ export default function ProductManagement() {
 
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            🛍️ নতুন প্রোডাক্ট যোগ করুন
+            🛍️ নতুন প্রোডাক্ট যোগ করুন (একাধিক ছবি ও কালারসহ)
           </h3>
 
           <form onSubmit={handleProductSubmit} className="space-y-5">
@@ -235,19 +290,69 @@ export default function ProductManagement() {
               ></textarea>
             </div>
 
+            {/* Multiple Product Images */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">🖼️ প্রোডাক্টের ছবি</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">🖼️ প্রোডাক্টের একাধিক ছবি (একাধিক সিলেক্ট করুন)</label>
               <input 
                 type="file" 
                 accept="image/*" 
-                onChange={handleImageChange}
+                multiple
+                onChange={handleProductImagesChange}
                 required 
                 className="w-full text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 border border-slate-300 rounded-xl bg-slate-50 cursor-pointer"
               />
               
-              {imagePreviewUrl && (
-                <div className="mt-3 text-center">
-                  <img src={imagePreviewUrl} alt="Preview" className="h-24 w-24 object-cover rounded-xl border shadow-sm mx-auto" />
+              {productImagePreviews.length > 0 && (
+                <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+                  {productImagePreviews.map((url, idx) => (
+                    <img key={idx} src={url} alt="Preview" className="h-20 w-20 object-cover rounded-xl border shadow-sm flex-shrink-0" />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Color Variants Section */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <label className="block text-sm font-bold text-slate-800">🎨 কালার ভ্যারিয়েন্ট ও ছবি (ঐচ্ছিক)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input 
+                  type="text" 
+                  value={newColorName} 
+                  onChange={(e) => setNewColorName(e.target.value)}
+                  placeholder="কালারের নাম (যেমন: Red)" 
+                  className="border border-slate-300 p-2.5 rounded-xl text-xs bg-white text-black"
+                />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleNewColorImageChange}
+                  className="border border-slate-300 p-1.5 rounded-xl text-xs bg-white"
+                />
+                <button 
+                  type="button" 
+                  onClick={handleAddColorVariant}
+                  className="bg-slate-800 hover:bg-slate-900 text-white font-bold p-2.5 rounded-xl text-xs cursor-pointer"
+                >
+                  + কালার যোগ করুন
+                </button>
+              </div>
+
+              {newColorPreview && (
+                <div className="flex items-center gap-2 mt-2">
+                  <img src={newColorPreview} alt="Color Preview" className="w-12 h-12 object-cover rounded-lg border" />
+                  <span className="text-xs text-slate-600">সিলেক্টেড কালার প্রিভিউ</span>
+                </div>
+              )}
+
+              {colors.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-200">
+                  {colors.map((col, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-white border p-2 rounded-xl shadow-xs">
+                      <img src={col.preview} alt={col.name} className="w-8 h-8 object-cover rounded-md" />
+                      <span className="text-xs font-bold text-slate-700">{col.name}</span>
+                      <button type="button" onClick={() => handleRemoveColor(idx)} className="text-red-500 font-bold text-xs ml-2 cursor-pointer">✕</button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -257,7 +362,7 @@ export default function ProductManagement() {
               disabled={loading}
               className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 cursor-pointer text-xs"
             >
-              <span>{loading ? "⏳ আপলোড হচ্ছে..." : "🚀 প্রোডাক্ট সেভ ও পাবলিশ করুন"}</span>
+              <span>{loading ? (uploadProgress || "⏳ আপলোড হচ্ছে...") : "🚀 প্রোডাক্ট সেভ ও পাবলিশ করুন"}</span>
             </button>
 
           </form>

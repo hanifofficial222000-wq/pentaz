@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
@@ -54,7 +54,7 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
-export default function ProductDetailsPage() {
+function ProductDetailsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -666,5 +666,14 @@ export default function ProductDetailsPage() {
       </div>
 
     </div>
+  );
+}
+
+// মূল এক্সপোর্টে Suspense বাউন্ডারি যুক্ত করা হয়েছে যাতে সাদা স্ক্রিন না আসে
+export default function ProductDetailsPage() {
+  return (
+    <Suspense fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>
+      <ProductDetailsContent />
+    </Suspense>
   );
 }

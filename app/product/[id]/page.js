@@ -1,63 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
-  doc, getDoc, collection, getDocs, addDoc, query, where, limit, serverTimestamp 
+  doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
 } from 'firebase/firestore';
 
-// ⏱️ রিয়েল-টাইম ফ্ল্যাশ সেল কাউন্টডাউন টাইমার কম্পোনেন্ট
-function FlashSaleTimer({ endsAt }) {
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
-
-  useEffect(() => {
-    if (!endsAt) return;
-    try {
-      const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
-
-      const updateTimer = () => {
-        const now = new Date();
-        const difference = targetTime - now;
-
-        if (difference <= 0) {
-          setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
-          return;
-        }
-
-        const hours = Math.floor((difference / (1000 * 60 * 60)));
-        const minutes = Math.floor((difference / 1000 / 60) % 60);
-        const seconds = Math.floor((difference / 1000) % 60);
-
-        setTimeLeft({ hours, minutes, seconds, isExpired: false });
-      };
-
-      updateTimer();
-      const interval = setInterval(updateTimer, 1000);
-      return () => clearInterval(interval);
-    } catch (e) {
-      console.error("Timer error:", e);
-    }
-  }, [endsAt]);
-
-  if (timeLeft.isExpired) {
-    return <span className="text-red-500 font-bold text-xs">ফ্ল্যাশ সেল অফারের সময় শেষ!</span>;
-  }
-
-  return (
-    <div className="flex items-center gap-1.5 text-xs font-bold text-white bg-red-600 px-3 py-2 rounded-xl shadow-md w-max animate-pulse">
-      <span>⚡ ফ্ল্যাশ সেল শেষ হতে বাকি:</span>
-      <span className="bg-black/30 px-2 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>
-      <span>:</span>
-      <span className="bg-black/30 px-2 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>
-      <span>:</span>
-      <span className="bg-black/30 px-2 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
-    </div>
-  );
-}
-
-function ProductDetailsContent() {
+export default function ProductDetailsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -105,45 +56,22 @@ function ProductDetailsContent() {
   // More Products State
   const [moreProducts, setMoreProducts] = useState([]);
 
-  // URL থেকে নিখুঁতভাবে আইডি রিড করার হুক
   useEffect(() => {
-    try {
-      let id = searchParams ? searchParams.get('id') : null;
-      if (!id && typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        id = urlParams.get('id');
-        
-        if (!id) {
-          const pathSegments = window.location.pathname.split('/');
-          const lastSegment = pathSegments[pathSegments.length - 1];
-          if (lastSegment && lastSegment !== 'product') {
-            id = lastSegment;
-          }
-        }
+    let id = searchParams.get('id');
+    if (!id) {
+      const pathSegments = window.location.pathname.split('/');
+      const lastSegment = pathSegments[pathSegments.length - 1];
+      if (lastSegment && lastSegment !== 'product') {
+        id = lastSegment;
       }
-      
-      if (id) {
-        setProductId(id);
-      } else {
-        setNotFound(true);
-        setLoading(false);
-      }
-    } catch (err) {
-      console.error("Param read error:", err);
-      setNotFound(true);
-      setLoading(false);
     }
+    setProductId(id);
   }, [searchParams]);
 
-  // প্রোডাক্ট ফেচ করার ইফেক্ট
   useEffect(() => {
     if (!productId) return;
 
     async function fetchProduct() {
-      setLoading(true);
-      setNotFound(false);
-      setNotApproved(false);
-
       try {
         let docRef = doc(db, "products", productId);
         let docSnap = await getDoc(docRef);
@@ -176,7 +104,7 @@ function ProductDetailsContent() {
 
           // Images setup
           let imgs = [];
-          if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+          if (data.imageUrls && data.imageUrls.length > 0) {
             imgs = data.imageUrls;
           } else if (data.imageUrl) {
             imgs = [data.imageUrl];
@@ -187,16 +115,13 @@ function ProductDetailsContent() {
           if (imgs.length > 0) setMainImage(imgs[0]);
 
           // Color Variants setup
-          if (data.colorVariants && Array.isArray(data.colorVariants) && data.colorVariants.length > 0) {
+          if (data.colorVariants && data.colorVariants.length > 0) {
             setColorVariants(data.colorVariants);
-            setSelectedColor(data.colorVariants[0].name || '');
-          } else {
-            setColorVariants([]);
-            setSelectedColor('');
+            setSelectedColor(data.colorVariants[0].name);
           }
 
           // Sizes setup
-          if (data.sizes && Array.isArray(data.sizes) && data.sizes.length > 0 && !(data.sizes.length === 1 && (data.sizes[0] === 'Standard' || data.sizes[0] === ''))) {
+          if (data.sizes && data.sizes.length > 0 && !(data.sizes.length === 1 && (data.sizes[0] === 'Standard' || data.sizes[0] === ''))) {
             setSizes(data.sizes);
             setCurrentSize(data.sizes[0]);
           } else {
@@ -204,12 +129,8 @@ function ProductDetailsContent() {
             setCurrentSize('N/A');
           }
 
-          setCouponCode('');
-          setCouponMsg({ text: '', color: '' });
-          setAppliedDiscount(0);
-
           loadReviews(productId);
-          loadMoreProducts(data.category, productId);
+          loadMoreProducts(data.categoryId || data.category || null, productId);
         } else {
           setNotFound(true);
         }
@@ -245,43 +166,33 @@ function ProductDetailsContent() {
         setReviews(revList);
         setAvgRating((total / count).toFixed(1));
         setRevCount(count);
-      } else {
-        setReviews([]);
-        setAvgRating(0);
-        setRevCount(0);
       }
     } catch (err) {
       console.error("Error loading reviews:", err);
     }
   }
 
-  async function loadMoreProducts(categoryName, currentId) {
+  async function loadMoreProducts(catId, currentId) {
     try {
-      let q;
-      if (categoryName) {
-        q = query(
-          collection(db, "products"),
-          where("category", "==", categoryName),
-          where("approved", "==", true),
-          limit(7)
-        );
-      } else {
-        q = query(
-          collection(db, "products"),
-          where("approved", "==", true),
-          limit(7)
-        );
+      let q = collection(db, "products");
+      if (catId) {
+        q = query(collection(db, "products"), where("categoryId", "==", catId));
+      }
+      let snapshot = await getDocs(q);
+
+      if (snapshot.empty && catId) {
+        snapshot = await getDocs(collection(db, "products"));
       }
 
-      const snapshot = await getDocs(q);
       let list = [];
-
       snapshot.forEach((d) => {
         if (d.id === currentId) return;
-        list.push({ id: d.id, ...d.data() });
+        const item = d.data();
+        if (item.approved !== true) return;
+        list.push({ id: d.id, ...item });
       });
 
-      setMoreProducts(list.slice(0, 6));
+      setMoreProducts(list);
     } catch (err) {
       console.error("Error loading more products:", err);
     }
@@ -311,33 +222,28 @@ function ProductDetailsContent() {
   const handleAddToCart = () => {
     if (!productData) return;
 
-    try {
-      let cart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
-      let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
+    let cart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
+    let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
 
-      let cartItem = {
-        id: productId,
-        title: productData.title || productData.name || 'Product',
-        price: finalPrice,
-        image: productImg,
-        size: currentSize || 'N/A',
-        color: selectedColor || 'N/A',
-        quantity: 1
-      };
+    let cartItem = {
+      id: productId,
+      title: productData.title || productData.name,
+      price: finalPrice,
+      image: productImg,
+      size: currentSize || 'N/A',
+      color: selectedColor || 'N/A',
+      quantity: 1
+    };
 
-      let existingIndex = cart.findIndex(item => item.id === productId && item.size === cartItem.size && item.color === cartItem.color);
-      if (existingIndex > -1) {
-        cart[existingIndex].quantity += 1;
-      } else {
-        cart.push(cartItem);
-      }
-
-      localStorage.setItem('ayaat_cart', JSON.stringify(cart));
-      alert("সফলভাবে কার্টে যোগ করা হয়েছে! 🛒");
-    } catch (e) {
-      console.error("Cart error:", e);
-      alert("কার্টে যোগ করতে সমস্যা হয়েছে।");
+    let existingIndex = cart.findIndex(item => item.id === productId && item.size === cartItem.size && item.color === cartItem.color);
+    if (existingIndex > -1) {
+      cart[existingIndex].quantity += 1;
+    } else {
+      cart.push(cartItem);
     }
+
+    localStorage.setItem('ayaat_cart', JSON.stringify(cart));
+    alert("সফলভাবে কার্টে যোগ করা হয়েছে! 🛒");
   };
 
   const handleSubmitReview = async (e) => {
@@ -378,7 +284,7 @@ function ProductDetailsContent() {
     setSubmittingOrder(true);
     try {
       let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
-      let productPin = productData.productPin || (productId ? productId.slice(0, 6).toUpperCase() : '');
+      let productPin = productData.productPin || productId.slice(0, 6).toUpperCase();
       let pName = productData.title || productData.name || 'Product';
 
       localStorage.setItem("userPhone", cNumber.trim());
@@ -414,15 +320,15 @@ function ProductDetailsContent() {
   };
 
   if (loading) {
-    return <div className="text-center p-20 font-bold text-gray-500 bg-[#f5f5f5] min-h-screen">প্রোডাক্ট লোড হচ্ছে...</div>;
+    return <div className="text-center p-20 font-bold text-gray-500">প্রোডাক্ট লোড হচ্ছে...</div>;
   }
 
   if (notApproved) {
-    return <div className="text-center p-20 font-bold text-[#e63946] bg-[#f5f5f5] min-h-screen">এই প্রোডাক্টটি এখনো অ্যাডমিন কর্তৃক অনুমোদিত (Approved) হয়নি!</div>;
+    return <div className="text-center p-20 font-bold text-[#e63946]">এই প্রোডাক্টটি এখনো অ্যাডমিন কর্তৃক অনুমোদিত (Approved) হয়নি!</div>;
   }
 
   if (notFound || !productData) {
-    return <div className="text-center p-20 font-bold text-gray-600 bg-[#f5f5f5] min-h-screen">প্রোডাক্টটি পাওয়া যায়নি!</div>;
+    return <div className="text-center p-20 font-bold text-gray-600">প্রোডাক্টটি পাওয়া যায়নি!</div>;
   }
 
   return (
@@ -440,15 +346,10 @@ function ProductDetailsContent() {
               {discountPercent}% OFF
             </div>
           )}
-          {productData.isFlashSale && (
-            <div className="absolute top-[15px] left-[15px] bg-amber-500 text-white p-[6px_10px] text-[12px] font-extrabold rounded-[6px] z-20 shadow">
-              ⚡ FLASH SALE
-            </div>
-          )}
           <img src={mainImage} className="w-full rounded-[10px] mb-2 h-[400px] object-cover border border-[#eee]" alt="Product" />
           
           {imageUrls.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar">
               {imageUrls.map((imgUrl, idx) => (
                 <img 
                   key={idx} 
@@ -462,13 +363,6 @@ function ProductDetailsContent() {
           )}
         </div>
 
-        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার */}
-        {productData.isFlashSale && productData.flashSaleEndsAt && (
-          <div className="my-3">
-            <FlashSaleTimer endsAt={productData.flashSaleEndsAt} />
-          </div>
-        )}
-
         <h1 className="text-[20px] my-2.5 text-[#222] font-bold">{productData.title || productData.name}</h1>
         
         <div className="bg-[#eef2f7] border-l-4 border-[#007bff] p-[8px_12px] my-2.5 rounded-r-[8px] text-[13px] text-[#333] font-bold">
@@ -481,15 +375,15 @@ function ProductDetailsContent() {
           <li className="text-[14px] text-[#444]">✓ Free Delivery in Moheskhali</li>
           <li className="text-[14px] text-[#444]">✓ Cash On Delivery All Over Bangladesh</li>
           <li className="text-[14px] text-[#444]">✓ Estimated Delivery: 5-7 Days</li>
-          <li className="text-[14px] text-[#444]">✓ Cox’s Bazar outside Delivery 120 ৳</li>
-          <li className="text-[14px] text-[#444]">✓ Cox&apos;s Bazar all over delivery 100 ৳ single product double product 50 ৳</li>
+          <li className="text-[14px] text-[#444]">✓ Cox’s Bazar outside Delivery 120.৳</li>
+          <li className="text-[14px] text-[#444]">✓ Cox's Bazar all over delivery 100.৳ single product double product 50.৳</li>
         </ul>
 
         {/* Price Box */}
         <div className="flex items-center gap-3 my-2.5 flex-wrap">
-          <div className="text-[#e63946] text-[24px] font-bold">৳ {finalPrice}</div>
+          <div className="text-[#e63946] text-[24px] font-bold">SAR {finalPrice}</div>
           {discountPercent > 0 && (
-            <div className="text-[#888] text-[16px] line-through">৳ {regularPrice}</div>
+            <div className="text-[#888] text-[16px] line-through">SAR {regularPrice}</div>
           )}
           {discountPercent > 0 && (
             <div className="bg-[#ffe5e6] text-[#e63946] p-[4px_8px] rounded-[4px] text-[12px] font-bold">
@@ -520,17 +414,17 @@ function ProductDetailsContent() {
           </div>
         )}
 
-        {/* Color Variants Card System */}
+        {/* Color Variants Card System (Placed below sizes) */}
         {colorVariants.length > 0 && (
           <div className="my-4">
             <label className="font-bold block mb-2 text-[#333]">Select Color: <span className="text-[#e63946]">{selectedColor}</span></label>
-            <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
               {colorVariants.map((col, idx) => (
                 <div 
                   key={idx}
                   onClick={() => {
                     setSelectedColor(col.name);
-                    if (col.imageUrl) setMainImage(col.imageUrl);
+                    setMainImage(col.imageUrl);
                   }}
                   className={`flex flex-col items-center p-1.5 border-2 rounded-xl cursor-pointer transition-all flex-shrink-0 w-20 bg-white ${selectedColor === col.name ? 'border-[#e63946] shadow-md scale-105' : 'border-gray-200 opacity-80'}`}
                 >
@@ -631,12 +525,12 @@ function ProductDetailsContent() {
           </form>
         </div>
 
-        {/* You May Also Like Section */}
+        {/* You May Also Like */}
         <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
             {moreProducts.length === 0 ? (
-              <div className="col-span-3 text-center text-gray-500 text-[13px] py-4">এই ক্যাটাগরিতে আর কোনো প্রোডাক্ট নেই!</div>
+              <div className="col-span-3 text-center text-gray-500 text-[13px]">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
             ) : (
               moreProducts.map((item) => {
                 let itemImg = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || item.image);
@@ -646,41 +540,23 @@ function ProductDetailsContent() {
                 if (itemDiscount > 0) {
                   finalDispPrice = Math.round(itemRegPrice - (itemRegPrice * itemDiscount) / 100);
                 }
-                let itemPin = item.productPin || (item.id ? item.id.slice(0, 6).toUpperCase() : '');
+                let itemPin = item.productPin || item.id.slice(0, 6).toUpperCase();
 
                 return (
-                  <div 
-                    key={item.id} 
-                    onClick={() => {
-                      // উইন্ডো লোকেশন ব্যবহার করা হয়েছে যাতে অন্য প্রোডাক্টে ক্লিক করলে পেজটি স্মুথলি রিলোড হয়ে নতুন ডাটা ফেচ করে
-                      window.location.href = `/product?id=${item.id}`;
-                    }}
-                    className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative cursor-pointer hover:border-[#e63946] transition-all"
-                  >
-                    <div className="relative w-full">
-                      {itemDiscount > 0 && (
-                        <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">
-                          {itemDiscount}% OFF
-                        </div>
-                      )}
-                      <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover block" />
+                  <Link key={item.id} href={`/product?id=${item.id}`} className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative">
+                    <div className="relative">
+                      {itemDiscount > 0 && <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">{itemDiscount}% OFF</div>}
+                      <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover" />
                     </div>
-
-                    <div className="p-2 flex flex-col flex-grow">
-                      <h3 className="text-[11px] font-bold mb-1 line-clamp-2 text-[#222]">
-                        {item.title || item.name}
-                      </h3>
-                      <div className="text-[10px] text-[#007bff] font-bold mb-1.5 bg-[#eef2f7] p-[2px_4px] rounded inline-block w-fit">
-                        ID: {itemPin}
-                      </div>
-                      <div className="flex items-center gap-1 mt-auto">
-                        <span className="text-[#e63946] text-[12px] font-bold">৳ {finalDispPrice}</span>
-                        {itemDiscount > 0 && (
-                          <span className="text-[#888] text-[10px] line-through">৳ {itemRegPrice}</span>
-                        )}
+                    <div className="p-1.5 flex flex-col justify-between flex-grow">
+                      <h3 className="text-[11px] font-bold mb-1 line-clamp-2">{item.title || item.name}</h3>
+                      <div className="text-[10px] text-[#007bff] font-bold mb-1 bg-[#eef2f7] p-[2px_4px] rounded inline-block w-fit">ID: {itemPin}</div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[#e63946] text-[12px] font-bold">SAR {finalDispPrice}</span>
+                        {itemDiscount > 0 && <span className="text-[#888] text-[10px] line-through">SAR {itemRegPrice}</span>}
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })
             )}
@@ -700,13 +576,5 @@ function ProductDetailsContent() {
       </div>
 
     </div>
-  );
-}
-
-export default function ProductDetailsPage() {
-  return (
-    <Suspense fallback={<div className="text-center p-20 font-bold text-gray-500 bg-[#f5f5f5] min-h-screen">লোড হচ্ছে...</div>}>
-      <ProductDetailsContent />
-    </Suspense>
   );
 }

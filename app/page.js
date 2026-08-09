@@ -452,6 +452,7 @@ export default function AyaatShopHome() {
         </div>
       </div>
 
+      {/* PRODUCT GRID */}
       <div className="max-w-xl mx-auto p-2">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-10 font-bold text-gray-500">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
@@ -467,31 +468,43 @@ export default function AyaatShopHome() {
                   key={item.id} 
                   className="border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm relative no-underline hover:shadow-md transition-all cursor-pointer"
                 >
+                  {/* Image Section (Love/Favorite icon and discount badge removed from here) */}
                   <div className="relative w-full h-[140px] bg-gray-100 overflow-hidden">
+                    <img src={mainImg} alt={item.title} className="w-full h-full object-cover" />
+                  </div>
+
+                  {/* Details Section */}
+                  <div className="p-2 flex flex-col justify-between flex-grow">
+                    
+                    {/* Discount Badge (Placed above title/name) */}
                     {item.discount && Number(item.discount) > 0 && (
-                      <span className="absolute top-2 left-2 bg-gradient-to-r from-[#ff416c] to-[#ff4b2b] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow z-10">
+                      <span className="bg-gradient-to-r from-[#ff416c] to-[#ff4b2b] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow w-max mb-1">
                         {item.discount}% ছাড়
                       </span>
                     )}
-                    <button 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleFavorite(e, item.id);
-                      }}
-                      className={`absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-xs shadow z-10 transition-transform hover:scale-110 cursor-pointer ${isFav ? 'text-[#e63946]' : 'text-gray-400'}`}
-                    >
-                      {isFav ? '❤️' : '🤍'}
-                    </button>
-                    <img src={mainImg} alt={item.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-2 flex flex-col justify-between flex-grow">
+
                     {item.productPin && (
                       <span className="text-[10px] text-[#e63946] font-bold bg-[#ffe5e6] px-1.5 py-0.5 rounded w-max mb-1">
                         📌 {item.productPin}
                       </span>
                     )}
-                    <h3 className="text-[11px] font-bold mb-1 line-clamp-2 text-gray-800">{item.title}</h3>
+
+                    <div className="flex items-start justify-between gap-1 mb-1">
+                      <h3 className="text-[11px] font-bold line-clamp-2 text-gray-800 flex-grow">{item.title}</h3>
+                      
+                      {/* Favorite (Love) Icon Button (Placed in white area next to title) */}
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleFavorite(e, item.id);
+                        }}
+                        className={`w-6 h-6 rounded-full bg-gray-100 flex-shrink-0 flex items-center justify-center text-[10px] shadow-sm transition-transform hover:scale-110 cursor-pointer ${isFav ? 'text-[#e63946]' : 'text-gray-400'}`}
+                      >
+                        {isFav ? '❤️' : '🤍'}
+                      </button>
+                    </div>
+
                     <div className="text-[#e63946] text-xs font-bold mt-auto">SAR {item.price || item.discountPrice}</div>
                   </div>
                 </Link>

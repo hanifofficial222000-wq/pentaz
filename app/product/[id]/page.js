@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
-  doc, getDoc, collection, getDocs, addDoc, query, where, limit, serverTimestamp 
+  doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
 } from 'firebase/firestore';
 
 // ⏱️ রিয়েল-টাইম ফ্ল্যাশ সেল কাউন্টডাউন টাইমার কম্পোনেন্ট
@@ -54,7 +54,7 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
-function ProductDetailsContent() {
+export default function ProductDetailsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -99,10 +99,9 @@ function ProductDetailsContent() {
   const [revName, setRevName] = useState('');
   const [revComment, setRevComment] = useState('');
 
-  // More Products State
+  // More Products State (Strict Category Filtering)
   const [moreProducts, setMoreProducts] = useState([]);
 
-  // URL থেকে আইডি রিড করার হুক
   useEffect(() => {
     let id = searchParams.get('id');
     if (!id) {
@@ -115,15 +114,10 @@ function ProductDetailsContent() {
     setProductId(id);
   }, [searchParams]);
 
-  // প্রোডাক্ট ফেচ করার ইফেক্ট
   useEffect(() => {
     if (!productId) return;
 
     async function fetchProduct() {
-      setLoading(true);
-      setNotFound(false);
-      setNotApproved(false);
-
       try {
         let docRef = doc(db, "products", productId);
         let docSnap = await getDoc(docRef);
@@ -170,9 +164,6 @@ function ProductDetailsContent() {
           if (data.colorVariants && data.colorVariants.length > 0) {
             setColorVariants(data.colorVariants);
             setSelectedColor(data.colorVariants[0].name);
-          } else {
-            setColorVariants([]);
-            setSelectedColor('');
           }
 
           // Sizes setup
@@ -184,12 +175,10 @@ function ProductDetailsContent() {
             setCurrentSize('N/A');
           }
 
-          setCouponCode('');
-          setCouponMsg({ text: '', color: '' });
-          setAppliedDiscount(0);
-
           loadReviews(productId);
-          loadMoreProducts(productId);
+          
+          // শুধুমাত্র এই প্রোডাক্টের ক্যাটাগরি বা ক্যাটাগরি আইডির প্রোডাক্টগুলো ফিল্টার করার ব্যবস্থা
+          loadMoreProducts(data.categoryId, data.category, productId);
         } else {
           setNotFound(true);
         }
@@ -225,48 +214,38 @@ function ProductDetailsContent() {
         setReviews(revList);
         setAvgRating((total / count).toFixed(1));
         setRevCount(count);
-      } else {
-        setReviews([]);
-        setAvgRating(0);
-        setRevCount(0);
       }
     } catch (err) {
       console.error("Error loading reviews:", err);
     }
   }
 
-  // নিরাপদভাবে সব প্রোডাক্ট থেকে রেন্ডম বা রিসেন্ট প্রোডাক্ট লোড করার ফাংশন (যাতে কুয়েরি এরর বা হোয়াইট স্ক্রিন না হয়)
-  async function loadMoreProducts(currentId) {
+  // ক্যাটাগরি অনুযায়ী strictly ফিল্টার করার লজিক (categoryId অথবা category নাম দিয়ে মেলানো)
+  async function loadMoreProducts(catId, categoryName, currentId) {
     try {
-      const q = query(
-        collection(db, "products"),
-        where("approved", "==", true),
-        limit(10)
-      );
-
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(collection(db, "products"));
       let list = [];
 
       snapshot.forEach((d) => {
         if (d.id === currentId) return;
-        list.push({ id: d.id, ...d.data() });
+        const item = d.data();
+        if (item.approved !== true) return;
+
+        // ক্যাটাগরি ম্যাচিং চেক (categoryId অথবা category নাম দিয়ে)
+        const isMatchingCategory = 
+          (catId && item.categoryId === catId) || 
+          (categoryName && item.category && item.category.trim().toLowerCase() === categoryName.trim().toLowerCase());
+
+        if (isMatchingCategory) {
+          list.push({ id: d.id, ...item });
+        }
       });
 
-      setMoreProducts(list.slice(0, 6));
+      // যদি হুবহু ক্যাটাগরিতে প্রোডাক্ট না পাওয়া যায়, তবে ব্যাকআপ হিসেবে অন্য প্রোডাক্টও দেখাতে পারেন চাইলে, 
+      // তবে রিকোয়েস্ট অনুযায়ী শুধু ঐ ক্যাটাগরির প্রোডাক্টই ফিল্টার করা হলো।
+      setMoreProducts(list);
     } catch (err) {
       console.error("Error loading more products:", err);
-      // ফলব্যাক হিসেবে সাধারণ কুয়েরি ট্রাই করা যেতে পারে
-      try {
-        const fallbackSnap = await getDocs(query(collection(db, "products"), limit(8)));
-        let fallbackList = [];
-        fallbackSnap.forEach((d) => {
-          if (d.id === currentId) return;
-          fallbackList.push({ id: d.id, ...d.data() });
-        });
-        setMoreProducts(fallbackList.slice(0, 6));
-      } catch (e) {
-        console.error("Fallback error:", e);
-      }
     }
   }
 
@@ -426,7 +405,7 @@ function ProductDetailsContent() {
           <img src={mainImage} className="w-full rounded-[10px] mb-2 h-[400px] object-cover border border-[#eee]" alt="Product" />
           
           {imageUrls.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar">
               {imageUrls.map((imgUrl, idx) => (
                 <img 
                   key={idx} 
@@ -440,7 +419,7 @@ function ProductDetailsContent() {
           )}
         </div>
 
-        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার */}
+        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার (এখানে নিশ্চিতভাবে রেন্ডার করা হয়েছে) */}
         {productData.isFlashSale && productData.flashSaleEndsAt && (
           <div className="my-3">
             <FlashSaleTimer endsAt={productData.flashSaleEndsAt} />
@@ -459,15 +438,15 @@ function ProductDetailsContent() {
           <li className="text-[14px] text-[#444]">✓ Free Delivery in Moheskhali</li>
           <li className="text-[14px] text-[#444]">✓ Cash On Delivery All Over Bangladesh</li>
           <li className="text-[14px] text-[#444]">✓ Estimated Delivery: 5-7 Days</li>
-          <li className="text-[14px] text-[#444]">✓ Cox’s Bazar outside Delivery 120 ৳</li>
-          <li className="text-[14px] text-[#444]">✓ Cox&apos;s Bazar all over delivery 100 ৳ single product double product 50 ৳</li>
+          <li className="text-[14px] text-[#444]">✓ Cox’s Bazar outside Delivery 120.৳</li>
+          <li className="text-[14px] text-[#444]">✓ Cox's Bazar all over delivery 100.৳ single product double product 50.৳</li>
         </ul>
 
         {/* Price Box */}
         <div className="flex items-center gap-3 my-2.5 flex-wrap">
-          <div className="text-[#e63946] text-[24px] font-bold">৳ {finalPrice}</div>
+          <div className="text-[#e63946] text-[24px] font-bold">SAR {finalPrice}</div>
           {discountPercent > 0 && (
-            <div className="text-[#888] text-[16px] line-through">৳ {regularPrice}</div>
+            <div className="text-[#888] text-[16px] line-through">SAR {regularPrice}</div>
           )}
           {discountPercent > 0 && (
             <div className="bg-[#ffe5e6] text-[#e63946] p-[4px_8px] rounded-[4px] text-[12px] font-bold">
@@ -502,7 +481,7 @@ function ProductDetailsContent() {
         {colorVariants.length > 0 && (
           <div className="my-4">
             <label className="font-bold block mb-2 text-[#333]">Select Color: <span className="text-[#e63946]">{selectedColor}</span></label>
-            <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
               {colorVariants.map((col, idx) => (
                 <div 
                   key={idx}
@@ -609,12 +588,12 @@ function ProductDetailsContent() {
           </form>
         </div>
 
-        {/* You May Also Like Section */}
+        {/* You May Also Like (Strictly Same Category Products + Layout fixed: Image top, title & price below sequentially) */}
         <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
             {moreProducts.length === 0 ? (
-              <div className="col-span-3 text-center text-gray-500 text-[13px] py-4">এই মুহূর্তে আর কোনো প্রোডাক্ট নেই!</div>
+              <div className="col-span-3 text-center text-gray-500 text-[13px] py-4">এই ক্যাটাগরিতে আর কোনো প্রোডাক্ট নেই!</div>
             ) : (
               moreProducts.map((item) => {
                 let itemImg = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || item.image);
@@ -627,11 +606,12 @@ function ProductDetailsContent() {
                 let itemPin = item.productPin || item.id.slice(0, 6).toUpperCase();
 
                 return (
-                  <a 
+                  <Link 
                     key={item.id} 
-                    href={`/product?id=${item.id}`}
-                    className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative block"
+                    href={`/product?id=${item.id}`} 
+                    className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative"
                   >
+                    {/* ইমেজ একদম উপরে */}
                     <div className="relative w-full">
                       {itemDiscount > 0 && (
                         <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">
@@ -641,6 +621,7 @@ function ProductDetailsContent() {
                       <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover block" />
                     </div>
 
+                    {/* প্রোডাক্টের নাম, আইডি এবং প্রাইস নিচে একটার পর একটা সাজানো */}
                     <div className="p-2 flex flex-col flex-grow">
                       <h3 className="text-[11px] font-bold mb-1 line-clamp-2 text-[#222]">
                         {item.title || item.name}
@@ -649,13 +630,13 @@ function ProductDetailsContent() {
                         ID: {itemPin}
                       </div>
                       <div className="flex items-center gap-1 mt-auto">
-                        <span className="text-[#e63946] text-[12px] font-bold">৳ {finalDispPrice}</span>
+                        <span className="text-[#e63946] text-[12px] font-bold">SAR {finalDispPrice}</span>
                         {itemDiscount > 0 && (
-                          <span className="text-[#888] text-[10px] line-through">৳ {itemRegPrice}</span>
+                          <span className="text-[#888] text-[10px] line-through">SAR {itemRegPrice}</span>
                         )}
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 );
               })
             )}
@@ -675,26 +656,5 @@ function ProductDetailsContent() {
       </div>
 
     </div>
-  );
-}
-
-// আলাদা র‍্যাপার কম্পোনেন্ট যাতে আইডি বদলানোর সাথে সাথে পেজটি রিলোড বা রিমাউন্ড হয়
-function ProductDetailsWrapper() {
-  const searchParams = useSearchParams();
-  const productId = searchParams.get('id');
-
-  return (
-    <Suspense key={productId || 'default'} fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>
-      <ProductDetailsContent />
-    </Suspense>
-  );
-}
-
-// মূল এক্সপোর্ট
-export default function ProductDetailsPage() {
-  return (
-    <Suspense fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>
-      <ProductDetailsWrapper />
-    </Suspense>
   );
 }

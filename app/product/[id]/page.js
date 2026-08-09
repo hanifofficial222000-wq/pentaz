@@ -634,7 +634,8 @@ function ProductDetailsContent() {
                   <div 
                     key={item.id} 
                     onClick={() => {
-                      window.location.href = '/product?id=${item.id}`;
+                      window.location.href = `/product?id=${item.id}`;
+
                     }}
                     className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative cursor-pointer hover:border-[#e63946] transition-all"
                   >

@@ -8,6 +8,52 @@ import {
   doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
 } from 'firebase/firestore';
 
+// ⏱️ রিয়েল-টাইম ফ্ল্যাশ সেল কাউন্টডাউন টাইমার কম্পোনেন্ট
+function FlashSaleTimer({ endsAt }) {
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  useEffect(() => {
+    if (!endsAt) return;
+
+    const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
+
+    const updateTimer = () => {
+      const now = new Date();
+      const difference = targetTime - now;
+
+      if (difference <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+      }
+
+      const hours = Math.floor((difference / (1000 * 60 * 60)));
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      setTimeLeft({ hours, minutes, seconds, isExpired: false });
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [endsAt]);
+
+  if (timeLeft.isExpired) {
+    return <span className="text-red-500 font-bold text-xs">ফ্ল্যাশ সেল অফারের সময় শেষ!</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-bold text-white bg-red-600 px-3 py-2 rounded-xl shadow-md w-max animate-pulse">
+      <span>⚡ ফ্ল্যাশ সেল শেষ হতে বাকি:</span>
+      <span className="bg-black/30 px-2 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>
+      <span>:</span>
+      <span className="bg-black/30 px-2 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>
+      <span>:</span>
+      <span className="bg-black/30 px-2 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
+    </div>
+  );
+}
+
 export default function ProductDetailsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -346,6 +392,11 @@ export default function ProductDetailsPage() {
               {discountPercent}% OFF
             </div>
           )}
+          {productData.isFlashSale && (
+            <div className="absolute top-[15px] left-[15px] bg-amber-500 text-white p-[6px_10px] text-[12px] font-extrabold rounded-[6px] z-20 shadow">
+              ⚡ FLASH SALE
+            </div>
+          )}
           <img src={mainImage} className="w-full rounded-[10px] mb-2 h-[400px] object-cover border border-[#eee]" alt="Product" />
           
           {imageUrls.length > 1 && (
@@ -362,6 +413,13 @@ export default function ProductDetailsPage() {
             </div>
           )}
         </div>
+
+        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার (ডিটেইলস পেজে যুক্ত করা হলো) */}
+        {productData.isFlashSale && productData.flashSaleEndsAt && (
+          <div className="my-3">
+            <FlashSaleTimer endsAt={productData.flashSaleEndsAt} />
+          </div>
+        )}
 
         <h1 className="text-[20px] my-2.5 text-[#222] font-bold">{productData.title || productData.name}</h1>
         
@@ -424,7 +482,7 @@ export default function ProductDetailsPage() {
                   key={idx}
                   onClick={() => {
                     setSelectedColor(col.name);
-                    setMainImage(col.imageUrl);
+                    if (col.imageUrl) setMainImage(col.imageUrl);
                   }}
                   className={`flex flex-col items-center p-1.5 border-2 rounded-xl cursor-pointer transition-all flex-shrink-0 w-20 bg-white ${selectedColor === col.name ? 'border-[#e63946] shadow-md scale-105' : 'border-gray-200 opacity-80'}`}
                 >

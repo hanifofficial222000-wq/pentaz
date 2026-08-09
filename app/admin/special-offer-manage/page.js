@@ -131,8 +131,6 @@ export default function SpecialOfferManagePage() {
 
   return (
     <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans">
-
-      {/* Header */}
       <div className="max-w-4xl mx-auto bg-gradient-to-r from-slate-900 to-pink-600 rounded-t-2xl p-6 text-white shadow-lg flex items-center justify-between">
         <div>
           <h1 className="text-lg md:text-xl font-extrabold uppercase">AYAAT SPORT SHOP - কন্ট্রোল রুম</h1>
@@ -144,15 +142,12 @@ export default function SpecialOfferManagePage() {
       </div>
 
       <div className="max-w-4xl mx-auto bg-white p-6 rounded-b-2xl shadow-xl space-y-8">
-        
-        {/* Alert Box */}
         {alert.show && (
           <div className="p-3 rounded-xl text-center font-bold text-xs bg-green-100 text-green-700 border border-green-300">
             {alert.msg}
           </div>
         )}
 
-        {/* 1. Add Special Product Form */}
         <div className="bg-pink-50 p-5 rounded-xl border border-pink-200">
           <h3 className="text-base font-bold text-pink-900 mb-3">➕ নতুন স্পেশাল অফার প্রডাক্ট অ্যাড করুন</h3>
           <form onSubmit={handleAddProduct} className="space-y-4 bg-white p-4 rounded-xl border border-pink-100">
@@ -226,7 +221,6 @@ export default function SpecialOfferManagePage() {
           </form>
         </div>
 
-        {/* 3. Special Offer Products List */}
         <div className="bg-pink-50/50 p-5 rounded-xl border border-pink-100">
           <h3 className="text-base font-bold text-pink-900 mb-3">🛍️ প্রকাশিত স্পেশাল অফার প্রডাক্টসমূহ</h3>
           <div className="space-y-3">
@@ -251,7 +245,6 @@ export default function SpecialOfferManagePage() {
           </div>
         </div>
 
-        {/* 2. Special Offer Orders List */}
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
           <h3 className="text-base font-bold text-slate-800 mb-3">📦 স্পেশাল অফার পেজের অর্ডারসমূহ</h3>
           <div className="space-y-3">
@@ -273,7 +266,6 @@ export default function SpecialOfferManagePage() {
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

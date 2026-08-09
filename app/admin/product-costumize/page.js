@@ -31,7 +31,6 @@ export default function ProductManagement() {
     setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
   };
 
-  // Fetch categories from Firestore to populate dropdowns
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -51,7 +50,6 @@ export default function ProductManagement() {
     fetchCategories();
   }, []);
 
-  // Handle Main Category Change to filter subcategories
   const handleMainCatChange = (e) => {
     const mainCat = e.target.value;
     setSelectedMainCat(mainCat);
@@ -61,7 +59,6 @@ export default function ProductManagement() {
     setFilteredSubCategories(filtered);
   };
 
-  // Handle Image Selection
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -73,7 +70,6 @@ export default function ProductManagement() {
     }
   };
 
-  // Submit Product
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     if (!selectedImageFile) {
@@ -102,7 +98,8 @@ export default function ProductManagement() {
         price: Number(price),
         discount: discount ? Number(discount) : null,
         mainCategory: selectedMainCat,
-        category: selectedSubCat,
+        category: selectedSubCat, // সাব-ক্যাটাগরির আসল নাম সেভ হবে
+        subCategory: selectedSubCat, // ব্যাকআপের জন্য উভয় ফিল্ড রাখা হলো
         sizes: sizesArray,
         description: description.trim(),
         imageUrl: cloudData.secure_url,
@@ -113,7 +110,6 @@ export default function ProductManagement() {
       });
 
       showAlert("🎉 প্রোডাক্ট সফলভাবে পাবলিশ হয়েছে!");
-      // Reset Form
       setTitle('');
       setPrice('');
       setDiscount('');
@@ -137,14 +133,12 @@ export default function ProductManagement() {
     <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans">
       <div className="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl space-y-8">
         
-        {/* Success Alert */}
         {alert.show && (
           <div className="p-4 rounded-xl text-center font-bold text-sm bg-green-100 text-green-700 border border-green-300">
             {alert.msg}
           </div>
         )}
 
-        {/* SECTION: ADD PRODUCT */}
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             🛍️ নতুন প্রোডাক্ট যোগ করুন
@@ -213,7 +207,7 @@ export default function ProductManagement() {
                 >
                   <option value="" disabled>{selectedMainCat ? "সাব-ক্যাটাগরি সিলেক্ট করুন" : "প্রথমে মেইন ক্যাটাগরি সিলেক্ট করুন"}</option>
                   {filteredSubCategories.map((sub) => (
-                    <option key={sub.id} value={sub.name.toLowerCase().trim()}>{sub.name}</option>
+                    <option key={sub.id} value={sub.name}>{sub.name}</option>
                   ))}
                 </select>
               </div>

@@ -29,15 +29,12 @@ export default function AyaatShopHome() {
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
   const [isTopAdTransitioning, setIsTopAdTransitioning] = useState(true);
 
-  // স্ক্রল করে নেভবার লুকানোর ও দেখানোর স্টেট
   const [showNavbar, setShowNavbar] = useState(true);
   const lastScrollY = useRef(0);
 
-  // ফুল-পেজ পপআপ ক্লোজ স্টেট
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
-  // ড্র্যাগেবল স্মল পপআপ স্টেট
   const [popupPosition, setPopupPosition] = useState({ x: 20, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
@@ -87,7 +84,6 @@ export default function AyaatShopHome() {
     };
   }, [isDragging]);
 
-  // পেজ স্ক্রল ডিটেকশন
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -103,7 +99,6 @@ export default function AyaatShopHome() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // ফায়ারবেস থেকে প্রোডাক্ট, ক্যাটাগরি ও অ্যাডস ফেচ করা
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const prodList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -129,7 +124,6 @@ export default function AyaatShopHome() {
         if (!bannerSnap.empty) {
           const rawBanners = bannerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(b => !b.hidden);
           if (rawBanners.length > 0) {
-            // লুপ স্মুথ করার জন্য প্রথম ব্যানারটি শেষে ক্লোন করে যুক্ত করা হলো
             setPromoBanners([...rawBanners, rawBanners[0]]);
           }
         }
@@ -169,7 +163,6 @@ export default function AyaatShopHome() {
     return () => unsubscribeProducts();
   }, []);
 
-  // প্রমো ব্যানার সিমেট্রিক ইনফিনিট লুপ অটো-স্লাইড
   useEffect(() => {
     if (promoBanners.length <= 1) return;
     const originalLength = promoBanners.length - 1;
@@ -180,7 +173,7 @@ export default function AyaatShopHome() {
           setTimeout(() => {
             setIsPromoTransitioning(false);
             setCurrentPromoIndex(0);
-          }, 600); // স্লাইড অ্যানিমেশন শেষের সময়
+          }, 600);
           return prevIndex + 1;
         } else {
           setIsPromoTransitioning(true);
@@ -192,7 +185,6 @@ export default function AyaatShopHome() {
     return () => clearInterval(promoInterval);
   }, [promoBanners]);
 
-  // টপ থিন অ্যাডস সিমেট্রিক ইনফিনিট লুপ অটো-স্লাইড
   useEffect(() => {
     if (topThinAds.length <= 1) return;
     const originalLength = topThinAds.length - 1;
@@ -237,7 +229,7 @@ export default function AyaatShopHome() {
 
       if (activeSubCategory !== 'all') {
         result = result.filter(p => {
-          const pSub = (p.subCategory || p.subcat || '').toLowerCase().trim();
+          const pSub = (p.subCategory || p.subcat || p.category || '').toLowerCase().trim();
           return pSub === activeSubCategory.toLowerCase().trim();
         });
       }
@@ -280,7 +272,6 @@ export default function AyaatShopHome() {
   return (
     <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800 relative">
       
-      {/* FULL PAGE POPUP MODAL */}
       {showFullPopupModal && activePopupAd && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn">
@@ -305,7 +296,6 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* FLOATING & DRAGGABLE SMALL POPUPS */}
       {smallPopups.length > 0 && (
         <div 
           style={{ right: `${popupPosition.x}px`, bottom: `${popupPosition.y}px` }}
@@ -339,7 +329,6 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* TOP THIN AD SLIDER */}
       {topThinAds.length > 0 && (
         <div className="w-full bg-black overflow-hidden relative z-40">
           <div 
@@ -357,7 +346,6 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* MAIN CATEGORY & SUB-CATEGORY HEADER */}
       <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
           <button 
@@ -404,7 +392,6 @@ export default function AyaatShopHome() {
         )}
       </header>
 
-      {/* SEARCH BOX */}
       <div className="p-3 max-w-xl mx-auto">
         <input 
           type="text" 
@@ -415,7 +402,6 @@ export default function AyaatShopHome() {
         />
       </div>
 
-      {/* PROMO BANNER SECTION */}
       {promoBanners.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">
           <div className="relative w-full h-[130px] rounded-xl overflow-hidden shadow-md">
@@ -447,7 +433,6 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* SUB-FILTER BAR */}
       <div className="p-3 max-w-xl mx-auto">
         <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
           {[
@@ -467,7 +452,6 @@ export default function AyaatShopHome() {
         </div>
       </div>
 
-      {/* PRODUCT GRID */}
       <div className="max-w-xl mx-auto p-2">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-10 font-bold text-gray-500">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>

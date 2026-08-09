@@ -99,7 +99,7 @@ export default function ProductDetailsPage() {
   const [revName, setRevName] = useState('');
   const [revComment, setRevComment] = useState('');
 
-  // More Products State
+  // More Products State (Strict Category Filtering)
   const [moreProducts, setMoreProducts] = useState([]);
 
   useEffect(() => {
@@ -176,7 +176,9 @@ export default function ProductDetailsPage() {
           }
 
           loadReviews(productId);
-          loadMoreProducts(data.categoryId || data.category || null, productId);
+          
+          // শুধুমাত্র এই প্রোডাক্টের ক্যাটাগরি বা ক্যাটাগরি আইডির প্রোডাক্টগুলো ফিল্টার করার ব্যবস্থা
+          loadMoreProducts(data.categoryId, data.category, productId);
         } else {
           setNotFound(true);
         }
@@ -218,26 +220,29 @@ export default function ProductDetailsPage() {
     }
   }
 
-  async function loadMoreProducts(catId, currentId) {
+  // ক্যাটাগরি অনুযায়ী strictly ফিল্টার করার লজিক (categoryId অথবা category নাম দিয়ে মেলানো)
+  async function loadMoreProducts(catId, categoryName, currentId) {
     try {
-      let q = collection(db, "products");
-      if (catId) {
-        q = query(collection(db, "products"), where("categoryId", "==", catId));
-      }
-      let snapshot = await getDocs(q);
-
-      if (snapshot.empty && catId) {
-        snapshot = await getDocs(collection(db, "products"));
-      }
-
+      const snapshot = await getDocs(collection(db, "products"));
       let list = [];
+
       snapshot.forEach((d) => {
         if (d.id === currentId) return;
         const item = d.data();
         if (item.approved !== true) return;
-        list.push({ id: d.id, ...item });
+
+        // ক্যাটাগরি ম্যাচিং চেক (categoryId অথবা category নাম দিয়ে)
+        const isMatchingCategory = 
+          (catId && item.categoryId === catId) || 
+          (categoryName && item.category && item.category.trim().toLowerCase() === categoryName.trim().toLowerCase());
+
+        if (isMatchingCategory) {
+          list.push({ id: d.id, ...item });
+        }
       });
 
+      // যদি হুবহু ক্যাটাগরিতে প্রোডাক্ট না পাওয়া যায়, তবে ব্যাকআপ হিসেবে অন্য প্রোডাক্টও দেখাতে পারেন চাইলে, 
+      // তবে রিকোয়েস্ট অনুযায়ী শুধু ঐ ক্যাটাগরির প্রোডাক্টই ফিল্টার করা হলো।
       setMoreProducts(list);
     } catch (err) {
       console.error("Error loading more products:", err);
@@ -414,7 +419,7 @@ export default function ProductDetailsPage() {
           )}
         </div>
 
-        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার (ডিটেইলস পেজে যুক্ত করা হলো) */}
+        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার (এখানে নিশ্চিতভাবে রেন্ডার করা হয়েছে) */}
         {productData.isFlashSale && productData.flashSaleEndsAt && (
           <div className="my-3">
             <FlashSaleTimer endsAt={productData.flashSaleEndsAt} />
@@ -472,7 +477,7 @@ export default function ProductDetailsPage() {
           </div>
         )}
 
-        {/* Color Variants Card System (Placed below sizes) */}
+        {/* Color Variants Card System */}
         {colorVariants.length > 0 && (
           <div className="my-4">
             <label className="font-bold block mb-2 text-[#333]">Select Color: <span className="text-[#e63946]">{selectedColor}</span></label>
@@ -583,12 +588,12 @@ export default function ProductDetailsPage() {
           </form>
         </div>
 
-        {/* You May Also Like */}
+        {/* You May Also Like (Strictly Same Category Products + Layout fixed: Image top, title & price below sequentially) */}
         <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
             {moreProducts.length === 0 ? (
-              <div className="col-span-3 text-center text-gray-500 text-[13px]">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
+              <div className="col-span-3 text-center text-gray-500 text-[13px] py-4">এই ক্যাটাগরিতে আর কোনো প্রোডাক্ট নেই!</div>
             ) : (
               moreProducts.map((item) => {
                 let itemImg = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || item.image);
@@ -601,17 +606,34 @@ export default function ProductDetailsPage() {
                 let itemPin = item.productPin || item.id.slice(0, 6).toUpperCase();
 
                 return (
-                  <Link key={item.id} href={`/product?id=${item.id}`} className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative">
-                    <div className="relative">
-                      {itemDiscount > 0 && <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">{itemDiscount}% OFF</div>}
-                      <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover" />
+                  <Link 
+                    key={item.id} 
+                    href={`/product?id=${item.id}`} 
+                    className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative"
+                  >
+                    {/* ইমেজ একদম উপরে */}
+                    <div className="relative w-full">
+                      {itemDiscount > 0 && (
+                        <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">
+                          {itemDiscount}% OFF
+                        </div>
+                      )}
+                      <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover block" />
                     </div>
-                    <div className="p-1.5 flex flex-col justify-between flex-grow">
-                      <h3 className="text-[11px] font-bold mb-1 line-clamp-2">{item.title || item.name}</h3>
-                      <div className="text-[10px] text-[#007bff] font-bold mb-1 bg-[#eef2f7] p-[2px_4px] rounded inline-block w-fit">ID: {itemPin}</div>
-                      <div className="flex items-center gap-1">
+
+                    {/* প্রোডাক্টের নাম, আইডি এবং প্রাইস নিচে একটার পর একটা সাজানো */}
+                    <div className="p-2 flex flex-col flex-grow">
+                      <h3 className="text-[11px] font-bold mb-1 line-clamp-2 text-[#222]">
+                        {item.title || item.name}
+                      </h3>
+                      <div className="text-[10px] text-[#007bff] font-bold mb-1.5 bg-[#eef2f7] p-[2px_4px] rounded inline-block w-fit">
+                        ID: {itemPin}
+                      </div>
+                      <div className="flex items-center gap-1 mt-auto">
                         <span className="text-[#e63946] text-[12px] font-bold">SAR {finalDispPrice}</span>
-                        {itemDiscount > 0 && <span className="text-[#888] text-[10px] line-through">SAR {itemRegPrice}</span>}
+                        {itemDiscount > 0 && (
+                          <span className="text-[#888] text-[10px] line-through">SAR {itemRegPrice}</span>
+                        )}
                       </div>
                     </div>
                   </Link>

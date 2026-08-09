@@ -5,6 +5,52 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 
+// ⏱️ স্পেশাল অফার ও ফ্ল্যাশ সেলের জন্য রিয়েল-টাইম কাউন্টডাউন টাইমার কম্পোনেন্ট
+function FlashSaleTimer({ endsAt }) {
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  useEffect(() => {
+    if (!endsAt) return;
+
+    const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
+
+    const updateTimer = () => {
+      const now = new Date();
+      const difference = targetTime - now;
+
+      if (difference <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+      }
+
+      const hours = Math.floor((difference / (1000 * 60 * 60)));
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      setTimeLeft({ hours, minutes, seconds, isExpired: false });
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [endsAt]);
+
+  if (timeLeft.isExpired) {
+    return <span className="text-red-500 font-bold text-xs bg-red-50 px-2 py-1 rounded">অফারের সময় শেষ!</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-[11px] font-extrabold text-white bg-red-600 px-2.5 py-1.5 rounded-lg shadow-sm w-max">
+      <span>⏰ অফার শেষ হতে বাকি:</span>
+      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}ঘণ্টা</span>
+      <span>:</span>
+      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}মি</span>
+      <span>:</span>
+      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}সে</span>
+    </div>
+  );
+}
+
 export default function SpecialOffersPage() {
   const [products, setProducts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,14 +63,25 @@ export default function SpecialOffersPage() {
   });
   const [loading, setLoading] = useState(false);
 
-  // ফায়ারবেস থেকে স্পেশাল অফার প্রডাক্ট লোড করা (Products কালেকশন থেকে ফিল্টার করে)
+  // ফায়ারবেস থেকে স্পেশাল অফার প্রডাক্ট লোড করা এবং অটো-এক্সপায়ার চেক করা
   const fetchProducts = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "products"));
+      const now = new Date();
       const list = [];
+      
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data.isSpecialOffer || data.category?.toLowerCase() === 'special-offers') {
+        
+        // অটো-এক্সপায়ার চেক: যদি ফ্ল্যাশ সেলের বা অফারের শেষ সময় পার হয়ে যায়, তবে প্রডাক্টটি ফিল্টার আউট করা
+        if (data.flashSaleEndsAt) {
+          const endTime = data.flashSaleEndsAt?.toDate ? data.flashSaleEndsAt.toDate() : new Date(data.flashSaleEndsAt);
+          if (endTime <= now) {
+            return; // সময় শেষ হলে এই প্রডাক্ট অফার লিস্টে দেখাবে না
+          }
+        }
+
+        if (data.isSpecialOffer || data.isFlashSale || data.category?.toLowerCase() === 'special-offers') {
           list.push({ id: docSnap.id, ...data });
         }
       });
@@ -103,27 +160,47 @@ export default function SpecialOffersPage() {
 
       <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         <div className="bg-pink-100 border border-pink-300 p-4 rounded-2xl text-center space-y-1 shadow-sm">
-          <h2 className="text-pink-900 font-extrabold text-sm md:text-base">সীমিত সময়ের জন্য বিশেষ ছাড়!</h2>
-          <p className="text-pink-700 text-xs">আপনার পছন্দের প্রডাক্টটি লুফে নিন এবং ঘরে বসেই অর্ডার করুন।</p>
+          <h2 className="text-pink-900 font-extrabold text-sm md:text-base">সীমিত সময়ের জন্য বিশেষ ছাড় ও ফ্ল্যাশ সেল!</h2>
+          <p className="text-pink-700 text-xs">আপনার পছন্দের প্রডাক্টটি লুফে নিন এবং ঘরে বসেই দ্রুত অর্ডার করুন।</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {products.length === 0 ? (
-            <div className="text-center col-span-full py-10 text-slate-400 text-xs">কোনো অফার প্রডাক্ট পাওয়া যায়নি।</div>
+            <div className="text-center col-span-full py-10 text-slate-400 text-xs">কোনো অফার প্রডাক্ট পাওয়া যায়নি বা সময় শেষ হয়ে গেছে।</div>
           ) : (
             products.map((p) => {
               const mainImg = p.imageUrl || p.image || (p.imageUrls && p.imageUrls[0]) || 'https://via.placeholder.com/300';
               return (
                 <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
                   <div>
-                    <img src={mainImg} alt={p.title} className="w-full h-48 object-cover" />
+                    <div className="relative w-full h-48 bg-slate-100">
+                      <img src={mainImg} alt={p.title} className="w-full h-full object-cover" />
+                      {p.isFlashSale && (
+                        <span className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded shadow">
+                          ⚡ FLASH SALE
+                        </span>
+                      )}
+                    </div>
+                    
                     <div className="p-4 space-y-2">
-                      <span className="bg-pink-100 text-pink-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Special Offer</span>
+                      <div className="flex items-center justify-between">
+                        <span className="bg-pink-100 text-pink-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Special Offer</span>
+                        {p.discount && <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">save {p.discount}%</span>}
+                      </div>
+
                       <h3 className="font-bold text-slate-900 text-sm">{p.title}</h3>
                       <p className="text-xs text-slate-600 line-clamp-2">{p.description}</p>
+                      
+                      {/* লাইভ কাউন্টডাউন টাইমার */}
+                      {p.flashSaleEndsAt && (
+                        <div className="pt-1">
+                          <FlashSaleTimer endsAt={p.flashSaleEndsAt} />
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2 pt-1">
-                        <span className="text-pink-600 font-extrabold text-sm">৳{p.discountPrice || p.price}</span>
-                        {p.regularPrice && <span className="text-slate-400 line-through text-xs">৳{p.regularPrice}</span>}
+                        <span className="text-pink-600 font-extrabold text-sm">SAR {p.discountPrice || p.price}</span>
+                        {p.regularPrice && <span className="text-slate-400 line-through text-xs">SAR {p.regularPrice}</span>}
                       </div>
                     </div>
                   </div>
@@ -155,7 +232,7 @@ export default function SpecialOffersPage() {
             <h3 className="text-base font-bold text-slate-800">অর্ডার কনফার্ম করুন</h3>
             <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border">
               <b>প্রডাক্ট:</b> {selectedProduct.title}<br />
-              <b>মূল্য:</b> ৳{selectedProduct.discountPrice || selectedProduct.price}
+              <b>মূল্য:</b> SAR {selectedProduct.discountPrice || selectedProduct.price}
             </div>
 
             <form onSubmit={handleSubmitOrder} className="space-y-3">
@@ -180,7 +257,7 @@ export default function SpecialOffersPage() {
                   value={formData.phone}
                   onChange={handleChange}
                   required 
-                  placeholder="017xxxxxxxx" 
+                  placeholder="05xxxxxxxx" 
                   className="w-full border p-2.5 rounded-xl text-xs focus:ring-2 focus:ring-pink-500 outline-none text-black bg-white"
                 />
               </div>
@@ -193,7 +270,7 @@ export default function SpecialOffersPage() {
                   value={formData.address}
                   onChange={handleChange}
                   required 
-                  placeholder="বাসা, রোড, থানা, জেলা" 
+                  placeholder="বাসা, স্ট্রিট, শহর" 
                   className="w-full border p-2.5 rounded-xl text-xs focus:ring-2 focus:ring-pink-500 outline-none text-black bg-white"
                 ></textarea>
               </div>

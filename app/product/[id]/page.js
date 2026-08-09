@@ -14,28 +14,31 @@ function FlashSaleTimer({ endsAt }) {
 
   useEffect(() => {
     if (!endsAt) return;
+    try {
+      const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
 
-    const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
+      const updateTimer = () => {
+        const now = new Date();
+        const difference = targetTime - now;
 
-    const updateTimer = () => {
-      const now = new Date();
-      const difference = targetTime - now;
+        if (difference <= 0) {
+          setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+          return;
+        }
 
-      if (difference <= 0) {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
-        return;
-      }
+        const hours = Math.floor((difference / (1000 * 60 * 60)));
+        const minutes = Math.floor((difference / 1000 / 60) % 60);
+        const seconds = Math.floor((difference / 1000) % 60);
 
-      const hours = Math.floor((difference / (1000 * 60 * 60)));
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-      const seconds = Math.floor((difference / 1000) % 60);
+        setTimeLeft({ hours, minutes, seconds, isExpired: false });
+      };
 
-      setTimeLeft({ hours, minutes, seconds, isExpired: false });
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    } catch (e) {
+      console.error("Timer error:", e);
+    }
   }, [endsAt]);
 
   if (timeLeft.isExpired) {
@@ -102,17 +105,23 @@ function ProductDetailsContent() {
   // More Products State
   const [moreProducts, setMoreProducts] = useState([]);
 
-  // URL থেকে আইডি রিড করার হুক
+  // URL থেকে আইডি সেফলি রিড করার হুক
   useEffect(() => {
-    let id = searchParams.get('id');
-    if (!id) {
-      const pathSegments = window.location.pathname.split('/');
-      const lastSegment = pathSegments[pathSegments.length - 1];
-      if (lastSegment && lastSegment !== 'product') {
-        id = lastSegment;
+    try {
+      let id = searchParams ? searchParams.get('id') : null;
+      if (!id && typeof window !== 'undefined') {
+        const pathSegments = window.location.pathname.split('/');
+        const lastSegment = pathSegments[pathSegments.length - 1];
+        if (lastSegment && lastSegment !== 'product') {
+          id = lastSegment;
+        }
       }
+      setProductId(id);
+    } catch (err) {
+      console.error("Param read error:", err);
+      setNotFound(true);
+      setLoading(false);
     }
-    setProductId(id);
   }, [searchParams]);
 
   // প্রোডাক্ট ফেচ করার ইফেক্ট
@@ -156,7 +165,7 @@ function ProductDetailsContent() {
 
           // Images setup
           let imgs = [];
-          if (data.imageUrls && data.imageUrls.length > 0) {
+          if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
             imgs = data.imageUrls;
           } else if (data.imageUrl) {
             imgs = [data.imageUrl];
@@ -167,16 +176,16 @@ function ProductDetailsContent() {
           if (imgs.length > 0) setMainImage(imgs[0]);
 
           // Color Variants setup
-          if (data.colorVariants && data.colorVariants.length > 0) {
+          if (data.colorVariants && Array.isArray(data.colorVariants) && data.colorVariants.length > 0) {
             setColorVariants(data.colorVariants);
-            setSelectedColor(data.colorVariants[0].name);
+            setSelectedColor(data.colorVariants[0].name || '');
           } else {
             setColorVariants([]);
             setSelectedColor('');
           }
 
           // Sizes setup
-          if (data.sizes && data.sizes.length > 0 && !(data.sizes.length === 1 && (data.sizes[0] === 'Standard' || data.sizes[0] === ''))) {
+          if (data.sizes && Array.isArray(data.sizes) && data.sizes.length > 0 && !(data.sizes.length === 1 && (data.sizes[0] === 'Standard' || data.sizes[0] === ''))) {
             setSizes(data.sizes);
             setCurrentSize(data.sizes[0]);
           } else {
@@ -298,28 +307,33 @@ function ProductDetailsContent() {
   const handleAddToCart = () => {
     if (!productData) return;
 
-    let cart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
-    let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
+    try {
+      let cart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
+      let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
 
-    let cartItem = {
-      id: productId,
-      title: productData.title || productData.name,
-      price: finalPrice,
-      image: productImg,
-      size: currentSize || 'N/A',
-      color: selectedColor || 'N/A',
-      quantity: 1
-    };
+      let cartItem = {
+        id: productId,
+        title: productData.title || productData.name || 'Product',
+        price: finalPrice,
+        image: productImg,
+        size: currentSize || 'N/A',
+        color: selectedColor || 'N/A',
+        quantity: 1
+      };
 
-    let existingIndex = cart.findIndex(item => item.id === productId && item.size === cartItem.size && item.color === cartItem.color);
-    if (existingIndex > -1) {
-      cart[existingIndex].quantity += 1;
-    } else {
-      cart.push(cartItem);
+      let existingIndex = cart.findIndex(item => item.id === productId && item.size === cartItem.size && item.color === cartItem.color);
+      if (existingIndex > -1) {
+        cart[existingIndex].quantity += 1;
+      } else {
+        cart.push(cartItem);
+      }
+
+      localStorage.setItem('ayaat_cart', JSON.stringify(cart));
+      alert("সফলভাবে কার্টে যোগ করা হয়েছে! 🛒");
+    } catch (e) {
+      console.error("Cart error:", e);
+      alert("কার্টে যোগ করতে সমস্যা হয়েছে।");
     }
-
-    localStorage.setItem('ayaat_cart', JSON.stringify(cart));
-    alert("সফলভাবে কার্টে যোগ করা হয়েছে! 🛒");
   };
 
   const handleSubmitReview = async (e) => {
@@ -360,7 +374,7 @@ function ProductDetailsContent() {
     setSubmittingOrder(true);
     try {
       let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
-      let productPin = productData.productPin || productId.slice(0, 6).toUpperCase();
+      let productPin = productData.productPin || (productId ? productId.slice(0, 6).toUpperCase() : '');
       let pName = productData.title || productData.name || 'Product';
 
       localStorage.setItem("userPhone", cNumber.trim());
@@ -396,15 +410,15 @@ function ProductDetailsContent() {
   };
 
   if (loading) {
-    return <div className="text-center p-20 font-bold text-gray-500">প্রোডাক্ট লোড হচ্ছে...</div>;
+    return <div className="text-center p-20 font-bold text-gray-500 bg-[#f5f5f5] min-h-screen">প্রোডাক্ট লোড হচ্ছে...</div>;
   }
 
   if (notApproved) {
-    return <div className="text-center p-20 font-bold text-[#e63946]">এই প্রোডাক্টটি এখনো অ্যাডমিন কর্তৃক অনুমোদিত (Approved) হয়নি!</div>;
+    return <div className="text-center p-20 font-bold text-[#e63946] bg-[#f5f5f5] min-h-screen">এই প্রোডাক্টটি এখনো অ্যাডমিন কর্তৃক অনুমোদিত (Approved) হয়নি!</div>;
   }
 
   if (notFound || !productData) {
-    return <div className="text-center p-20 font-bold text-gray-600">প্রোডাক্টটি পাওয়া যায়নি!</div>;
+    return <div className="text-center p-20 font-bold text-gray-600 bg-[#f5f5f5] min-h-screen">প্রোডাক্টটি পাওয়া যায়নি!</div>;
   }
 
   return (
@@ -613,7 +627,7 @@ function ProductDetailsContent() {
           </form>
         </div>
 
-        {/* You May Also Like Section (Fixed with router.push for Netlify Export compatibility) */}
+        {/* You May Also Like Section */}
         <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
@@ -628,7 +642,7 @@ function ProductDetailsContent() {
                 if (itemDiscount > 0) {
                   finalDispPrice = Math.round(itemRegPrice - (itemRegPrice * itemDiscount) / 100);
                 }
-                let itemPin = item.productPin || item.id.slice(0, 6).toUpperCase();
+                let itemPin = item.productPin || (item.id ? item.id.slice(0, 6).toUpperCase() : '');
 
                 return (
                   <div 
@@ -684,21 +698,10 @@ function ProductDetailsContent() {
   );
 }
 
-function ProductDetailsWrapper() {
-  const searchParams = useSearchParams();
-  const productId = searchParams.get('id');
-
-  return (
-    <Suspense key={productId || 'default'} fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>
-      <ProductDetailsContent />
-    </Suspense>
-  );
-}
-
 export default function ProductDetailsPage() {
   return (
-    <Suspense fallback={<div className="text-center p-20 font-bold text-gray-500">লোড হচ্ছে...</div>}>
-      <ProductDetailsWrapper />
+    <Suspense fallback={<div className="text-center p-20 font-bold text-gray-500 bg-[#f5f5f5] min-h-screen">লোড হচ্ছে...</div>}>
+      <ProductDetailsContent />
     </Suspense>
   );
 }

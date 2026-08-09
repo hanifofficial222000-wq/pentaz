@@ -5,6 +5,52 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 
+// ⏱️ কাউন্টডাউন টাইমার কম্পোনেন্ট (ফ্ল্যাশ সেলের জন্য রিয়েল-টাইম কাউন্টডাউন)
+function FlashSaleTimer({ endsAt }) {
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  useEffect(() => {
+    if (!endsAt) return;
+
+    const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
+
+    const updateTimer = () => {
+      const now = new Date();
+      const difference = targetTime - now;
+
+      if (difference <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+      }
+
+      const hours = Math.floor((difference / (1000 * 60 * 60)));
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      setTimeLeft({ hours, minutes, seconds, isExpired: false });
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [endsAt]);
+
+  if (timeLeft.isExpired) {
+    return <span className="text-red-500 font-bold text-xs">অফার শেষ!</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-[11px] font-extrabold text-white bg-red-600 px-2 py-1 rounded-md shadow-sm">
+      <span>⏰ সময় বাকি:</span>
+      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}ঘণ্টা</span>
+      <span>:</span>
+      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}মি</span>
+      <span>:</span>
+      <span className="bg-black/30 px-1.5 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}সে</span>
+    </div>
+  );
+}
+
 export default function AyaatShopHome() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -101,7 +147,18 @@ export default function AyaatShopHome() {
 
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
-      const prodList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const now = new Date();
+      const prodList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // অটো-এক্সপায়ার চেক: যদি ফ্ল্যাশ সেলের সময় পার হয়ে যায়, তবে প্রডাক্টের ফ্ল্যাশ সেল স্ট্যাটাস ফলস করে দেওয়া
+        if (data.flashSaleEndsAt) {
+          const endTime = data.flashSaleEndsAt?.toDate ? data.flashSaleEndsAt.toDate() : new Date(data.flashSaleEndsAt);
+          if (endTime <= now) {
+            data.isFlashSale = false;
+          }
+        }
+        return { id: doc.id, ...data };
+      });
       setProducts(prodList);
       setFilteredProducts(prodList);
     }, (error) => {
@@ -219,8 +276,8 @@ export default function AyaatShopHome() {
   useEffect(() => {
     let result = products.filter(p => p.approved !== false);
 
-    if (activeCategory === 'special-offers') {
-      result = result.filter(p => p.isSpecialOffer || p.category?.toLowerCase() === 'special-offers');
+    if (activeCategory === 'special-offers' || activeCategory === 'flash-sale') {
+      result = result.filter(p => p.isSpecialOffer || p.isFlashSale || p.category?.toLowerCase() === 'special-offers');
     } else if (activeCategory !== 'all') {
       result = result.filter(p => {
         const pMain = (p.mainCategory || p.category || '').toLowerCase().trim();
@@ -235,7 +292,9 @@ export default function AyaatShopHome() {
       }
     }
 
-    if (activeSubFilter === 'bestseller') {
+    if (activeSubFilter === 'flash-sale') {
+      result = result.filter(p => p.isFlashSale);
+    } else if (activeSubFilter === 'bestseller') {
       result = result.filter(p => p.bestseller);
     } else if (activeSubFilter === 'discount') {
       result = result.filter(p => Number(p.discount || 0) >= 50);
@@ -348,7 +407,6 @@ export default function AyaatShopHome() {
 
       <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
         
-        {/* 🟢 SEARCH BAR (লাল দাগ চিহ্নিত একদম উপরে হেডার বা লোগোর ঠিক নিচে বসানো হয়েছে) */}
         <div className="max-w-xl mx-auto px-3 pt-3 pb-1 bg-white">
           <input 
             type="text" 
@@ -359,7 +417,6 @@ export default function AyaatShopHome() {
           />
         </div>
 
-        {/* 🟢 TRENDYOL STYLE CIRCULAR CATEGORIES SECTION */}
         <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
           <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
             
@@ -375,7 +432,19 @@ export default function AyaatShopHome() {
               <span className="text-[11px] font-bold text-gray-800 mt-1.5">সকল</span>
             </button>
 
-            {/* 🟢 SPECIAL OFFER BUTTON LINKED TO /special-offers */}
+            {/* ⚡ ফ্ল্যাশ সেল বাটন */}
+            <button 
+              onClick={() => handleMainCategoryClick('flash-sale')}
+              className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
+            >
+              <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'flash-sale' ? 'border-amber-500 scale-105' : 'border-amber-300'}`}>
+                <div className="w-full h-full rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-xl animate-pulse">
+                  ⚡
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-amber-700 mt-1.5">ফ্ল্যাশ সেল</span>
+            </button>
+
             <Link 
               href="/special-offer"
               className="flex flex-col items-center flex-shrink-0 group cursor-pointer no-underline"
@@ -466,6 +535,7 @@ export default function AyaatShopHome() {
         <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
           {[
             { id: 'all', label: 'সকল প্রোডাক্ট' },
+            { id: 'flash-sale', label: '⚡ ফ্ল্যাশ সেল' },
             { id: 'bestseller', label: '🔥 সেরা বিকশিত' },
             { id: 'discount', label: '🏷️ ৫০% বা তার বেশি ছাড়' },
             { id: 'coupon', label: '🎟️ কুপন সহ' }
@@ -498,10 +568,21 @@ export default function AyaatShopHome() {
                 >
                   <div className="relative w-full h-[140px] bg-gray-100 overflow-hidden">
                     <img src={mainImg} alt={item.title} className="w-full h-full object-cover" />
+                    {item.isFlashSale && (
+                      <span className="absolute top-1 left-1 bg-amber-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow">
+                        ⚡ FLASH SALE
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-2 flex flex-col justify-between flex-grow">
                     
+                    {item.isFlashSale && item.flashSaleEndsAt && (
+                      <div className="mb-1">
+                        <FlashSaleTimer endsAt={item.flashSaleEndsAt} />
+                      </div>
+                    )}
+
                     {item.discount && Number(item.discount) > 0 && (
                       <span className="bg-gradient-to-r from-[#ff416c] to-[#ff4b2b] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow w-max mb-1">
                         {item.discount}% ছাড়

@@ -189,7 +189,7 @@ function ProductDetailsContent() {
           setAppliedDiscount(0);
 
           loadReviews(productId);
-          loadMoreProducts(data.categoryId, data.category, productId);
+          loadMoreProducts(productId);
         } else {
           setNotFound(true);
         }
@@ -235,31 +235,14 @@ function ProductDetailsContent() {
     }
   }
 
-  // অপ্টিমাইজড কুয়েরি ব্যবহার করে রিলেটেড প্রোডাক্ট ফেচ করা (সার্ভার সাইড ফিল্টারিং)
-  async function loadMoreProducts(catId, categoryName, currentId) {
+  // নিরাপদভাবে সব প্রোডাক্ট থেকে রেন্ডম বা রিসেন্ট প্রোডাক্ট লোড করার ফাংশন (যাতে কুয়েরি এরর বা হোয়াইট স্ক্রিন না হয়)
+  async function loadMoreProducts(currentId) {
     try {
-      let q;
-      if (catId) {
-        q = query(
-          collection(db, "products"),
-          where("categoryId", "==", catId),
-          where("approved", "==", true),
-          limit(7)
-        );
-      } else if (categoryName) {
-        q = query(
-          collection(db, "products"),
-          where("category", "==", categoryName),
-          where("approved", "==", true),
-          limit(7)
-        );
-      } else {
-        q = query(
-          collection(db, "products"),
-          where("approved", "==", true),
-          limit(7)
-        );
-      }
+      const q = query(
+        collection(db, "products"),
+        where("approved", "==", true),
+        limit(10)
+      );
 
       const snapshot = await getDocs(q);
       let list = [];
@@ -272,6 +255,18 @@ function ProductDetailsContent() {
       setMoreProducts(list.slice(0, 6));
     } catch (err) {
       console.error("Error loading more products:", err);
+      // ফলব্যাক হিসেবে সাধারণ কুয়েরি ট্রাই করা যেতে পারে
+      try {
+        const fallbackSnap = await getDocs(query(collection(db, "products"), limit(8)));
+        let fallbackList = [];
+        fallbackSnap.forEach((d) => {
+          if (d.id === currentId) return;
+          fallbackList.push({ id: d.id, ...d.data() });
+        });
+        setMoreProducts(fallbackList.slice(0, 6));
+      } catch (e) {
+        console.error("Fallback error:", e);
+      }
     }
   }
 
@@ -468,7 +463,7 @@ function ProductDetailsContent() {
           <li className="text-[14px] text-[#444]">✓ Cox&apos;s Bazar all over delivery 100 ৳ single product double product 50 ৳</li>
         </ul>
 
-        {/* Price Box (Standardized to ৳ BDT currency for Bangladesh market context) */}
+        {/* Price Box */}
         <div className="flex items-center gap-3 my-2.5 flex-wrap">
           <div className="text-[#e63946] text-[24px] font-bold">৳ {finalPrice}</div>
           {discountPercent > 0 && (
@@ -619,7 +614,7 @@ function ProductDetailsContent() {
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
             {moreProducts.length === 0 ? (
-              <div className="col-span-3 text-center text-gray-500 text-[13px] py-4">এই ক্যাটাগরিতে আর কোনো প্রোডাক্ট নেই!</div>
+              <div className="col-span-3 text-center text-gray-500 text-[13px] py-4">এই মুহূর্তে আর কোনো প্রোডাক্ট নেই!</div>
             ) : (
               moreProducts.map((item) => {
                 let itemImg = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || item.image);
@@ -632,10 +627,10 @@ function ProductDetailsContent() {
                 let itemPin = item.productPin || item.id.slice(0, 6).toUpperCase();
 
                 return (
-                  <Link 
+                  <a 
                     key={item.id} 
-                    href={`/product?id=${item.id}`} 
-                    className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative"
+                    href={`/product?id=${item.id}`}
+                    className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative block"
                   >
                     <div className="relative w-full">
                       {itemDiscount > 0 && (
@@ -660,7 +655,7 @@ function ProductDetailsContent() {
                         )}
                       </div>
                     </div>
-                  </Link>
+                  </a>
                 );
               })
             )}
@@ -683,7 +678,7 @@ function ProductDetailsContent() {
   );
 }
 
-// আলাদা র‍্যাপার কম্পোনেন্ট তৈরি করা হয়েছে যাতে searchParams পরিবর্তন হলে কী (key) এর মাধ্যমে পেজটি সঠিকভাবে রিমাউন্ড হয়
+// আলাদা র‍্যাপার কম্পোনেন্ট যাতে আইডি বদলানোর সাথে সাথে পেজটি রিলোড বা রিমাউন্ড হয়
 function ProductDetailsWrapper() {
   const searchParams = useSearchParams();
   const productId = searchParams.get('id');

@@ -20,6 +20,10 @@ export default function ProductManagement() {
   const [sizes, setSizes] = useState('');
   const [description, setDescription] = useState('');
   
+  // ⚡ ফ্ল্যাশ সেল ও অফার সম্পর্কিত নতুন স্টেট
+  const [isFlashSale, setIsFlashSale] = useState(false);
+  const [flashSaleEndsAt, setFlashSaleEndsAt] = useState('');
+
   // Multiple Product Images State
   const [productImageFiles, setProductImageFiles] = useState([]);
   const [productImagePreviews, setProductImagePreviews] = useState([]);
@@ -144,6 +148,12 @@ export default function ProductManagement() {
 
       const sizesArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s !== '') : [];
 
+      // ফ্ল্যাশ সেলের শেষ সময় ডেট অবজেক্টে রূপান্তর
+      let formattedEndsAt = null;
+      if (isFlashSale && flashSaleEndsAt) {
+        formattedEndsAt = new Date(flashSaleEndsAt);
+      }
+
       await addDoc(collection(db, "products"), {
         title: title.trim(),
         price: Number(price),
@@ -156,6 +166,9 @@ export default function ProductManagement() {
         imageUrls: imageUrls,
         imageUrl: imageUrls[0], // Main fallback image
         colorVariants: colorVariants,
+        isFlashSale: isFlashSale,
+        isSpecialOffer: isFlashSale, // স্পেশাল অফার পেজেও শো করার জন্য
+        flashSaleEndsAt: formattedEndsAt,
         sellerName: 'AYAAT SPORT SHOP',
         sellerPhone: '01835302525',
         approved: true,
@@ -170,6 +183,8 @@ export default function ProductManagement() {
       setSelectedSubCat('');
       setSizes('');
       setDescription('');
+      setIsFlashSale(false);
+      setFlashSaleEndsAt('');
       setProductImageFiles([]);
       setProductImagePreviews([]);
       setColors([]);
@@ -196,7 +211,7 @@ export default function ProductManagement() {
 
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            🛍️ নতুন প্রোডাক্ট যোগ করুন (একাধিক ছবি ও কালারসহ)
+            🛍️ নতুন প্রোডাক্ট যোগ করুন (ফ্ল্যাশ সেল ও কালারসহ)
           </h3>
 
           <form onSubmit={handleProductSubmit} className="space-y-5">
@@ -235,6 +250,36 @@ export default function ProductManagement() {
                   className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 transition text-xs text-black"
                 />
               </div>
+            </div>
+
+            {/* ⚡ ফ্ল্যাশ সেল ও অফার সেটিং সেকশন */}
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-3">
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="flashSaleCheck"
+                  checked={isFlashSale}
+                  onChange={(e) => setIsFlashSale(e.target.checked)}
+                  className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer"
+                />
+                <label htmlFor="flashSaleCheck" className="text-sm font-bold text-amber-900 cursor-pointer">
+                  ⚡ এটি কি ফ্ল্যাশ সেল বা স্পেশাল অফার প্রোডাক্ট হবে?
+                </label>
+              </div>
+
+              {isFlashSale && (
+                <div>
+                  <label className="block text-xs font-semibold text-amber-800 mb-1">⏰ অফার শেষের তারিখ ও সময় (End Time)</label>
+                  <input 
+                    type="datetime-local" 
+                    value={flashSaleEndsAt}
+                    onChange={(e) => setFlashSaleEndsAt(e.target.value)}
+                    required={isFlashSale}
+                    className="w-full border border-amber-300 p-2.5 rounded-xl bg-white text-xs text-black outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[11px] text-amber-700 mt-1">এই সময় পার হয়ে গেলে প্রডাক্টটি অটোমেটিক অফার পেজ ও হোম পেজের ফ্ল্যাশ সেল থেকে সরে যাবে।</p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

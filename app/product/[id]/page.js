@@ -235,7 +235,6 @@ function ProductDetailsContent() {
     }
   }
 
-  // অপ্টিমাইজড কুয়েরি ব্যবহার করে রিলেটেড প্রোডাক্ট ফেচ করা (সার্ভার সাইড ফিল্টারিং)
   async function loadMoreProducts(catId, categoryName, currentId) {
     try {
       let q;
@@ -614,7 +613,7 @@ function ProductDetailsContent() {
           </form>
         </div>
 
-        {/* You May Also Like Section */}
+        {/* You May Also Like Section (Updated with direct navigation fix) */}
         <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
@@ -632,9 +631,11 @@ function ProductDetailsContent() {
                 let itemPin = item.productPin || item.id.slice(0, 6).toUpperCase();
 
                 return (
-                  <a 
+                  <div 
                     key={item.id} 
-                    href={`/product?id=${item.id}`} 
+                    onClick={() => {
+                      window.location.href = `/product?id=${item.id}`;
+                    }}
                     className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative cursor-pointer hover:border-[#e63946] transition-all"
                   >
                     <div className="relative w-full">
@@ -660,7 +661,7 @@ function ProductDetailsContent() {
                         )}
                       </div>
                     </div>
-                  </a>
+                  </div>
                 );
               })
             )}

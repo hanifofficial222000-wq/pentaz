@@ -12,9 +12,7 @@ export default function ProductDetailsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // কুয়েরি প্যারামিটার (?id=...) অথবা উইন্ডো পাথ থেকে আইডি বের করার ব্যবস্থা
   const [productId, setProductId] = useState(null);
-
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -32,6 +30,10 @@ export default function ProductDetailsPage() {
   const [sizes, setSizes] = useState([]);
   const [currentSize, setCurrentSize] = useState('N/A');
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+
+  // Color Variants State
+  const [colorVariants, setColorVariants] = useState([]);
+  const [selectedColor, setSelectedColor] = useState('');
 
   // Coupon State
   const [couponCode, setCouponCode] = useState('');
@@ -54,11 +56,9 @@ export default function ProductDetailsPage() {
   // More Products State
   const [moreProducts, setMoreProducts] = useState([]);
 
-  // আইডি সেট করার ইফেক্ট
   useEffect(() => {
     let id = searchParams.get('id');
     if (!id) {
-      // যদি কুয়েরি প্যারাম না থাকে, তবে URL পাথ থেকে আইডি বের করার চেষ্টা করবে (যেমন: /product/xyz)
       const pathSegments = window.location.pathname.split('/');
       const lastSegment = pathSegments[pathSegments.length - 1];
       if (lastSegment && lastSegment !== 'product') {
@@ -68,7 +68,6 @@ export default function ProductDetailsPage() {
     setProductId(id);
   }, [searchParams]);
 
-  // Fetch Product Details
   useEffect(() => {
     if (!productId) return;
 
@@ -115,6 +114,12 @@ export default function ProductDetailsPage() {
           setImageUrls(imgs);
           if (imgs.length > 0) setMainImage(imgs[0]);
 
+          // Color Variants setup
+          if (data.colorVariants && data.colorVariants.length > 0) {
+            setColorVariants(data.colorVariants);
+            setSelectedColor(data.colorVariants[0].name);
+          }
+
           // Sizes setup
           if (data.sizes && data.sizes.length > 0 && !(data.sizes.length === 1 && (data.sizes[0] === 'Standard' || data.sizes[0] === ''))) {
             setSizes(data.sizes);
@@ -140,7 +145,6 @@ export default function ProductDetailsPage() {
     fetchProduct();
   }, [productId]);
 
-  // Load Reviews
   async function loadReviews(prodId) {
     try {
       const q = query(collection(db, "reviews"), where("productId", "==", prodId));
@@ -168,7 +172,6 @@ export default function ProductDetailsPage() {
     }
   }
 
-  // Load More Products
   async function loadMoreProducts(catId, currentId) {
     try {
       let q = collection(db, "products");
@@ -195,7 +198,6 @@ export default function ProductDetailsPage() {
     }
   }
 
-  // Apply Coupon
   const handleApplyCoupon = () => {
     if (!productData) return;
     const code = couponCode.trim().toUpperCase();
@@ -217,12 +219,11 @@ export default function ProductDetailsPage() {
     }
   };
 
-  // Add to Cart
   const handleAddToCart = () => {
     if (!productData) return;
 
     let cart = JSON.parse(localStorage.getItem('ayaat_cart')) || [];
-    let productImg = imageUrls.length > 0 ? imageUrls[0] : '';
+    let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
 
     let cartItem = {
       id: productId,
@@ -230,10 +231,11 @@ export default function ProductDetailsPage() {
       price: finalPrice,
       image: productImg,
       size: currentSize || 'N/A',
+      color: selectedColor || 'N/A',
       quantity: 1
     };
 
-    let existingIndex = cart.findIndex(item => item.id === productId && item.size === cartItem.size);
+    let existingIndex = cart.findIndex(item => item.id === productId && item.size === cartItem.size && item.color === cartItem.color);
     if (existingIndex > -1) {
       cart[existingIndex].quantity += 1;
     } else {
@@ -244,7 +246,6 @@ export default function ProductDetailsPage() {
     alert("সফলভাবে কার্টে যোগ করা হয়েছে! 🛒");
   };
 
-  // Submit Review
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (!revName.trim() || !revComment.trim()) {
@@ -272,7 +273,6 @@ export default function ProductDetailsPage() {
     }
   };
 
-  // Submit Website Order
   const handleSubmitOrder = async () => {
     if (!cName.trim() || !cNumber.trim() || !cAddress.trim()) {
       alert("দয়া করে আপনার নাম, ফোন নম্বর এবং সম্পূর্ণ ঠিকানা লিখুন!");
@@ -283,7 +283,7 @@ export default function ProductDetailsPage() {
 
     setSubmittingOrder(true);
     try {
-      let productImg = imageUrls.length > 0 ? imageUrls[0] : '';
+      let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
       let productPin = productData.productPin || productId.slice(0, 6).toUpperCase();
       let pName = productData.title || productData.name || 'Product';
 
@@ -298,6 +298,7 @@ export default function ProductDetailsPage() {
         productPrice: finalPrice,
         imageUrl: productImg,
         size: currentSize || 'N/A',
+        color: selectedColor || 'N/A',
         customerName: cName.trim(),
         phone: cNumber.trim(),
         custPhone: cNumber.trim(),
@@ -323,19 +324,11 @@ export default function ProductDetailsPage() {
   }
 
   if (notApproved) {
-    return (
-      <div className="text-center p-20 font-bold text-[#e63946]">
-        এই প্রোডাক্টটি এখনো অ্যাডমিন কর্তৃক অনুমোদিত (Approved) হয়নি!
-      </div>
-    );
+    return <div className="text-center p-20 font-bold text-[#e63946]">এই প্রোডাক্টটি এখনো অ্যাডমিন কর্তৃক অনুমোদিত (Approved) হয়নি!</div>;
   }
 
   if (notFound || !productData) {
-    return (
-      <div className="text-center p-20 font-bold text-gray-600">
-        প্রোডাক্টটি পাওয়া যায়নি!
-      </div>
-    );
+    return <div className="text-center p-20 font-bold text-gray-600">প্রোডাক্টটি পাওয়া যায়নি!</div>;
   }
 
   return (
@@ -346,7 +339,7 @@ export default function ProductDetailsPage() {
           ← Back to Shop
         </Link>
         
-        {/* Gallery */}
+        {/* Gallery with Horizontal Side Scroll */}
         <div className="mb-[15px] relative">
           {discountPercent > 0 && (
             <div className="absolute top-[15px] right-[15px] bg-[#e63946] text-white p-[8px_12px] text-[14px] font-bold rounded-[6px] z-20 shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
@@ -356,13 +349,13 @@ export default function ProductDetailsPage() {
           <img src={mainImage} className="w-full rounded-[10px] mb-2 h-[400px] object-cover border border-[#eee]" alt="Product" />
           
           {imageUrls.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar">
               {imageUrls.map((imgUrl, idx) => (
                 <img 
                   key={idx} 
                   src={imgUrl} 
                   onClick={() => setMainImage(imgUrl)}
-                  className={`w-[65px] h-[65px] object-cover rounded-[6px] border-2 cursor-pointer flex-shrink-0 ${mainImage === imgUrl ? 'border-[#e63946]' : 'border-[#ddd]'}`} 
+                  className={`w-[70px] h-[70px] object-cover rounded-[8px] border-2 cursor-pointer flex-shrink-0 transition-all ${mainImage === imgUrl ? 'border-[#e63946] scale-105' : 'border-[#ddd]'}`} 
                   alt="Thumbnail" 
                 />
               ))}
@@ -399,6 +392,50 @@ export default function ProductDetailsPage() {
           )}
         </div>
 
+        {/* Sizes */}
+        {sizes.length > 0 && (
+          <div className="my-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="font-bold text-[#333]">Select Size:</label>
+              <span className="text-[12px] text-[#007bff] underline cursor-pointer" onClick={() => setIsSizeChartOpen(true)}>📏 Size Chart</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {sizes.map((s, idx) => (
+                <button 
+                  key={idx}
+                  type="button" 
+                  onClick={() => setCurrentSize(s)}
+                  className={`p-[10px_16px] border-2 rounded-[8px] font-bold text-[15px] cursor-pointer transition ${currentSize === s ? 'border-[#e63946] bg-[#e63946] text-white' : 'border-[#ddd] bg-white text-black'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Color Variants Card System (Placed below sizes) */}
+        {colorVariants.length > 0 && (
+          <div className="my-4">
+            <label className="font-bold block mb-2 text-[#333]">Select Color: <span className="text-[#e63946]">{selectedColor}</span></label>
+            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+              {colorVariants.map((col, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => {
+                    setSelectedColor(col.name);
+                    setMainImage(col.imageUrl);
+                  }}
+                  className={`flex flex-col items-center p-1.5 border-2 rounded-xl cursor-pointer transition-all flex-shrink-0 w-20 bg-white ${selectedColor === col.name ? 'border-[#e63946] shadow-md scale-105' : 'border-gray-200 opacity-80'}`}
+                >
+                  <img src={col.imageUrl} alt={col.name} className="w-16 h-16 object-cover rounded-lg mb-1" />
+                  <span className="text-[11px] font-bold text-center truncate w-full">{col.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Coupon Section */}
         {productData.coupon && (
           <div className="bg-[#fff8f8] border border-dashed border-[#e63946] p-3 rounded-[8px] my-4">
@@ -424,28 +461,6 @@ export default function ProductDetailsPage() {
           <div className="bg-[#f8f9fa] border-l-4 border-[#e63946] p-[10px_12px] my-3 rounded-r-[8px] text-[13px] text-[#333]">
             <p className="my-0.5">👤 <b>বিক্রেতা:</b> <span>{productData.sellerName}</span></p>
             <p className="my-0.5">📞 <b>মোবাইল:</b> <a href={`https://wa.me/${productData.sellerPhone}`} target="_blank" rel="noreferrer" className="text-[#007bff] font-bold no-underline">{productData.sellerPhone || 'N/A'}</a></p>
-          </div>
-        )}
-
-        {/* Sizes */}
-        {sizes.length > 0 && (
-          <div className="my-4">
-            <div className="flex justify-between items-center mb-2">
-              <label className="font-bold text-[#333]">Select Size:</label>
-              <span className="text-[12px] text-[#007bff] underline cursor-pointer" onClick={() => setIsSizeChartOpen(true)}>📏 Size Chart</span>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {sizes.map((s, idx) => (
-                <button 
-                  key={idx}
-                  type="button" 
-                  onClick={() => setCurrentSize(s)}
-                  className={`p-[10px_16px] border-2 rounded-[8px] font-bold text-[15px] cursor-pointer transition ${currentSize === s ? 'border-[#e63946] bg-[#e63946] text-white' : 'border-[#ddd] bg-white text-black'}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 

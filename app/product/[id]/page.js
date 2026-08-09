@@ -105,18 +105,29 @@ function ProductDetailsContent() {
   // More Products State
   const [moreProducts, setMoreProducts] = useState([]);
 
-  // URL থেকে আইডি সেফলি রিড করার হুক
+  // URL থেকে নিখুঁতভাবে আইডি রিড করার হুক
   useEffect(() => {
     try {
       let id = searchParams ? searchParams.get('id') : null;
       if (!id && typeof window !== 'undefined') {
-        const pathSegments = window.location.pathname.split('/');
-        const lastSegment = pathSegments[pathSegments.length - 1];
-        if (lastSegment && lastSegment !== 'product') {
-          id = lastSegment;
+        const urlParams = new URLSearchParams(window.location.search);
+        id = urlParams.get('id');
+        
+        if (!id) {
+          const pathSegments = window.location.pathname.split('/');
+          const lastSegment = pathSegments[pathSegments.length - 1];
+          if (lastSegment && lastSegment !== 'product') {
+            id = lastSegment;
+          }
         }
       }
-      setProductId(id);
+      
+      if (id) {
+        setProductId(id);
+      } else {
+        setNotFound(true);
+        setLoading(false);
+      }
     } catch (err) {
       console.error("Param read error:", err);
       setNotFound(true);
@@ -198,8 +209,6 @@ function ProductDetailsContent() {
           setAppliedDiscount(0);
 
           loadReviews(productId);
-          
-          // ক্যাটাগরি নাম দিয়ে সম্পর্কিত প্রোডাক্ট লোড করা হচ্ছে
           loadMoreProducts(data.category, productId);
         } else {
           setNotFound(true);
@@ -246,7 +255,6 @@ function ProductDetailsContent() {
     }
   }
 
-  // ক্যাটাগরি নাম অনুযায়ী কুয়েরি করার আপডেট ফাংশন
   async function loadMoreProducts(categoryName, currentId) {
     try {
       let q;
@@ -644,7 +652,8 @@ function ProductDetailsContent() {
                   <div 
                     key={item.id} 
                     onClick={() => {
-                      router.push(`/product?id=${item.id}`);
+                      // উইন্ডো লোকেশন ব্যবহার করা হয়েছে যাতে অন্য প্রোডাক্টে ক্লিক করলে পেজটি স্মুথলি রিলোড হয়ে নতুন ডাটা ফেচ করে
+                      window.location.href = `/product?id=${item.id}`;
                     }}
                     className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative cursor-pointer hover:border-[#e63946] transition-all"
                   >

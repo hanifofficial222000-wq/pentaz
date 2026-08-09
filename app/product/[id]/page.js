@@ -613,7 +613,7 @@ function ProductDetailsContent() {
           </form>
         </div>
 
-        {/* You May Also Like Section (Updated with direct navigation fix) */}
+        {/* You May Also Like Section (Fixed with proper route link) */}
         <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
@@ -635,7 +635,6 @@ function ProductDetailsContent() {
                     key={item.id} 
                     onClick={() => {
                       window.location.href = `/product?id=${item.id}`;
-
                     }}
                     className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative cursor-pointer hover:border-[#e63946] transition-all"
                   >

@@ -99,9 +99,10 @@ export default function ProductDetailsPage() {
   const [revName, setRevName] = useState('');
   const [revComment, setRevComment] = useState('');
 
-  // More Products State (Strict Category Filtering)
+  // More Products State
   const [moreProducts, setMoreProducts] = useState([]);
 
+  // URL থেকে আইডি রিড করার জন্য হুক
   useEffect(() => {
     let id = searchParams.get('id');
     if (!id) {
@@ -114,10 +115,15 @@ export default function ProductDetailsPage() {
     setProductId(id);
   }, [searchParams]);
 
+  // productId অথবা searchParams পরিবর্তন হলেই নতুন প্রোডাক্ট ফেচ করবে
   useEffect(() => {
     if (!productId) return;
 
     async function fetchProduct() {
+      setLoading(true);
+      setNotFound(false);
+      setNotApproved(false);
+
       try {
         let docRef = doc(db, "products", productId);
         let docSnap = await getDoc(docRef);
@@ -164,6 +170,9 @@ export default function ProductDetailsPage() {
           if (data.colorVariants && data.colorVariants.length > 0) {
             setColorVariants(data.colorVariants);
             setSelectedColor(data.colorVariants[0].name);
+          } else {
+            setColorVariants([]);
+            setSelectedColor('');
           }
 
           // Sizes setup
@@ -175,9 +184,12 @@ export default function ProductDetailsPage() {
             setCurrentSize('N/A');
           }
 
+          // ইনপুট ফিল্ড ও কুপন রিসেট
+          setCouponCode('');
+          setCouponMsg({ text: '', color: '' });
+          setAppliedDiscount(0);
+
           loadReviews(productId);
-          
-          // শুধুমাত্র এই প্রোডাক্টের ক্যাটাগরি বা ক্যাটাগরি আইডির প্রোডাক্টগুলো ফিল্টার করার ব্যবস্থা
           loadMoreProducts(data.categoryId, data.category, productId);
         } else {
           setNotFound(true);
@@ -191,7 +203,7 @@ export default function ProductDetailsPage() {
     }
 
     fetchProduct();
-  }, [productId]);
+  }, [productId, searchParams]);
 
   async function loadReviews(prodId) {
     try {
@@ -214,13 +226,16 @@ export default function ProductDetailsPage() {
         setReviews(revList);
         setAvgRating((total / count).toFixed(1));
         setRevCount(count);
+      } else {
+        setReviews([]);
+        setAvgRating(0);
+        setRevCount(0);
       }
     } catch (err) {
       console.error("Error loading reviews:", err);
     }
   }
 
-  // ক্যাটাগরি অনুযায়ী strictly ফিল্টার করার লজিক (categoryId অথবা category নাম দিয়ে মেলানো)
   async function loadMoreProducts(catId, categoryName, currentId) {
     try {
       const snapshot = await getDocs(collection(db, "products"));
@@ -231,7 +246,6 @@ export default function ProductDetailsPage() {
         const item = d.data();
         if (item.approved !== true) return;
 
-        // ক্যাটাগরি ম্যাচিং চেক (categoryId অথবা category নাম দিয়ে)
         const isMatchingCategory = 
           (catId && item.categoryId === catId) || 
           (categoryName && item.category && item.category.trim().toLowerCase() === categoryName.trim().toLowerCase());
@@ -241,8 +255,6 @@ export default function ProductDetailsPage() {
         }
       });
 
-      // যদি হুবহু ক্যাটাগরিতে প্রোডাক্ট না পাওয়া যায়, তবে ব্যাকআপ হিসেবে অন্য প্রোডাক্টও দেখাতে পারেন চাইলে, 
-      // তবে রিকোয়েস্ট অনুযায়ী শুধু ঐ ক্যাটাগরির প্রোডাক্টই ফিল্টার করা হলো।
       setMoreProducts(list);
     } catch (err) {
       console.error("Error loading more products:", err);
@@ -419,7 +431,7 @@ export default function ProductDetailsPage() {
           )}
         </div>
 
-        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার (এখানে নিশ্চিতভাবে রেন্ডার করা হয়েছে) */}
+        {/* ⚡ ফ্ল্যাশ সেল কাউন্টডাউন টাইমার */}
         {productData.isFlashSale && productData.flashSaleEndsAt && (
           <div className="my-3">
             <FlashSaleTimer endsAt={productData.flashSaleEndsAt} />
@@ -588,7 +600,7 @@ export default function ProductDetailsPage() {
           </form>
         </div>
 
-        {/* You May Also Like (Strictly Same Category Products + Layout fixed: Image top, title & price below sequentially) */}
+        {/* You May Also Like Section */}
         <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
           <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
           <div className="grid grid-cols-3 gap-2">
@@ -611,7 +623,6 @@ export default function ProductDetailsPage() {
                     href={`/product?id=${item.id}`} 
                     className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative"
                   >
-                    {/* ইমেজ একদম উপরে */}
                     <div className="relative w-full">
                       {itemDiscount > 0 && (
                         <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">
@@ -621,7 +632,6 @@ export default function ProductDetailsPage() {
                       <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover block" />
                     </div>
 
-                    {/* প্রোডাক্টের নাম, আইডি এবং প্রাইস নিচে একটার পর একটা সাজানো */}
                     <div className="p-2 flex flex-col flex-grow">
                       <h3 className="text-[11px] font-bold mb-1 line-clamp-2 text-[#222]">
                         {item.title || item.name}

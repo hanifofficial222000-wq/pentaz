@@ -347,28 +347,55 @@ export default function AyaatShopHome() {
       )}
 
       <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="flex overflow-x-auto gap-2 p-3 no-scrollbar whitespace-nowrap">
-          <button 
-            onClick={() => handleMainCategoryClick('all')} 
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'all' ? 'bg-[#e63946] text-white shadow-md' : 'bg-gray-100 text-gray-700'}`}
-          >
-            সব
-          </button>
-          <button 
-            onClick={() => handleMainCategoryClick('special-offers')} 
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === 'special-offers' ? 'bg-[#e63946] text-white shadow-md' : 'bg-pink-100 text-[#e63946]'}`}
-          >
-            🔥 স্পেশাল অফার
-          </button>
-          {mainCategories.map((cat) => (
+        
+        {/* 🟢 TRENDYOL STYLE CIRCULAR CATEGORIES SECTION */}
+        <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+            
             <button 
-              key={cat.id} 
-              onClick={() => handleMainCategoryClick(cat.name)} 
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-all cursor-pointer ${activeCategory === cat.name ? 'bg-[#e63946] text-white shadow-md' : 'bg-gray-100 text-gray-700'}`}
+              onClick={() => handleMainCategoryClick('all')}
+              className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
             >
-              {cat.name}
+              <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'all' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+                <div className="w-full h-full rounded-full bg-red-50 flex items-center justify-center text-[#e63946] font-bold text-xs">
+                  সব
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-gray-800 mt-1.5">সকল</span>
             </button>
-          ))}
+
+            <button 
+              onClick={() => handleMainCategoryClick('special-offers')}
+              className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
+            >
+              <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'special-offers' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+                <div className="w-full h-full rounded-full bg-pink-50 flex items-center justify-center text-[#e63946] font-bold text-xs">
+                  🔥
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-gray-800 mt-1.5">অফার</span>
+            </button>
+
+            {mainCategories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleMainCategoryClick(cat.name)}
+                className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
+              >
+                <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+                  <img 
+                    src={cat.imageUrl || 'https://via.placeholder.com/150'} 
+                    alt={cat.name} 
+                    className="w-full h-full object-cover rounded-full bg-gray-100" 
+                  />
+                </div>
+                <span className="text-[11px] font-bold text-gray-800 mt-1.5 max-w-[70px] truncate">
+                  {cat.name}
+                </span>
+              </button>
+            ))}
+
+          </div>
         </div>
 
         {currentSubCategoriesList.length > 0 && (
@@ -452,7 +479,6 @@ export default function AyaatShopHome() {
         </div>
       </div>
 
-      {/* PRODUCT GRID */}
       <div className="max-w-xl mx-auto p-2">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-10 font-bold text-gray-500">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
@@ -468,15 +494,12 @@ export default function AyaatShopHome() {
                   key={item.id} 
                   className="border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm relative no-underline hover:shadow-md transition-all cursor-pointer"
                 >
-                  {/* Image Section (Love/Favorite icon and discount badge removed from here) */}
                   <div className="relative w-full h-[140px] bg-gray-100 overflow-hidden">
                     <img src={mainImg} alt={item.title} className="w-full h-full object-cover" />
                   </div>
 
-                  {/* Details Section */}
                   <div className="p-2 flex flex-col justify-between flex-grow">
                     
-                    {/* Discount Badge (Placed above title/name) */}
                     {item.discount && Number(item.discount) > 0 && (
                       <span className="bg-gradient-to-r from-[#ff416c] to-[#ff4b2b] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow w-max mb-1">
                         {item.discount}% ছাড়
@@ -492,7 +515,6 @@ export default function AyaatShopHome() {
                     <div className="flex items-start justify-between gap-1 mb-1">
                       <h3 className="text-[11px] font-bold line-clamp-2 text-gray-800 flex-grow">{item.title}</h3>
                       
-                      {/* Favorite (Love) Icon Button (Placed in white area next to title) */}
                       <button 
                         onClick={(e) => {
                           e.preventDefault();

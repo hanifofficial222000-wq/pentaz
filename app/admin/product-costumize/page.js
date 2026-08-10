@@ -20,9 +20,14 @@ export default function ProductManagement() {
   const [sizes, setSizes] = useState('');
   const [description, setDescription] = useState('');
   
-  // ⚡ ফ্ল্যাশ সেল ও অফার সম্পর্কিত নতুন স্টেট
+  // ⚡ ফ্ল্যাশ সেল ও অফার সম্পর্কিত স্টেট
   const [isFlashSale, setIsFlashSale] = useState(false);
   const [flashSaleEndsAt, setFlashSaleEndsAt] = useState('');
+
+  // 🏷️ নতুন ট্যাব ফিল্টার সম্পর্কিত স্টেট (Best Seller, Discount Offer, Promo)
+  const [isBestSeller, setIsBestSeller] = useState(false);
+  const [isDiscountOffer, setIsDiscountOffer] = useState(false);
+  const [isPromoProduct, setIsPromoProduct] = useState(false);
 
   // Multiple Product Images State
   const [productImageFiles, setProductImageFiles] = useState([]);
@@ -167,8 +172,14 @@ export default function ProductManagement() {
         imageUrl: imageUrls[0], // Main fallback image
         colorVariants: colorVariants,
         isFlashSale: isFlashSale,
-        isSpecialOffer: isFlashSale, // স্পেশাল অফার পেজেও শো করার জন্য
+        isSpecialOffer: isFlashSale,
         flashSaleEndsAt: formattedEndsAt,
+        // হোমপেজের ৩টি নতুন ট্যাব ফিল্টারের প্রপার্টি
+        bestseller: isBestSeller,
+        isBestSeller: isBestSeller,
+        isDiscountOffer: isDiscountOffer,
+        isPromoProduct: isPromoProduct,
+        coupon: isPromoProduct ? "ACTIVE" : null, // হোমপেজ ফিল্টারের সাথে সামঞ্জস্য রাখতে
         sellerName: 'AYAAT SPORT SHOP',
         sellerPhone: '01835302525',
         approved: true,
@@ -185,6 +196,9 @@ export default function ProductManagement() {
       setDescription('');
       setIsFlashSale(false);
       setFlashSaleEndsAt('');
+      setIsBestSeller(false);
+      setIsDiscountOffer(false);
+      setIsPromoProduct(false);
       setProductImageFiles([]);
       setProductImagePreviews([]);
       setColors([]);
@@ -211,7 +225,7 @@ export default function ProductManagement() {
 
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            🛍️ নতুন প্রোডাক্ট যোগ করুন (ফ্ল্যাশ সেল ও কালারসহ)
+            🛍️ নতুন প্রোডাক্ট যোগ করুন (ট্যাব লিংক ও কালারসহ)
           </h3>
 
           <form onSubmit={handleProductSubmit} className="space-y-5">
@@ -280,6 +294,52 @@ export default function ProductManagement() {
                   <p className="text-[11px] text-amber-700 mt-1">এই সময় পার হয়ে গেলে প্রডাক্টটি অটোমেটিক অফার পেজ ও হোম পেজের ফ্ল্যাশ সেল থেকে সরে যাবে।</p>
                 </div>
               )}
+            </div>
+
+            {/* 🔗 হোমপেজ ট্যাব লিংক সেকশন (Best Seller, Discount Offer, Promo) */}
+            <div className="bg-red-50 border border-red-200 p-4 rounded-xl space-y-3">
+              <label className="block text-sm font-bold text-red-900">📌 হোমপেজ ট্যাব লিংক সেকশন (যে ট্যাবে দেখাতে চান সিলেক্ট করুন)</label>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100 shadow-xs">
+                  <input 
+                    type="checkbox" 
+                    id="bestSellerCheck"
+                    checked={isBestSeller}
+                    onChange={(e) => setIsBestSeller(e.target.checked)}
+                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="bestSellerCheck" className="text-xs font-bold text-slate-700 cursor-pointer">
+                    🔥 Best Seller
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100 shadow-xs">
+                  <input 
+                    type="checkbox" 
+                    id="discountOfferCheck"
+                    checked={isDiscountOffer}
+                    onChange={(e) => setIsDiscountOffer(e.target.checked)}
+                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="discountOfferCheck" className="text-xs font-bold text-slate-700 cursor-pointer">
+                    🏷️ Discount Offer
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100 shadow-xs">
+                  <input 
+                    type="checkbox" 
+                    id="promoCheck"
+                    checked={isPromoProduct}
+                    onChange={(e) => setIsPromoProduct(e.target.checked)}
+                    className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="promoCheck" className="text-xs font-bold text-slate-700 cursor-pointer">
+                    🎟️ Promo
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

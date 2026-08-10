@@ -288,11 +288,11 @@ function MainContent() {
     if (activeSubFilter === 'flash-sale') {
       result = result.filter(p => p.isFlashSale);
     } else if (activeSubFilter === 'bestseller') {
-      result = result.filter(p => p.bestseller);
+      result = result.filter(p => p.bestseller || p.isBestSeller);
     } else if (activeSubFilter === 'discount') {
-      result = result.filter(p => Number(p.discount || 0) >= 50);
+      result = result.filter(p => Number(p.discount || 0) >= 50 || p.isDiscountOffer);
     } else if (activeSubFilter === 'coupon') {
-      result = result.filter(p => p.coupon);
+      result = result.filter(p => p.coupon || p.isPromoProduct);
     }
 
     if (searchQuery.trim() !== '') {

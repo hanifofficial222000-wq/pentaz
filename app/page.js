@@ -386,49 +386,12 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* ২ লাইন বিশিষ্ট মেইন ক্যাটাগরি সেকশন */}
+      {/* ক্যাটাগরি সেকশন */}
       <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         
-        {/* মেইন ক্যাটাগরিগুলো ২ লাইনে (Grid) ছবিসহ শো করার জন্য */}
         <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
           <div className="grid grid-cols-4 gap-y-3 gap-x-2 justify-items-center">
             
-            <button 
-              onClick={() => handleMainCategoryClick('all')}
-              className="flex flex-col items-center group cursor-pointer w-full"
-            >
-              <div className={`w-[56px] h-[56px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'all' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
-                <div className="w-full h-full rounded-full bg-red-50 flex items-center justify-center text-[#e63946] font-bold text-xs">
-                  All
-                </div>
-              </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">All</span>
-            </button>
-
-            <button 
-              onClick={() => handleMainCategoryClick('flash-sale')}
-              className="flex flex-col items-center group cursor-pointer w-full"
-            >
-              <div className={`w-[56px] h-[56px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'flash-sale' ? 'border-amber-500 scale-105' : 'border-amber-300'}`}>
-                <div className="w-full h-full rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-lg animate-pulse">
-                  ⚡
-                </div>
-              </div>
-              <span className="text-[11px] font-bold text-amber-700 mt-1 truncate w-full text-center">Flash Sell</span>
-            </button>
-
-            <Link 
-              href="/special-offer"
-              className="flex flex-col items-center group cursor-pointer no-underline w-full"
-            >
-              <div className="w-[56px] h-[56px] rounded-full p-[2px] border-2 border-pink-300 hover:border-pink-500 transition-all">
-                <div className="w-full h-full rounded-full bg-pink-50 flex items-center justify-center text-[#e63946] font-bold text-lg">
-                  🔥
-                </div>
-              </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">Promo</span>
-            </Link>
-
             {mainCategories.map((cat) => (
               <button
                 key={cat.id}
@@ -503,7 +466,7 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* হলুদ দাগ দেওয়া ফিল্টার সেকশন */}
+      {/* ফিল্টার সেকশন */}
       <div className="p-3 max-w-xl mx-auto">
         <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
           {[

@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '@/lib/firebase'; // storage ইমপোর্ট করা হলো
+import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // ফায়ারবেস স্টোরেজের ফাংশন
 
 export default function CategoryManagement() {
+  const cloudName = "b3gsgcpl";
+  const uploadPreset = "tho4ycz8";
+
   const [mainCatName, setMainCatName] = useState('');
-  const [mainCatImageFile, setMainCatImageFile] = useState(null); // ফাইলের জন্য স্টেট
-  const [mainCatImagePreview, setMainCatImagePreview] = useState(''); // প্রিভিউয়ের জন্য স্টেট
+  const [mainCatImageFile, setMainCatImageFile] = useState(null);
+  const [mainCatImagePreview, setMainCatImagePreview] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const [parentMainCatSelect, setParentMainCatSelect] = useState('');
@@ -25,7 +27,6 @@ export default function CategoryManagement() {
     setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
   };
 
-  // লোকাল ফাইল সিলেক্ট এবং প্রিভিউ দেখানোর জন্য
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -53,6 +54,20 @@ export default function CategoryManagement() {
     loadAllCategoriesData();
   }, []);
 
+  // Cloudinary Upload Helper (প্রোডাক্ট পেজের মতো হুবহু একই পদ্ধতি)
+  const uploadToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("Image Upload Failed");
+    return data.secure_url;
+  };
+
   const handleMainCategorySubmit = async (e) => {
     e.preventDefault();
     const name = mainCatName.trim();
@@ -69,12 +84,10 @@ export default function CategoryManagement() {
     setUploadingImage(true);
 
     try {
-      // ছবি সরাসরি ফায়ারবেস স্টোরেজে আপলোড করা হচ্ছে
-      const imageRef = ref(storage, `category_images/${Date.now()}_${mainCatImageFile.name}`);
-      const snapshot = await uploadBytes(imageRef, mainCatImageFile);
-      const imageUrl = await getDownloadURL(snapshot.ref);
+      // Cloudinary তে ছবি আপলোড করা হচ্ছে
+      const imageUrl = await uploadToCloudinary(mainCatImageFile);
 
-      // ফায়ারস্টোর ডেটাবেজে নাম এবং ছবির লিংক সেভ করা হচ্ছে
+      // ডেটাবেজে সেভ করা হচ্ছে
       await addDoc(collection(db, "mainCategories"), { 
         name, 
         imageUrl, 
@@ -92,7 +105,7 @@ export default function CategoryManagement() {
       await loadAllCategoriesData();
     } catch (err) {
       console.error("Save error:", err);
-      alert("⚠️ ডেটাবেজে সেভ করতে সমস্যা হয়েছে!");
+      alert("⚠️ ছবি আপলোড বা ডেটাবেজে সেভ করতে সমস্যা হয়েছে!");
     } finally {
       setUploadingImage(false);
     }

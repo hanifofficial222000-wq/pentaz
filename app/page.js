@@ -404,7 +404,8 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      <header className={`sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
+      {/* ⚠️ পরিবর্তন ১: এখানে 'sticky top-0' সরিয়ে শুধু স্বাভাবিক হেডার রাখা হয়েছে, যাতে স্ক্রল করলে ক্যাসহ অন্যান্য অংশসহ হেডারটি স্ক্রিনের সাথে উপরে চলে যায় (হাইড বা আটকে থাকে না) */}
+      <header className={`bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
         
         <div className="max-w-xl mx-auto px-3 pt-3 pb-1 bg-white">
           <input 
@@ -416,59 +417,60 @@ export default function AyaatShopHome() {
           />
         </div>
 
-        <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
-          <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+        {/* ⚠️ পরিবর্তন ২: ক্যাডারগুলোকে ১ লাইনের বদলে ২ লাইনে দেখানোর জন্য 'flex-wrap' এবং গ্রিড স্টাইল দেওয়া হয়েছে */}
+        <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-3">
             
             <button 
               onClick={() => handleMainCategoryClick('all')}
-              className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
+              className="flex flex-col items-center flex-shrink-0 group cursor-pointer w-[70px]"
             >
-              <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'all' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+              <div className={`w-[60px] h-[60px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'all' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
                 <div className="w-full h-full rounded-full bg-red-50 flex items-center justify-center text-[#e63946] font-bold text-xs">
                   সব
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1.5">সকল</span>
+              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">সকল</span>
             </button>
 
             <button 
               onClick={() => handleMainCategoryClick('flash-sale')}
-              className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
+              className="flex flex-col items-center flex-shrink-0 group cursor-pointer w-[70px]"
             >
-              <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'flash-sale' ? 'border-amber-500 scale-105' : 'border-amber-300'}`}>
+              <div className={`w-[60px] h-[60px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'flash-sale' ? 'border-amber-500 scale-105' : 'border-amber-300'}`}>
                 <div className="w-full h-full rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-xl animate-pulse">
                   ⚡
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-amber-700 mt-1.5">ফ্ল্যাশ সেল</span>
+              <span className="text-[11px] font-bold text-amber-700 mt-1 truncate w-full text-center">ফ্ল্যাশ সেল</span>
             </button>
 
             <Link 
               href="/special-offer"
-              className="flex flex-col items-center flex-shrink-0 group cursor-pointer no-underline"
+              className="flex flex-col items-center flex-shrink-0 group cursor-pointer no-underline w-[70px]"
             >
-              <div className="w-[70px] h-[70px] rounded-full p-[2px] border-2 border-pink-300 hover:border-pink-500 transition-all">
+              <div className="w-[60px] h-[60px] rounded-full p-[2px] border-2 border-pink-300 hover:border-pink-500 transition-all">
                 <div className="w-full h-full rounded-full bg-pink-50 flex items-center justify-center text-[#e63946] font-bold text-xl">
                   🔥
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1.5">অফার</span>
+              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">অফার</span>
             </Link>
 
             {mainCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => handleMainCategoryClick(cat.name)}
-                className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
+                className="flex flex-col items-center flex-shrink-0 group cursor-pointer w-[70px]"
               >
-                <div className={`w-[70px] h-[70px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+                <div className={`w-[60px] h-[60px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
                   <img 
                     src={cat.imageUrl || 'https://via.placeholder.com/150'} 
                     alt={cat.name} 
                     className="w-full h-full object-cover rounded-full bg-gray-100" 
                   />
                 </div>
-                <span className="text-[11px] font-bold text-gray-800 mt-1.5 max-w-[70px] truncate">
+                <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
                   {cat.name}
                 </span>
               </button>

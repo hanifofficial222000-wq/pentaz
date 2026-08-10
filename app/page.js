@@ -386,20 +386,10 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* ক্যাটাগরি সেকশনসহ হেডারটি স্ক্রিন স্ক্রল করার সময় যেন হাইড না হয়ে ফিক্সড থাকে তার জন্য sticky top-0 দেওয়া হয়েছে */}
+      {/* ২ লাইন বিশিষ্ট মেইন ক্যাটাগরি সেকশন */}
       <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         
-        <div className="max-w-xl mx-auto px-3 pt-3 pb-1 bg-white">
-          <input 
-            type="text" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="🔍 প্রোডাক্টের নাম বা আইডি দিয়ে খুঁজুন..." 
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-full text-xs bg-gray-50 outline-none shadow-xs focus:ring-2 focus:ring-[#e63946] text-black"
-          />
-        </div>
-
-        {/* ক্যাটাগরিগুলো ১ লাইনের পরিবর্তে ২ লাইনে সুন্দরভাবে দেখানোর জন্য গ্রিড লেআউট ব্যবহার করা হয়েছে */}
+        {/* মেইন ক্যাটাগরিগুলো ২ লাইনে (Grid) ছবিসহ শো করার জন্য */}
         <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
           <div className="grid grid-cols-4 gap-y-3 gap-x-2 justify-items-center">
             
@@ -409,10 +399,10 @@ export default function AyaatShopHome() {
             >
               <div className={`w-[56px] h-[56px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'all' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
                 <div className="w-full h-full rounded-full bg-red-50 flex items-center justify-center text-[#e63946] font-bold text-xs">
-                  সব
+                  All
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">সকল</span>
+              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">All</span>
             </button>
 
             <button 
@@ -424,7 +414,7 @@ export default function AyaatShopHome() {
                   ⚡
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-amber-700 mt-1 truncate w-full text-center">ফ্ল্যাশ সেল</span>
+              <span className="text-[11px] font-bold text-amber-700 mt-1 truncate w-full text-center">Flash Sell</span>
             </button>
 
             <Link 
@@ -436,7 +426,7 @@ export default function AyaatShopHome() {
                   🔥
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">অফার</span>
+              <span className="text-[11px] font-bold text-gray-800 mt-1 truncate w-full text-center">Promo</span>
             </Link>
 
             {mainCategories.map((cat) => (
@@ -467,7 +457,7 @@ export default function AyaatShopHome() {
               onClick={() => setActiveSubCategory('all')}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
             >
-              সব ({activeCategory})
+              All ({activeCategory})
             </button>
             {currentSubCategoriesList.map((sub) => (
               <button
@@ -513,14 +503,15 @@ export default function AyaatShopHome() {
         </div>
       )}
 
+      {/* হলুদ দাগ দেওয়া ফিল্টার সেকশন */}
       <div className="p-3 max-w-xl mx-auto">
         <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
           {[
-            { id: 'all', label: 'সকল প্রোডাক্ট' },
-            { id: 'flash-sale', label: '⚡ ফ্ল্যাশ সেল' },
-            { id: 'bestseller', label: '🔥 সেরা বিকশিত' },
-            { id: 'discount', label: '🏷️ ৫০% বা তার বেশি ছাড়' },
-            { id: 'coupon', label: '🎟️ কুপন সহ' }
+            { id: 'all', label: 'All Product' },
+            { id: 'flash-sale', label: '⚡ Flash Sell' },
+            { id: 'bestseller', label: '🔥 Best Seller' },
+            { id: 'discount', label: '🏷️ Discount Offer' },
+            { id: 'coupon', label: '🎟️ Promo' }
           ].map((chip) => (
             <button 
               key={chip.id}

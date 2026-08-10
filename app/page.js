@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
@@ -52,7 +52,7 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
-export default function AyaatShopHome() {
+function MainContent() {
   const searchParams = useSearchParams();
   const searchParamValue = searchParams.get('search');
 
@@ -586,5 +586,13 @@ export default function AyaatShopHome() {
       </div>
 
     </div>
+  );
+}
+
+export default function AyaatShopHome() {
+  return (
+    <Suspense fallback={<div className="text-center py-10 font-bold text-gray-500">লোড হচ্ছে...</div>}>
+      <MainContent />
+    </Suspense>
   );
 }

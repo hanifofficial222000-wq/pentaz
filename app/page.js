@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 
@@ -52,6 +53,9 @@ function FlashSaleTimer({ endsAt }) {
 }
 
 export default function AyaatShopHome() {
+  const searchParams = useSearchParams();
+  const searchParamValue = searchParams.get('search');
+
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [promoBanners, setPromoBanners] = useState([]);
@@ -111,6 +115,14 @@ export default function AyaatShopHome() {
   const handleTouchEnd = () => {
     setIsDragging(false);
   };
+
+  useEffect(() => {
+    if (searchParamValue) {
+      setSearchQuery(searchParamValue);
+    } else {
+      setSearchQuery('');
+    }
+  }, [searchParamValue]);
 
   useEffect(() => {
     if (isDragging) {
@@ -289,7 +301,10 @@ export default function AyaatShopHome() {
         p =>
           p.title?.toLowerCase().includes(query) ||
           p.id?.toLowerCase().includes(query) ||
-          p.productPin?.toLowerCase().includes(query)
+          p.productPin?.toLowerCase().includes(query) ||
+          p.category?.toLowerCase().includes(query) ||
+          p.mainCategory?.toLowerCase().includes(query) ||
+          p.subCategory?.toLowerCase().includes(query)
       );
     }
 
@@ -486,6 +501,21 @@ export default function AyaatShopHome() {
           ))}
         </div>
       </div>
+
+      {searchQuery && (
+        <div className="max-w-xl mx-auto px-3 py-1 flex items-center justify-between text-xs text-gray-600">
+          <span>অনুসন্ধান ফলাফল: &quot;<b>{searchQuery}</b>&quot;</span>
+          <button 
+            onClick={() => {
+              setSearchQuery('');
+              window.history.pushState({}, '', '/');
+            }} 
+            className="text-[#e63946] font-bold cursor-pointer underline"
+          >
+            রিসেট করুন
+          </button>
+        </div>
+      )}
 
       <div className="max-w-xl mx-auto p-2">
         {filteredProducts.length === 0 ? (

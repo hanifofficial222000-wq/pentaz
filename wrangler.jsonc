@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pentaz1",
+  "name": "pentaz",
   "compatibility_date": "2026-08-10",
   "compatibility_flags": [
     "nodejs_compat"
@@ -9,7 +9,7 @@
   "assets": {
     "directory": ".open-next/assets"
   },
-  "observability": {
-    "enabled": true
+  "site": {
+    "bucket": ".open-next/assets"
   }
 }

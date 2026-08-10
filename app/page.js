@@ -75,9 +75,6 @@ export default function AyaatShopHome() {
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
   const [isTopAdTransitioning, setIsTopAdTransitioning] = useState(true);
 
-  const [showNavbar, setShowNavbar] = useState(true);
-  const lastScrollY = useRef(0);
-
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
@@ -129,21 +126,6 @@ export default function AyaatShopHome() {
       window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isDragging]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
-        setShowNavbar(false);
-      } else {
-        setShowNavbar(true);
-      }
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
@@ -404,8 +386,8 @@ export default function AyaatShopHome() {
         </div>
       )}
 
-      {/* ⚠️ পরিবর্তন ১: এখানে 'sticky top-0' সরিয়ে শুধু স্বাভাবিক হেডার রাখা হয়েছে, যাতে স্ক্রল করলে ক্যাসহ অন্যান্য অংশসহ হেডারটি স্ক্রিনের সাথে উপরে চলে যায় (হাইড বা আটকে থাকে না) */}
-      <header className={`bg-white z-30 border-b border-gray-100 shadow-sm transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
+      {/* ক্যাটাগরি সেকশনসহ হেডারটি স্ক্রিন স্ক্রল করার সময় যেন হাইড না হয়ে ফিক্সড থাকে তার জন্য sticky top-0 দেওয়া হয়েছে */}
+      <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         
         <div className="max-w-xl mx-auto px-3 pt-3 pb-1 bg-white">
           <input 
@@ -417,15 +399,15 @@ export default function AyaatShopHome() {
           />
         </div>
 
-        {/* ⚠️ পরিবর্তন ২: ক্যাডারগুলোকে ১ লাইনের বদলে ২ লাইনে দেখানোর জন্য 'flex-wrap' এবং গ্রিড স্টাইল দেওয়া হয়েছে */}
-        <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-3">
+        {/* ক্যাটাগরিগুলো ১ লাইনের পরিবর্তে ২ লাইনে সুন্দরভাবে দেখানোর জন্য গ্রিড লেআউট ব্যবহার করা হয়েছে */}
+        <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
+          <div className="grid grid-cols-4 gap-y-3 gap-x-2 justify-items-center">
             
             <button 
               onClick={() => handleMainCategoryClick('all')}
-              className="flex flex-col items-center flex-shrink-0 group cursor-pointer w-[70px]"
+              className="flex flex-col items-center group cursor-pointer w-full"
             >
-              <div className={`w-[60px] h-[60px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'all' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+              <div className={`w-[56px] h-[56px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'all' ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
                 <div className="w-full h-full rounded-full bg-red-50 flex items-center justify-center text-[#e63946] font-bold text-xs">
                   সব
                 </div>
@@ -435,10 +417,10 @@ export default function AyaatShopHome() {
 
             <button 
               onClick={() => handleMainCategoryClick('flash-sale')}
-              className="flex flex-col items-center flex-shrink-0 group cursor-pointer w-[70px]"
+              className="flex flex-col items-center group cursor-pointer w-full"
             >
-              <div className={`w-[60px] h-[60px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'flash-sale' ? 'border-amber-500 scale-105' : 'border-amber-300'}`}>
-                <div className="w-full h-full rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-xl animate-pulse">
+              <div className={`w-[56px] h-[56px] rounded-full p-[2px] border-2 transition-all ${activeCategory === 'flash-sale' ? 'border-amber-500 scale-105' : 'border-amber-300'}`}>
+                <div className="w-full h-full rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-lg animate-pulse">
                   ⚡
                 </div>
               </div>
@@ -447,10 +429,10 @@ export default function AyaatShopHome() {
 
             <Link 
               href="/special-offer"
-              className="flex flex-col items-center flex-shrink-0 group cursor-pointer no-underline w-[70px]"
+              className="flex flex-col items-center group cursor-pointer no-underline w-full"
             >
-              <div className="w-[60px] h-[60px] rounded-full p-[2px] border-2 border-pink-300 hover:border-pink-500 transition-all">
-                <div className="w-full h-full rounded-full bg-pink-50 flex items-center justify-center text-[#e63946] font-bold text-xl">
+              <div className="w-[56px] h-[56px] rounded-full p-[2px] border-2 border-pink-300 hover:border-pink-500 transition-all">
+                <div className="w-full h-full rounded-full bg-pink-50 flex items-center justify-center text-[#e63946] font-bold text-lg">
                   🔥
                 </div>
               </div>
@@ -461,9 +443,9 @@ export default function AyaatShopHome() {
               <button
                 key={cat.id}
                 onClick={() => handleMainCategoryClick(cat.name)}
-                className="flex flex-col items-center flex-shrink-0 group cursor-pointer w-[70px]"
+                className="flex flex-col items-center group cursor-pointer w-full"
               >
-                <div className={`w-[60px] h-[60px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+                <div className={`w-[56px] h-[56px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
                   <img 
                     src={cat.imageUrl || 'https://via.placeholder.com/150'} 
                     alt={cat.name} 

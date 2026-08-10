@@ -2,20 +2,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import "./globals.css";
 
 const globalTranslations = {
-  bn: { shopName: "AYAAT SHOP LTD" },
-  en: { shopName: "AYAAT SHOP LTD" },
-  ar: { shopName: "متجر آيات المحدودة" },
-  ur: { shopName: "آیات شاپ لمیٹڈ" }
+  bn: { shopName: "AYAAT SHOP LTD", searchPlaceholder: "প্রোডাক্ট খুঁজুন..." },
+  en: { shopName: "AYAAT SHOP LTD", searchPlaceholder: "Search products..." },
+  ar: { shopName: "متجر آيات المحدودة", searchPlaceholder: "بحث عن منتجات..." },
+  ur: { shopName: "آیات شاپ لمیٹڈ", searchPlaceholder: "مصنوعات تلاش کریں..." }
 };
 
 export default function RootLayout({ children }) {
   const [currentLang, setLang] = useState('bn');
   const [direction, setDirection] = useState('ltr');
   const [showNavbar, setShowNavbar] = useState(true);
+  const [searchKeyword, setSearchKeyword] = useState('');
   const lastScrollY = useRef(0);
+  const router = useRouter();
 
   useEffect(() => {
     const savedLang = localStorage.getItem('selected_language') || 'bn';
@@ -54,6 +57,13 @@ export default function RootLayout({ children }) {
     window.location.reload();
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchKeyword.trim()) {
+      router.(`/?search=${encodeURIComponent(searchKeyword.trim())}`);
+    }
+  };
+
   const t = globalTranslations[currentLang] || globalTranslations['bn'];
 
   return (
@@ -62,15 +72,30 @@ export default function RootLayout({ children }) {
         <div className="w-full max-w-md min-h-screen bg-white shadow-2xl overflow-hidden flex flex-col justify-between relative">
           
           <div className="flex-grow">
-            {/* টপ ল্যাঙ্গুয়েজ বার */}
-            <div className="bg-white border-b border-gray-200 py-2 px-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
-              <Link href="/" className="font-extrabold text-[#e63946] text-xs no-underline">
+            {/* টপ ল্যাঙ্গুয়েজ বার ও সার্চ বক্স */}
+            <div className="bg-white border-b border-gray-200 py-2 px-3 flex items-center justify-between gap-2 sticky top-0 z-50 shadow-sm">
+              <Link href="/" className="font-extrabold text-[#e63946] text-xs no-underline flex-shrink-0">
                 {t.shopName}
               </Link>
+
+              {/* একদম উপরে মাঝখানের সাদা খালি অংশে সার্চ বক্স */}
+              <form onSubmit={handleSearchSubmit} className="flex-grow max-w-[160px] relative">
+                <input 
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder={t.searchPlaceholder}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-full py-1 pl-3 pr-7 text-[10px] text-gray-800 outline-none focus:border-[#e63946] transition-all"
+                />
+                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e63946] text-[10px]">
+                  🔍
+                </button>
+              </form>
+
               <select 
                 value={currentLang} 
                 onChange={handleLanguageChange} 
-                className="p-1 rounded-md border border-gray-300 text-[11px] font-bold bg-white text-[#e63946] cursor-pointer outline-none"
+                className="p-1 rounded-md border border-gray-300 text-[11px] font-bold bg-white text-[#e63946] cursor-pointer outline-none flex-shrink-0"
               >
                 <option value="bn">🇧🇩 বাংলা</option>
                 <option value="en">🇬🇧 English</option>

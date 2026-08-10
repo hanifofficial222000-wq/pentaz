@@ -60,7 +60,7 @@ export default function RootLayout({ children }) {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchKeyword.trim()) {
-      router.(`/?search=${encodeURIComponent(searchKeyword.trim())}`);
+      router.push(`/?search=${encodeURIComponent(searchKeyword.trim())}`);
     }
   };
 
@@ -87,7 +87,7 @@ export default function RootLayout({ children }) {
                   placeholder={t.searchPlaceholder}
                   className="w-full bg-gray-50 border border-gray-200 rounded-full py-1 pl-3 pr-7 text-[10px] text-gray-800 outline-none focus:border-[#e63946] transition-all"
                 />
-                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e63946] text-[10px]">
+                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e63946] text-[10px] cursor-pointer">
                   🔍
                 </button>
               </form>
@@ -120,10 +120,9 @@ export default function RootLayout({ children }) {
             💬
           </a>
 
-          {/* স্ক্রিনশটের মতো স্টাইলিশ বটম নেভবার */}
+          {/* বটম নেভবার */}
           <nav className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center py-2 px-1 z-40 shadow-lg transition-transform duration-300 ${showNavbar ? 'translate-y-0' : 'translate-y-full'}`}>
             
-            {/* Home */}
             <Link href="/" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
@@ -131,7 +130,6 @@ export default function RootLayout({ children }) {
               <span className="text-[11px] font-medium mt-0.5">Home</span>
             </Link>
 
-            {/* Categories */}
             <Link href="/category" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
@@ -139,7 +137,6 @@ export default function RootLayout({ children }) {
               <span className="text-[11px] font-medium mt-0.5">Categories</span>
             </Link>
 
-            {/* Favorites */}
             <Link href="/favorites" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
@@ -147,7 +144,6 @@ export default function RootLayout({ children }) {
               <span className="text-[11px] font-medium mt-0.5">Favorites</span>
             </Link>
 
-            {/* Cart */}
             <Link href="/cart" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -155,7 +151,6 @@ export default function RootLayout({ children }) {
               <span className="text-[11px] font-medium mt-0.5">Cart</span>
             </Link>
 
-            {/* Account */}
             <Link href="/my-details" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>

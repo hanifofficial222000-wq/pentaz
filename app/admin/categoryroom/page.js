@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase'; // storage ইমপোর্ট করা হলো
 import { collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // ফায়ারবেস স্টোরেজের ফাংশন
 
 export default function CategoryManagement() {
   const [mainCatName, setMainCatName] = useState('');
-  const [mainCatImage, setMainCatImage] = useState('');
+  const [mainCatImageFile, setMainCatImageFile] = useState(null); // ফাইলের জন্য স্টেট
+  const [mainCatImagePreview, setMainCatImagePreview] = useState(''); // প্রিভিউয়ের জন্য স্টেট
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const [parentMainCatSelect, setParentMainCatSelect] = useState('');
@@ -23,31 +25,12 @@ export default function CategoryManagement() {
     setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
   };
 
-  const handleImageUpload = async (e) => {
+  // লোকাল ফাইল সিলেক্ট এবং প্রিভিউ দেখানোর জন্য
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    setUploadingImage(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'ayaat_shop');
-
-    try {
-      const res = await fetch('https://api.cloudinary.com/v1_1/dx1h5g3ry/image/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.secure_url) {
-        setMainCatImage(data.secure_url);
-        showAlert("🖼️ ক্যাটাগরি ছবি সফলভাবে আপলোড হয়েছে!");
-      }
-    } catch (err) {
-      console.error("Image upload error:", err);
-      alert("⚠️ ছবি আপলোড করতে সমস্যা হয়েছে!");
-    } finally {
-      setUploadingImage(false);
-    }
+    setMainCatImageFile(file);
+    setMainCatImagePreview(URL.createObjectURL(file));
   };
 
   const loadAllCategoriesData = async () => {
@@ -73,24 +56,45 @@ export default function CategoryManagement() {
   const handleMainCategorySubmit = async (e) => {
     e.preventDefault();
     const name = mainCatName.trim();
-    if (!name || !mainCatImage) {
-      alert("দয়া করে নাম এবং ছবি উভয়ই দিন!");
+    
+    if (!name) {
+      alert("দয়া করে মেইন ক্যাটাগরির নাম দিন!");
+      return;
+    }
+    if (!mainCatImageFile) {
+      alert("দয়া করে ক্যাটাগরির একটি ছবি সিলেক্ট করুন!");
       return;
     }
 
+    setUploadingImage(true);
+
     try {
+      // ছবি সরাসরি ফায়ারবেস স্টোরেজে আপলোড করা হচ্ছে
+      const imageRef = ref(storage, `category_images/${Date.now()}_${mainCatImageFile.name}`);
+      const snapshot = await uploadBytes(imageRef, mainCatImageFile);
+      const imageUrl = await getDownloadURL(snapshot.ref);
+
+      // ফায়ারস্টোর ডেটাবেজে নাম এবং ছবির লিংক সেভ করা হচ্ছে
       await addDoc(collection(db, "mainCategories"), { 
         name, 
-        imageUrl: mainCatImage, 
+        imageUrl, 
         createdAt: serverTimestamp() 
       });
+
       showAlert("🎉 মেইন ক্যাটাগরি সফলভাবে সেভ হয়েছে!");
       setMainCatName('');
-      setMainCatImage('');
+      setMainCatImageFile(null);
+      setMainCatImagePreview('');
+      
+      const fileInput = document.getElementById('mainCatImageInput');
+      if (fileInput) fileInput.value = '';
+      
       await loadAllCategoriesData();
     } catch (err) {
-      console.error(err);
-      alert("⚠️ সেভ করতে সমস্যা হয়েছে!");
+      console.error("Save error:", err);
+      alert("⚠️ ডেটাবেজে সেভ করতে সমস্যা হয়েছে!");
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -165,22 +169,25 @@ export default function CategoryManagement() {
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">ক্যাটাগরি গোল ছবি (Image)</label>
               <input 
+                id="mainCatImageInput"
                 type="file" 
-                onChange={handleImageUpload} 
+                onChange={handleImageChange} 
                 accept="image/*"
                 className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
               />
-              {uploadingImage && <p className="text-xs text-blue-500 mt-1">ছবি আপলোড হচ্ছে...</p>}
-              {mainCatImage && (
+              {mainCatImagePreview && (
                 <div className="mt-2 flex items-center gap-2">
-                  <img src={mainCatImage} alt="Preview" className="w-12 h-12 rounded-full object-cover border" />
-                  <span className="text-xs text-green-600 font-bold">ছবি আপলোড সম্পন্ন!</span>
+                  <img src={mainCatImagePreview} alt="Preview" className="w-12 h-12 rounded-full object-cover border" />
+                  <span className="text-xs text-green-600 font-bold">ছবি সিলেক্ট করা হয়েছে!</span>
                 </div>
               )}
             </div>
-            <button type="submit" 
-                    className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 rounded-lg transition duration-200 cursor-pointer text-xs">
-              ➕ মেইন ক্যাটাগরি সেভ করুন
+            <button 
+              type="submit" 
+              disabled={uploadingImage}
+              className={`w-full text-white font-semibold py-2.5 rounded-lg transition duration-200 text-xs ${uploadingImage ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'}`}
+            >
+              {uploadingImage ? 'ছবি আপলোড ও সেভ হচ্ছে, অপেক্ষা করুন...' : '➕ মেইন ক্যাটাগরি সেভ করুন'}
             </button>
           </form>
 

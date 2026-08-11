@@ -401,19 +401,19 @@ function MainContent() {
         </div>
       )}
 
-      {/* ক্যাটাগরি সেকশন (সার্কেল সাইজ বড় করা হয়েছে) */}
+      {/* ক্যাটাগরি সেকশন (২ লাইনে পাশাপাশি স্ক্রল এবং বড় সাইজ) */}
       <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         
-        <div className="max-w-xl mx-auto px-3 py-2.5 bg-white border-b border-gray-100">
-          <div className="grid grid-cols-4 gap-y-3 gap-x-2 justify-items-center">
+        <div className="max-w-xl mx-auto px-3 py-2.5 bg-white border-b border-gray-100 overflow-x-auto no-scrollbar">
+          <div className="grid grid-flow-col grid-rows-2 gap-x-4 gap-y-2 w-max">
             
             {mainCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => handleMainCategoryClick(cat.name)}
-                className="flex flex-col items-center group cursor-pointer w-full"
+                className="flex flex-col items-center group cursor-pointer w-[68px]"
               >
-                <div className={`w-[68px] h-[68px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+                <div className={`w-[68px] h-[68px] rounded-full p-[2px] border-2 transition-all shadow-sm flex-shrink-0 ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
                   <img 
                     src={cat.imageUrl || 'https://via.placeholder.com/150'} 
                     alt={cat.name} 

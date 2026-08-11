@@ -153,7 +153,7 @@ export default function RootLayout({ children }) {
               <span className="text-[11px] font-medium mt-0.5">Cart</span>
             </Link>
 
-            <Link href="/my-details" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
+            <Link href="/dishboard" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="root" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
               </svg>

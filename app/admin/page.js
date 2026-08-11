@@ -232,12 +232,12 @@ export default function AdminControlRoom() {
           </div>
         </Link>
 
-        {/* 10. Special Offer Management */}
-        <Link href="/admin/special-offer-manage" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-rose-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
+        {/* 10. GlobalControlPanel*/}
+        <Link href="/admin/GlobalControlPanel" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-rose-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">🔥</div>
-            <h3 className="text-lg font-bold text-white group-hover:text-rose-400 transition">Special Offer Management</h3>
-          </div>
+            <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">💻</div>
+            <h3 className="text-lg font-bold text-white group-hover:text-rose-400 transition"> GlobalControlPanel</h3>
+          </div>GlobalControlPanel
           <div className="mt-6 flex items-center text-xs font-bold text-rose-400 gap-1 group-hover:translate-x-1 transition">
             <span>প্রবেশ করুন</span> ➔
           </div>

@@ -13,7 +13,9 @@ export default function MyDetailsPage() {
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+880');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [bio, setBio] = useState('');
+  const [previewImage, setPreviewImage] = useState('');
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -29,8 +31,19 @@ export default function MyDetailsPage() {
             setFirstName(data.firstName || '');
             setLastName(data.lastName || '');
             setEmail(data.email || '');
-            setPhone(data.phone || '');
+            
+            // ফোন নম্বর ও কান্ট্রি কোড আলাদা করার লজিক
+            if (data.phone && data.phone.includes(' ')) {
+              const parts = data.phone.split(' ');
+              setCountryCode(parts[0]);
+              setPhone(parts.slice(1).join(' '));
+            } else {
+              setPhone(data.phone || '');
+            }
+
+            setAddress(data.address || '');
             setBio(data.bio || '');
+            setPreviewImage(data.photo || '');
           }
         } catch (error) {
           console.error("Error fetching user details:", error);
@@ -41,6 +54,18 @@ export default function MyDetailsPage() {
 
     fetchUserData();
   }, []);
+
+  // প্রোফাইল ছবি পরিবর্তনের জন্য Choose File হ্যান্ডলার
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        setPreviewImage(uploadEvent.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -65,7 +90,9 @@ export default function MyDetailsPage() {
         lastName: lastName.trim(),
         name: fullName,
         phone: fullPhone,
+        address: address.trim(),
         bio: bio.trim(),
+        photo: previewImage,
       });
 
       alert('আপনার প্রফাইল সফলভাবে আপডেট করা হয়েছে!');
@@ -98,6 +125,26 @@ export default function MyDetailsPage() {
         <div className="bg-white rounded-[16px] p-[25px_20px] shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-[#eee]">
           <form onSubmit={handleUpdate}>
             
+            {/* প্রোফাইল ছবি ও Choose File সিস্টেম */}
+            <div className="text-left mb-[20px]">
+              <label className="text-[13px] font-bold block mb-[8px] text-[#333]">Profile Picture</label>
+              <div className="flex items-center gap-4">
+                <div className="w-[60px] h-[60px] rounded-full bg-[#f1f3f5] border border-[#ddd] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {previewImage ? (
+                    <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[11px] text-[#888]">ছবি</span>
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleProfileImageChange}
+                  className="w-full text-[13px] text-[#555] file:mr-4 file:py-2 file:px-4 file:rounded-[10px] file:border-0 file:text-[13px] file:font-bold file:bg-[#e63946] file:text-white hover:file:bg-[#c52a36] cursor-pointer" 
+                />
+              </div>
+            </div>
+
             <div className="text-left mb-[15px]">
               <label className="text-[13px] font-bold block mb-[5px] text-[#333]">First name</label>
               <input 
@@ -158,6 +205,19 @@ export default function MyDetailsPage() {
               </div>
             </div>
 
+            {/* মোবাইল নম্বর বক্সের ঠিক নিচে অ্যাড্রেস (Address) ইনপুট বক্স */}
+            <div className="text-left mb-[15px]">
+              <label className="text-[13px] font-bold block mb-[5px] text-[#333]">Address</label>
+              <textarea 
+                value={address} 
+                onChange={(e) => setAddress(e.target.value)} 
+                rows="2" 
+                placeholder="আপনার সম্পূর্ণ ঠিকানা লিখুন..." 
+                required 
+                className="w-full p-[11px] border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946] focus:bg-white transition"
+              ></textarea>
+            </div>
+
             <div className="text-left mb-[20px]">
               <label className="text-[13px] font-bold block mb-[5px] text-[#333]">Bio</label>
               <textarea 
@@ -184,4 +244,3 @@ export default function MyDetailsPage() {
     </div>
   );
 }
-

@@ -401,10 +401,10 @@ function MainContent() {
         </div>
       )}
 
-      {/* ক্যাটাগরি সেকশন */}
+      {/* ক্যাটাগরি সেকশন (সার্কেল সাইজ বড় করা হয়েছে) */}
       <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         
-        <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100">
+        <div className="max-w-xl mx-auto px-3 py-2.5 bg-white border-b border-gray-100">
           <div className="grid grid-cols-4 gap-y-3 gap-x-2 justify-items-center">
             
             {mainCategories.map((cat) => (
@@ -413,14 +413,14 @@ function MainContent() {
                 onClick={() => handleMainCategoryClick(cat.name)}
                 className="flex flex-col items-center group cursor-pointer w-full"
               >
-                <div className={`w-[56px] h-[56px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+                <div className={`w-[68px] h-[68px] rounded-full p-[2px] border-2 transition-all shadow-sm ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
                   <img 
                     src={cat.imageUrl || 'https://via.placeholder.com/150'} 
                     alt={cat.name} 
                     className="w-full h-full object-cover rounded-full bg-gray-100" 
                   />
                 </div>
-                <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+                <span className="text-[11px] font-bold text-gray-800 mt-1.5 w-full truncate text-center">
                   {cat.name}
                 </span>
               </button>

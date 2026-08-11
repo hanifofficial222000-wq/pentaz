@@ -52,6 +52,44 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
+// 🖼️ ক্যাটাগরি কার্ড কম্পোনেন্ট যার ভেতরে একাধিক ছবি থাকলে অটো-প্লে হবে
+function CategoryCardItem({ cat, isActive, onClick }) {
+  // ক্যাটাগরির একাধিক ছবি হ্যান্ডেল করার জন্য (imageUrls অ্যারে অথবা সিঙ্গেল imageUrl)
+  const images = cat.imageUrls && Array.isArray(cat.imageUrls) && cat.imageUrls.length > 0 
+    ? cat.imageUrls 
+    : [cat.imageUrl || 'https://via.placeholder.com/150'];
+
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentImgIndex((prev) => (prev + 1) % images.length);
+    }, 2500); // প্রতি ২.৫ সেকেন্ড পর পর ছবি পরিবর্তন হবে
+
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center group cursor-pointer w-[66px]"
+    >
+      <div className={`w-[64px] h-[64px] rounded-full p-[2px] border-2 transition-all shadow-sm flex-shrink-0 relative overflow-hidden bg-gray-100 ${isActive ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+        <img 
+          src={images[currentImgIndex]} 
+          alt={cat.name} 
+          className="w-full h-full object-cover rounded-full transition-opacity duration-500" 
+        />
+      </div>
+      <span className="text-[10px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+        {cat.name}
+      </span>
+    </button>
+  );
+}
+
 function MainContent() {
   const searchParams = useSearchParams();
   const searchParamValue = searchParams.get('search');
@@ -401,29 +439,19 @@ function MainContent() {
         </div>
       )}
 
-      {/* ক্যাটাগরি সেকশন (বড় সাইজ ও স্পষ্ট ৫টি কলাম সহ স্ক্রল) */}
+      {/* ক্যাটাগরি সেকশন (একাধিক ছবি স্বয়ংক্রিয় প্লে ফিচার সহ) */}
       <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         
         <div className="max-w-xl mx-auto px-3 py-2.5 bg-white border-b border-gray-100 overflow-x-auto no-scrollbar">
           <div className="grid grid-flow-col grid-rows-2 gap-x-3.5 gap-y-2 w-max px-1">
             
             {mainCategories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => handleMainCategoryClick(cat.name)}
-                className="flex flex-col items-center group cursor-pointer w-[66px]"
-              >
-                <div className={`w-[64px] h-[64px] rounded-full p-[2px] border-2 transition-all shadow-sm flex-shrink-0 ${activeCategory === cat.name ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
-                  <img 
-                    src={cat.imageUrl || 'https://via.placeholder.com/150'} 
-                    alt={cat.name} 
-                    className="w-full h-full object-cover rounded-full bg-gray-100" 
-                  />
-                </div>
-                <span className="text-[10px] font-bold text-gray-800 mt-1 w-full truncate text-center">
-                  {cat.name}
-                </span>
-              </button>
+              <CategoryCardItem 
+                key={cat.id} 
+                cat={cat} 
+                isActive={activeCategory === cat.name} 
+                onClick={() => handleMainCategoryClick(cat.name)} 
+              />
             ))}
 
           </div>

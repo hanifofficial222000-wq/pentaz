@@ -74,13 +74,11 @@ export default function RootLayout({ children }) {
         <div className="w-full max-w-md min-h-screen bg-white shadow-2xl overflow-hidden flex flex-col justify-between relative">
           
           <div className="flex-grow">
-            {/* টপ ল্যাঙ্গুয়েজ বার ও সার্চ বক্স */}
             <div className="bg-white border-b border-gray-200 py-2 px-3 flex items-center justify-between gap-2 sticky top-0 z-50 shadow-sm">
               <Link href="/" className="font-extrabold text-[#e63946] text-xs no-underline flex-shrink-0">
                 {t.shopName}
               </Link>
 
-              {/* একদম উপরে মাঝখানের সাদা খালি অংশে সার্চ বক্স */}
               <form onSubmit={handleSearchSubmit} className="flex-grow max-w-[160px] relative">
                 <input 
                   type="text"
@@ -106,13 +104,11 @@ export default function RootLayout({ children }) {
               </select>
             </div>
 
-            {/* মূল পেজের কনটেন্ট */}
             <main className="pb-16">
               {children}
             </main>
           </div>
 
-          {/* হোয়াটসঅ্যাপ ফ্লোটিং বাটন */}
           <a 
             href="https://wa.me/8801835302525" 
             className={`fixed right-5 bg-[#25D366] text-white w-11 h-11 rounded-full flex items-center justify-center text-xl no-underline shadow-lg z-50 hover:scale-105 transition-all duration-300 ${showNavbar ? 'bottom-20' : 'bottom-5'}`} 
@@ -122,7 +118,6 @@ export default function RootLayout({ children }) {
             💬
           </a>
 
-          {/* বটম নেভবার */}
           <nav className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center py-2 px-1 z-40 shadow-lg transition-transform duration-300 ${showNavbar ? 'translate-y-0' : 'translate-y-full'}`}>
             
             <Link href="/" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
@@ -153,12 +148,23 @@ export default function RootLayout({ children }) {
               <span className="text-[11px] font-medium mt-0.5">Cart</span>
             </Link>
 
-            <Link href="/login" className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline">
+            {/* আপডেট করা Account বাটন */}
+            <div 
+              onClick={() => {
+                const savedUser = localStorage.getItem('ayaat_user_phone');
+                if (savedUser) {
+                  router.push('/dashboard');
+                } else {
+                  router.push('/login');
+                }
+              }}
+              className="flex flex-col items-center text-gray-500 hover:text-[#e63946] no-underline cursor-pointer"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
               </svg>
               <span className="text-[11px] font-medium mt-0.5">Account</span>
-            </Link>
+            </div>
 
           </nav>
 

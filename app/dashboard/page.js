@@ -100,7 +100,30 @@ function DashboardContent() {
           setUser(docSnap.data());
           localStorage.setItem('ayaat_user_phone', emailKey);
         } else {
-          alert('ইউজার ডাটাবেজে পাওয়া যায়নি!');
+          // ডেটাবেজে প্রোফাইল না থাকলে অটোমেটিক তৈরি করে নেওয়া হবে (যাতে এরর না আসে)
+          const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
+          const referredBy = localStorage.getItem('referred_by') || 'Direct';
+          const authUser = userCredential.user;
+
+          const newUserData = {
+            firstName: 'User',
+            lastName: '',
+            name: email.split('@')[0],
+            phone: email,
+            email: email,
+            address: 'Not provided',
+            photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`,
+            promo: autoPromo,
+            points: 50,
+            referrals: 0,
+            referredBy: referredBy,
+            uid: authUser.uid,
+            createdAt: new Date().toISOString()
+          };
+
+          await setDoc(docRef, newUserData);
+          localStorage.setItem('ayaat_user_phone', emailKey);
+          setUser(newUserData);
         }
       } else {
         // নতুন অ্যাকাউন্ট তৈরির জন্য
@@ -186,10 +209,10 @@ function DashboardContent() {
     }
   };
 
-  // ১. লগআউট করার ফাংশন আপডেট করা হয়েছে
+  // লগআউট করার ফাংশন
   const handleLogout = async () => {
     try {
-      await signOut(auth); // ফায়ারবেস থেকে লগআউট
+      await signOut(auth);
     } catch (error) {
       console.error("Logout Error:", error);
     }
@@ -199,7 +222,7 @@ function DashboardContent() {
     setPassword('');
   };
 
-  // ২. অ্যাকাউন্ট সম্পূর্ণ ডিলিট করার ফাংশন যুক্ত করা হয়েছে
+  // অ্যাকাউন্ট সম্পূর্ণ ডিলিট করার ফাংশন
   const handleDeleteAccount = async () => {
     const confirmDelete = window.confirm("আপনি কি নিশ্চিতভাবে আপনার অ্যাকাউন্ট ডিলিট করতে চান? এটি আর ফিরিয়ে আনা যাবে না।");
     if (!confirmDelete) return;
@@ -207,18 +230,15 @@ function DashboardContent() {
     try {
       const currentUser = auth.currentUser;
       
-      // ফায়ারবেস অথেন্টিকেশন থেকে ডিলিট
       if (currentUser) {
         await deleteUser(currentUser);
       }
       
-      // ফায়ারবেস ডাটাবেস (Firestore) থেকে ইউজারের তথ্য মুছে ফেলা
       const savedUserKey = localStorage.getItem('ayaat_user_phone');
       if (savedUserKey) {
         await deleteDoc(doc(db, 'users', savedUserKey));
       }
 
-      // লোকাল স্টোরেজ ক্লিয়ার ও স্টেট রিসেট
       localStorage.removeItem('ayaat_user_phone');
       setUser(null);
       setEmail('');
@@ -258,10 +278,8 @@ function DashboardContent() {
 
             <form onSubmit={handleEmailAuth}>
               
-              {/* Register হলে অতিরিক্ত ফিল্ডগুলো দেখাবে */}
               {!isLoginMode && (
                 <>
-                  {/* Profile Image - Choose File System */}
                   <div className="flex justify-start mb-[15px]">
                     <div className="w-[65px] h-[65px] rounded-full bg-[#f1f3f5] border-2 border-dashed border-[#e63946] flex items-center justify-center overflow-hidden relative cursor-pointer">
                       {previewImage ? (
@@ -329,7 +347,6 @@ function DashboardContent() {
                 </>
               )}
 
-              {/* Email Field */}
               <div className="text-left mb-[15px]">
                 <label className="text-[13px] font-bold block mb-[5px] text-[#333]">ইমেইল:</label>
                 <input 
@@ -342,7 +359,6 @@ function DashboardContent() {
                 />
               </div>
 
-              {/* Password Field */}
               <div className="text-left mb-[15px]">
                 <label className="text-[13px] font-bold block mb-[5px] text-[#333]">পাসওয়ার্ড:</label>
                 <input 
@@ -364,7 +380,6 @@ function DashboardContent() {
               </button>
             </form>
 
-            {/* Toggle between Login and Register */}
             <div className="text-center mt-4">
               <button 
                 type="button"
@@ -375,14 +390,12 @@ function DashboardContent() {
               </button>
             </div>
 
-            {/* Divider */}
             <div className="flex items-center my-4">
               <div className="flex-grow border-t border-[#ddd]"></div>
               <span className="px-3 text-xs text-[#778]">অথবা</span>
               <div className="flex-grow border-t border-[#ddd]"></div>
             </div>
 
-            {/* Google Sign-In Button */}
             <button 
               onClick={handleGoogleLogin}
               className="w-full bg-white hover:bg-[#f1f3f5] text-[#333] border border-[#ddd] p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition flex items-center justify-center gap-2"
@@ -398,10 +411,8 @@ function DashboardContent() {
 
           </div>
         ) : (
-          /* DASHBOARD SECTION (আপনার পূর্বের চমৎকার ডিজাইন বিন্যাস অনুযায়ী) */
           <div className="bg-white rounded-[16px] p-[25px_20px] shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-[#eee] text-left">
             
-            {/* Profile Info Header */}
             <div className="bg-[#fff5f5] border border-dashed border-[#e63946] rounded-[12px] p-[15px] text-center mb-5">
               <img src={user.photo} alt="Profile" className="w-[70px] h-[70px] rounded-full object-cover border-2 border-[#e63946] mx-auto mb-2" />
               <h3 className="text-[16px] text-[#e63946] mb-1 font-bold">স্বাগতম, {user.name}!</h3>
@@ -409,7 +420,6 @@ function DashboardContent() {
               <p className="text-[13px] text-[#555] mb-0.5">প্রোমো কোড: {user.promo}</p>
             </div>
 
-            {/* OVERVIEW MENU */}
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">Overview</div>
             <div className="bg-[#f8f9fa] rounded-[12px] border border-[#eaeaea] overflow-hidden mb-4">
               <div onClick={() => openSubPage('my-orders')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
@@ -434,7 +444,6 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* ACCOUNT MENU */}
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">Account</div>
             <div className="bg-[#f8f9fa] rounded-[12px] border border-[#eaeaea] overflow-hidden mb-4">
               <div onClick={() => openSubPage('my-details')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
@@ -455,7 +464,6 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* MORE MENU */}
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">More</div>
             <div className="bg-[#f8f9fa] rounded-[12px] border border-[#eaeaea] overflow-hidden mb-4">
               <div onClick={() => openSubPage('shop-plus')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
@@ -488,7 +496,6 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Action Buttons (Logout and Delete Account) */}
             <div className="mt-5 space-y-3">
               <button onClick={handleLogout} className="block w-full bg-[#333] hover:bg-[#111] text-white border-none p-3 rounded-[12px] font-bold text-[14px] cursor-pointer text-center transition shadow-sm">
                 লগআউট করুন (Logout)

@@ -430,10 +430,21 @@ function DashboardContent() {
         ) : (
           <div className="bg-white rounded-[16px] p-[25px_20px] shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-[#eee] text-left">
             
-            {/* ইউজার ডিটেইলস কার্ড (Name, Number, Gmail, Address, Bio, Promo Code ফরম্যাট) */}
+            {/* ইউজার ডিটেইলস কার্ড ও এডিট পিন সহ প্রোফাইল ছবি */}
             <div className="bg-[#fff5f5] border border-dashed border-[#e63946] rounded-[12px] p-[18px] mb-5 text-center">
-              <img src={user.photo} alt="Profile" className="w-[75px] h-[75px] rounded-full object-cover border-2 border-[#e63946] mx-auto mb-3 shadow-sm" />
               
+              {/* প্রোফাইল ছবি এবং কলম/এডিট পিন */}
+              <div className="relative inline-block mx-auto mb-3 cursor-pointer" onClick={() => openSubPage('my-details')}>
+                <img 
+                  src={user.photo} 
+                  alt="Profile" 
+                  className="w-[75px] h-[75px] rounded-full object-cover border-2 border-[#e63946] shadow-sm block" 
+                />
+                <div className="absolute bottom-0 right-0 bg-[#e63946] text-white w-6 h-6 rounded-full flex items-center justify-center text-[11px] border-2 border-white shadow-md">
+                  ✏️
+                </div>
+              </div>
+
               <div className="text-left space-y-1.5 text-[13px] text-[#333] bg-white p-3.5 rounded-[10px] border border-[#ffe3e3]">
                 <p><strong>Name:</strong> {user.name || 'Not provided'}</p>
                 <p><strong>Number:</strong> {user.phone || 'Not provided'}</p>

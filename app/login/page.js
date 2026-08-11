@@ -2,54 +2,92 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { db, auth } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   onAuthStateChanged, 
   signOut 
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 export default function AuthPage() {
   const router = useRouter();
-  const [isLoginMode, setIsLoginMode] = useState(true); // লগইন নাকি সাইন-আপ মোড তা ট্র্যাক করবে
+  const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // ইউজার ইতিমধ্যে লগইন করা আছে কি না তা চেক করা
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        // যদি অলরেডি লগইন করা থাকে, তবে সরাসরি ড্যাশবোর্ডে পাঠিয়ে দিতে পারেন
-        router.push('/dashboard');
       } else {
         setUser(null);
       }
       setCheckingAuth(false);
     });
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
-  // ফর্ম সাবমিট (লগইন বা সাইন-আপ)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const emailKey = email.replace(/[.#$[\]]/g, '_');
+      const docRef = doc(db, 'users', emailKey);
+
       if (isLoginMode) {
         // লগইন প্রক্রিয়া
         await signInWithEmailAndPassword(auth, email, password);
+        
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
+          // যদি ডাটাবেজে প্রোফাইল না থাকে তবে অটো তৈরি করে নেবে
+          const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
+          const newUserData = {
+            name: email.split('@')[0],
+            phone: email,
+            email: email,
+            address: 'Not provided',
+            photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`,
+            promo: autoPromo,
+            points: 50,
+            referrals: 0,
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(docRef, newUserData);
+        }
+
+        localStorage.setItem('ayaat_user_phone', emailKey);
         alert("সফলভাবে লগইন হয়েছে!");
       } else {
         // নতুন অ্যাকাউন্ট তৈরি (সাইন-আপ) প্রক্রিয়া
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const authUser = userCredential.user;
+
+        const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
+        const userData = {
+          name: email.split('@')[0],
+          phone: email,
+          email: email,
+          address: 'Not provided',
+          photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`,
+          promo: autoPromo,
+          points: 50,
+          referrals: 0,
+          uid: authUser.uid,
+          createdAt: new Date().toISOString()
+        };
+
+        await setDoc(docRef, userData);
+        localStorage.setItem('ayaat_user_phone', emailKey);
         alert("সফলভাবে নতুন অ্যাকাউন্ট তৈরি হয়েছে!");
       }
-      // সফল লগইন বা সাইন-আপের পর সরাসরি ড্যাশবোর্ডে পাঠিয়ে দেওয়া হবে
+
       router.push('/dashboard'); 
     } catch (error) {
       alert("সমস্যা হয়েছে: " + error.message);
@@ -58,10 +96,10 @@ export default function AuthPage() {
     }
   };
 
-  // লগআউট করার ফাংশন
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem('ayaat_user_phone');
       alert("লগআউট সফল হয়েছে।");
     } catch (error) {
       alert("লগআউট করতে সমস্যা হয়েছে: " + error.message);
@@ -72,7 +110,6 @@ export default function AuthPage() {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">লোড হচ্ছে...</div>;
   }
 
-  // যদি ইউজার ইতিমধ্যে লগইন করা থাকে, তবে তার অ্যাকাউন্ট স্ট্যাটাস ও লগআউট বাটন দেখাবে
   if (user) {
     return (
       <div className="bg-[#f8f9fa] min-h-screen flex items-center justify-center p-4 font-sans">
@@ -81,29 +118,27 @@ export default function AuthPage() {
           <p className="text-[13px] text-gray-600 mb-6 break-all">ইমেইল: {user.email}</p>
           
           <button 
-            onClick={handleLogout}
+            onClick={() => router.push('/dashboard')}
             className="w-full bg-[#e63946] hover:bg-[#c52a36] text-white p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition mb-3"
           >
-            লগআউট করুন
+            ড্যাশবোর্ডে যান
           </button>
 
           <button 
-            onClick={() => router.push('/dashboard')}
-            className="w-full bg-gray-800 hover:bg-gray-900 text-white p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition"
+            onClick={handleLogout}
+            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition"
           >
-            ড্যাশবোর্ডে যান
+            লগআউট করুন
           </button>
         </div>
       </div>
     );
   }
 
-  // লগইন করা না থাকলে একই পেজে লগইন অথবা সাইন-আপ ফর্ম দেখাবে
   return (
     <div className="bg-[#f8f9fa] min-h-screen flex items-center justify-center p-4 font-sans">
       <div className="max-w-[400px] w-full bg-white rounded-[16px] p-6 shadow-md border border-[#eee]">
         
-        {/* টগল হেডার */}
         <div className="flex border-b border-gray-200 mb-6">
           <button 
             type="button"

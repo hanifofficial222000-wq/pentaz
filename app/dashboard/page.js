@@ -3,8 +3,15 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut,
+  deleteUser
+} from 'firebase/auth';
 
 export default function UserDashboardPage() {
   return (
@@ -80,9 +87,6 @@ function DashboardContent() {
     setIsSubmitting(true);
 
     try {
-      // যেহেতু আপনার ফায়ারবেস অথেন্টিকেশনে ইমেইল/পাসওয়ার্ড মেথড চালু করা হয়েছে
-      const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import('firebase/auth');
-      
       let userCredential;
       const emailKey = email.replace(/[.#$[\]]/g, '_');
 
@@ -182,11 +186,49 @@ function DashboardContent() {
     }
   };
 
-  const handleLogout = () => {
+  // ১. লগআউট করার ফাংশন আপডেট করা হয়েছে
+  const handleLogout = async () => {
+    try {
+      await signOut(auth); // ফায়ারবেস থেকে লগআউট
+    } catch (error) {
+      console.error("Logout Error:", error);
+    }
     localStorage.removeItem('ayaat_user_phone');
     setUser(null);
     setEmail('');
     setPassword('');
+  };
+
+  // ২. অ্যাকাউন্ট সম্পূর্ণ ডিলিট করার ফাংশন যুক্ত করা হয়েছে
+  const handleDeleteAccount = async () => {
+    const confirmDelete = window.confirm("আপনি কি নিশ্চিতভাবে আপনার অ্যাকাউন্ট ডিলিট করতে চান? এটি আর ফিরিয়ে আনা যাবে না।");
+    if (!confirmDelete) return;
+
+    try {
+      const currentUser = auth.currentUser;
+      
+      // ফায়ারবেস অথেন্টিকেশন থেকে ডিলিট
+      if (currentUser) {
+        await deleteUser(currentUser);
+      }
+      
+      // ফায়ারবেস ডাটাবেস (Firestore) থেকে ইউজারের তথ্য মুছে ফেলা
+      const savedUserKey = localStorage.getItem('ayaat_user_phone');
+      if (savedUserKey) {
+        await deleteDoc(doc(db, 'users', savedUserKey));
+      }
+
+      // লোকাল স্টোরেজ ক্লিয়ার ও স্টেট রিসেট
+      localStorage.removeItem('ayaat_user_phone');
+      setUser(null);
+      setEmail('');
+      setPassword('');
+      alert("আপনার অ্যাকাউন্ট সফলভাবে ডিলিট করা হয়েছে।");
+      
+    } catch (error) {
+      console.error("Delete Account Error:", error);
+      alert("অ্যাকাউন্ট ডিলিট করতে সমস্যা হয়েছে: " + error.message + "\n(নিরাপত্তার জন্য একবার লগআউট করে পুনরায় লগইন করে চেষ্টা করুন)");
+    }
   };
 
   const openSubPage = (pageName) => {
@@ -446,10 +488,17 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Logout Button */}
-            <button onClick={handleLogout} className="block w-full bg-[#e63946] hover:bg-[#c52a36] text-white border-none p-3 rounded-[12px] font-bold text-[14px] cursor-pointer text-center transition mt-5">
-              Logout
-            </button>
+            {/* Action Buttons (Logout and Delete Account) */}
+            <div className="mt-5 space-y-3">
+              <button onClick={handleLogout} className="block w-full bg-[#333] hover:bg-[#111] text-white border-none p-3 rounded-[12px] font-bold text-[14px] cursor-pointer text-center transition shadow-sm">
+                লগআউট করুন (Logout)
+              </button>
+              
+              <button onClick={handleDeleteAccount} className="block w-full bg-white hover:bg-[#fff5f5] text-[#e63946] border border-[#e63946] p-3 rounded-[12px] font-bold text-[14px] cursor-pointer text-center transition">
+                অ্যাকাউন্ট ডিলিট করুন (Delete Account)
+              </button>
+            </div>
+
           </div>
         )}
 

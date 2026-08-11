@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { db } from '@/lib/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 // ১. মূল পেজ কম্পোনেন্ট যা Suspense বাউন্ডারি দিয়ে র‍্যাপ করা
 export default function UserDashboardPage() {
@@ -30,20 +32,34 @@ function DashboardContent() {
   // User Dashboard State
   const [user, setUser] = useState(null);
 
-  // Check LocalStorage and URL referral on load
+  // Check LocalStorage / Firebase session on load
   useEffect(() => {
     const refCode = searchParams.get('ref');
     if (refCode) {
       localStorage.setItem('referred_by', refCode);
     }
 
-    const localUser = JSON.parse(localStorage.getItem('ayaat_user'));
-    if (localUser) {
-      setUser(localUser);
-    }
+    const checkStoredUser = async () => {
+      const savedPhone = localStorage.getItem('ayaat_user_phone');
+      if (savedPhone) {
+        try {
+          const docRef = doc(db, 'users', savedPhone);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setUser(docSnap.data());
+          } else {
+            localStorage.removeItem('ayaat_user_phone');
+          }
+        } catch (error) {
+          console.error("Error fetching user from Firebase:", error);
+        }
+      }
+    };
+
+    checkStoredUser();
   }, [searchParams]);
 
-  // Handle Profile Image Selection (Base64 conversion for LocalStorage)
+  // Handle Profile Image Selection (Base64 conversion)
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -56,11 +72,11 @@ function DashboardContent() {
     }
   };
 
-  // Register / Save Manual User to LocalStorage
-  const handleRegister = (e) => {
+  // Register / Save User to Firebase Firestore
+  const handleRegister = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitBtnText('Saving Data...');
+    setSubmitBtnText('Saving to Database...');
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
     let photoUrl = previewImage;
@@ -70,28 +86,34 @@ function DashboardContent() {
     }
 
     const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
-    const userId = 'user_' + manualPhone.trim();
+    const phoneClean = manualPhone.trim();
+    const userId = 'user_' + phoneClean;
     const referredBy = localStorage.getItem('referred_by') || 'Direct';
 
     const userData = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       name: fullName,
-      phone: manualPhone.trim(),
+      phone: phoneClean,
       address: manualAddress.trim(),
       photo: photoUrl,
       promo: autoPromo,
       points: 50,
       referrals: 0,
       referredBy: referredBy,
-      uid: userId
+      uid: userId,
+      createdAt: new Date().toISOString()
     };
 
     try {
-      localStorage.setItem('ayaat_user', JSON.stringify(userData));
+      // Save data to Firebase Firestore (using phone number as document ID)
+      await setDoc(doc(db, 'users', phoneClean), userData);
+      
+      // Keep session in localStorage
+      localStorage.setItem('ayaat_user_phone', phoneClean);
       setUser(userData);
     } catch (error) {
-      console.error("Error saving user:", error);
+      console.error("Error saving user to Firebase:", error);
       alert('রেজিস্ট্রেশন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
       setSubmitBtnText('Register');
       setIsSubmitting(false);
@@ -100,7 +122,7 @@ function DashboardContent() {
 
   // Logout Account
   const handleLogout = () => {
-    localStorage.removeItem('ayaat_user');
+    localStorage.removeItem('ayaat_user_phone');
     setUser(null);
     setFirstName('');
     setLastName('');
@@ -112,10 +134,9 @@ function DashboardContent() {
     setIsSubmitting(false);
   };
 
-  // Subpage Navigation Helper (Fixed .html extension issue)
+  // Subpage Navigation Helper (Clean Next.js routing)
   const openSubPage = (pageName) => {
-    const route = pageName.replace('.html', '');
-    router.push(`/${route}`);
+    router.push(`/${pageName}`);
   };
 
   return (
@@ -220,23 +241,23 @@ function DashboardContent() {
             {/* OVERVIEW MENU */}
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">Overview</div>
             <div className="bg-[#f8f9fa] rounded-[12px] border border-[#eaeaea] overflow-hidden mb-4">
-              <div onClick={() => openSubPage('my-orders.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('my-orders')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>📦</span> My orders</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('my-returns.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
-                <div className="flex items-center gap-2.5"><span>🔄</span> My returns</div>
+              <div onClick={() => openSubPage('return-management')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+                <div className="flex items-center gap-2.5"><span>🔄</span> return-management</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('my-coupons.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('my-coupons')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>🎟️</span> My coupons</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('my-questions.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('my-questions')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>❓</span> My questions</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('coin-balance.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('coins-balance')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>🪙</span> Coin balance</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
@@ -245,19 +266,19 @@ function DashboardContent() {
             {/* ACCOUNT MENU */}
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">Account</div>
             <div className="bg-[#f8f9fa] rounded-[12px] border border-[#eaeaea] overflow-hidden mb-4">
-              <div onClick={() => openSubPage('my-details.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('my-details')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>👤</span> My personal details</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('payment-methods.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('payment-methods')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>💳</span> My payment methods</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('my-address.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('my-address')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>📍</span> My address</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('settings.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('settings')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>⚙️</span> Settings</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
@@ -266,31 +287,31 @@ function DashboardContent() {
             {/* MORE MENU */}
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">More</div>
             <div className="bg-[#f8f9fa] rounded-[12px] border border-[#eaeaea] overflow-hidden mb-4">
-              <div onClick={() => openSubPage('shop-plus.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('shop-plus')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>⭐</span> Ayaat sports shop plus</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('shop-assistant.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('shop-assistant')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>🤖</span> Ayaat sports shop assistant</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('help.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('help')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>🛟</span> Help</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('about-us.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('about')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>ℹ️</span> About us</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('privacy.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('privacy-policy')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>📜</span> Privacy Policy</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('terms.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('terms')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>📜</span> Terms & Conditions</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
-              <div onClick={() => openSubPage('add-product.html')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
+              <div onClick={() => openSubPage('add-product')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
                 <div className="flex items-center gap-2.5"><span>🏷️</span> On sell you</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>

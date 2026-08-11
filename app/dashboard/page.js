@@ -39,6 +39,7 @@ function DashboardContent() {
   const [lastName, setLastName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualAddress, setManualAddress] = useState('');
+  const [manualBio, setManualBio] = useState('');
   const [previewImage, setPreviewImage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -100,18 +101,20 @@ function DashboardContent() {
           setUser(docSnap.data());
           localStorage.setItem('ayaat_user_phone', emailKey);
         } else {
-          // ডেটাবেজে প্রোফাইল না থাকলে অটোমেটিক তৈরি করে নেওয়া হবে (যাতে এরর না আসে)
+          // ডেটাবেজে প্রোফাইল না থাকলে অটোমেটিক তৈরি করে নেওয়া হবে
           const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
           const referredBy = localStorage.getItem('referred_by') || 'Direct';
           const authUser = userCredential.user;
 
+          const defaultName = email.split('@')[0];
           const newUserData = {
-            firstName: 'User',
+            firstName: defaultName,
             lastName: '',
-            name: email.split('@')[0],
-            phone: email,
+            name: defaultName,
+            phone: 'Not provided',
             email: email,
             address: 'Not provided',
+            bio: 'No bio added yet',
             photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`,
             promo: autoPromo,
             points: 50,
@@ -139,9 +142,10 @@ function DashboardContent() {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           name: fullName,
-          phone: manualPhone.trim() || email,
+          phone: manualPhone.trim() || 'Not provided',
           email: email,
-          address: manualAddress.trim(),
+          address: manualAddress.trim() || 'Not provided',
+          bio: manualBio.trim() || 'No bio added yet',
           photo: photoUrl,
           promo: autoPromo,
           points: 50,
@@ -180,16 +184,18 @@ function DashboardContent() {
       } else {
         const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
         const referredBy = localStorage.getItem('referred_by') || 'Direct';
-        const nameParts = (loggedUser.displayName || 'Google User').split(' ');
+        const displayName = loggedUser.displayName || 'Google User';
+        const nameParts = displayName.split(' ');
         
         userData = {
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
-          name: loggedUser.displayName || 'Google User',
-          phone: loggedUser.phoneNumber || loggedUser.email,
+          name: displayName,
+          phone: loggedUser.phoneNumber || 'Not provided',
           email: loggedUser.email,
           address: 'Not provided',
-          photo: loggedUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(loggedUser.displayName || 'User')}`,
+          bio: 'No bio added yet',
+          photo: loggedUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName)}`,
           promo: autoPromo,
           points: 50,
           referrals: 0,
@@ -344,6 +350,17 @@ function DashboardContent() {
                       className="w-full p-[11px] border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946] focus:bg-white transition"
                     ></textarea>
                   </div>
+
+                  <div className="text-left mb-[15px]">
+                    <label className="text-[13px] font-bold block mb-[5px] text-[#333]">বায়ো (Bio):</label>
+                    <input 
+                      type="text" 
+                      value={manualBio} 
+                      onChange={(e) => setManualBio(e.target.value)} 
+                      placeholder="আপনার সম্পর্কে কিছু বলুন" 
+                      className="w-full p-[11px] border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946] focus:bg-white transition"
+                    />
+                  </div>
                 </>
               )}
 
@@ -413,11 +430,18 @@ function DashboardContent() {
         ) : (
           <div className="bg-white rounded-[16px] p-[25px_20px] shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-[#eee] text-left">
             
-            <div className="bg-[#fff5f5] border border-dashed border-[#e63946] rounded-[12px] p-[15px] text-center mb-5">
-              <img src={user.photo} alt="Profile" className="w-[70px] h-[70px] rounded-full object-cover border-2 border-[#e63946] mx-auto mb-2" />
-              <h3 className="text-[16px] text-[#e63946] mb-1 font-bold">স্বাগতম, {user.name}!</h3>
-              <p className="text-[13px] text-[#555] mb-0.5">যোগাযোগ: {user.phone || user.email}</p>
-              <p className="text-[13px] text-[#555] mb-0.5">প্রোমো কোড: {user.promo}</p>
+            {/* ইউজার ডিটেইলস কার্ড (Name, Number, Gmail, Address, Bio, Promo Code ফরম্যাট) */}
+            <div className="bg-[#fff5f5] border border-dashed border-[#e63946] rounded-[12px] p-[18px] mb-5 text-center">
+              <img src={user.photo} alt="Profile" className="w-[75px] h-[75px] rounded-full object-cover border-2 border-[#e63946] mx-auto mb-3 shadow-sm" />
+              
+              <div className="text-left space-y-1.5 text-[13px] text-[#333] bg-white p-3.5 rounded-[10px] border border-[#ffe3e3]">
+                <p><strong>Name:</strong> {user.name || 'Not provided'}</p>
+                <p><strong>Number:</strong> {user.phone || 'Not provided'}</p>
+                <p><strong>Gmail:</strong> {user.email || 'Not provided'}</p>
+                <p><strong>Address:</strong> {user.address || 'Not provided'}</p>
+                <p><strong>Bio:</strong> {user.bio || 'No bio added yet'}</p>
+                <p><strong>Promo Code:</strong> <span className="text-[#e63946] font-bold">{user.promo}</span></p>
+              </div>
             </div>
 
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">Overview</div>

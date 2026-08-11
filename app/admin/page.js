@@ -266,7 +266,7 @@ export default function AdminControlRoom() {
         </Link>
 
         {/* 13. Question & Answer */}
-        <Link href="/admin/question-anser" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
+        <Link href="/admin/question-answer" className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500/50 p-6 rounded-2xl shadow-xl transition duration-300 transform hover:-translate-y-1 flex flex-col justify-between group cursor-pointer no-underline text-white">
           <div>
             <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">❓</div>
             <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition">Question & Answer</h3>

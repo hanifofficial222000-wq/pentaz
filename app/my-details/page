@@ -29,8 +29,9 @@ function DashboardContent() {
   const [submitBtnText, setSubmitBtnText] = useState('Register');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // User Dashboard State
+  // User Dashboard & Loading State
   const [user, setUser] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   // Check LocalStorage / Firebase session on load
   useEffect(() => {
@@ -54,6 +55,7 @@ function DashboardContent() {
           console.error("Error fetching user from Firebase:", error);
         }
       }
+      setCheckingSession(false);
     };
 
     checkStoredUser();
@@ -138,6 +140,11 @@ function DashboardContent() {
   const openSubPage = (pageName) => {
     router.push(`/${pageName}`);
   };
+
+  // session চেক করার সময় লোডিং দেখাবে যাতে ফর্ম ফ্লিকার না করে
+  if (checkingSession) {
+    return <div className="text-center py-20 text-xs text-slate-400">লোড হচ্ছে...</div>;
+  }
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-[50px] text-[#333] font-sans">

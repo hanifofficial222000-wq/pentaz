@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -6,9 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-const CLOUDINARY_CLOUD_NAME = "b3gsgcpl"; 
-const CLOUDINARY_UPLOAD_PRESET = "tho4ycz8"; 
 
 // ১. মূল এক্সপোর্ট করা পেজ কম্পোনেন্ট যা Suspense বাউন্ডারি দিয়ে মোড়ানো থাকবে
 export default function MyDetailsPage() {
@@ -27,9 +23,6 @@ function DetailsContent() {
   const [lastName, setLastName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualAddress, setManualAddress] = useState('');
-  const [previewImage, setPreviewImage] = useState('');
-  const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [existingPhotoUrl, setExistingPhotoUrl] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [btnText, setBtnText] = useState('পরিবর্তন সেভ করুন');
@@ -60,11 +53,6 @@ function DetailsContent() {
       setManualPhone(localUser.phone || '');
       setManualAddress(localUser.address || '');
 
-      if (localUser.photo) {
-        setExistingPhotoUrl(localUser.photo);
-        setPreviewImage(localUser.photo);
-      }
-
       // ফায়ারস্টোর থেকে লেটেস্ট ডাটা ফেচ করে সিংক রাখা
       try {
         const userId = localUser.uid || ('user_' + localUser.phone);
@@ -77,11 +65,6 @@ function DetailsContent() {
           setLastName(firestoreData.lastName || '');
           setManualPhone(firestoreData.phone || '');
           setManualAddress(firestoreData.address || '');
-          
-          if (firestoreData.photo) {
-            setExistingPhotoUrl(firestoreData.photo);
-            setPreviewImage(firestoreData.photo);
-          }
         }
       } catch (err) {
         console.error("Error fetching user data:", err);
@@ -91,54 +74,18 @@ function DetailsContent() {
     loadUserData();
   }, [router]);
 
-  // ছবি সিলেক্ট করলে ইনস্ট্যান্ট প্রিভিউ দেখানোর ফাংশন
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        setPreviewImage(uploadEvent.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   // আপডেট বা সাবমিট ফাংশন
   const updateUserProfile = async (e) => {
     e.preventDefault();
     setLoading(true);
     setBtnText('আপডেট হচ্ছে...');
 
-    let photoUrl = existingPhotoUrl;
-
     try {
-      // যদি নতুন ছবি সিলেক্ট করা হয়ে থাকে তবে ক্লাউডিনারিতে আপলোড হবে
-      if (selectedImageFile) {
-        setBtnText('ছবি আপলোড হচ্ছে...');
-        const formData = new FormData();
-        formData.append('file', selectedImageFile);
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-        const cloudinaryRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-          method: 'POST',
-          body: formData
-        });
-
-        const cloudinaryData = await cloudinaryRes.json();
-        if (cloudinaryData.secure_url) {
-          photoUrl = cloudinaryData.secure_url;
-        } else {
-          throw new Error(cloudinaryData.error?.message || "Cloudinary image upload failed!");
-        }
-      }
-
-      setBtnText('ডাটা সেভ হচ্ছে...');
       const localUser = JSON.parse(localStorage.getItem('ayaat_user')) || {};
       const userId = localUser.uid || ('user_' + manualPhone);
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-      // নতুন আপডেট অবজেক্ট
+      // নতুন আপডেট অবজেক্ট (ছবি ছাড়া)
       const updatedUserData = {
         ...localUser,
         firstName: firstName.trim(),
@@ -146,7 +93,6 @@ function DetailsContent() {
         name: fullName,
         phone: manualPhone.trim(),
         address: manualAddress.trim(),
-        photo: photoUrl,
         uid: userId
       };
 
@@ -156,16 +102,15 @@ function DetailsContent() {
       // লোকালস্টোরেজ আপডেট করা
       localStorage.setItem('ayaat_user', JSON.stringify(updatedUserData));
 
-      // সফল মেসেজ দেখানো
+      // সফল মেসেজ দেখানো এবং ১.৫ সেকেন্ড পর ড্যাশবোর্ডে রিডাইরেক্ট করা
       setShowAlert(true);
       setTimeout(() => {
-        setShowAlert(false);
-      }, 3000);
+        router.push('/');
+      }, 1500);
 
     } catch (error) {
       console.error("Error updating profile:", error);
       alert('আপডেট করতে সমস্যা হয়েছে: ' + error.message);
-    } finally {
       setLoading(false);
       setBtnText('পরিবর্তন সেভ করুন');
     }
@@ -198,23 +143,6 @@ function DetailsContent() {
 
           <form onSubmit={updateUserProfile}>
             
-            {/* Top Profile Circle */}
-            <div className="flex justify-center mb-5">
-              <div className="w-[85px] h-[85px] rounded-full bg-[#f1f3f5] border-2 border-dashed border-[#e63946] flex items-center justify-center overflow-hidden relative cursor-pointer">
-                {previewImage ? (
-                  <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[11px] text-[#555] text-center">📷 ছবি</span>
-                )}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageChange}
-                  className="absolute w-[85px] h-[85px] opacity-0 cursor-pointer"
-                />
-              </div>
-            </div>
-
             {/* First Name & Last Name */}
             <div className="flex gap-2.5 mb-4">
               <div className="flex-1 text-left">

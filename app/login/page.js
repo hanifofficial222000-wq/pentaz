@@ -24,13 +24,15 @@ export default function AuthPage() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        // যদি অলরেডি লগইন করা থাকে, তবে সরাসরি ড্যাশবোর্ডে পাঠিয়ে দিতে পারেন
+        router.push('/dashboard');
       } else {
         setUser(null);
       }
       setCheckingAuth(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   // ফর্ম সাবমিট (লগইন বা সাইন-আপ)
   const handleSubmit = async (e) => {
@@ -47,7 +49,8 @@ export default function AuthPage() {
         await createUserWithEmailAndPassword(auth, email, password);
         alert("সফলভাবে নতুন অ্যাকাউন্ট তৈরি হয়েছে!");
       }
-      router.push('/'); // হোমে বা ড্যাশবোর্ডে পাঠিয়ে দেওয়া
+      // সফল লগইন বা সাইন-আপের পর সরাসরি ড্যাশবোর্ডে পাঠিয়ে দেওয়া হবে
+      router.push('/dashboard'); 
     } catch (error) {
       alert("সমস্যা হয়েছে: " + error.message);
     } finally {
@@ -69,7 +72,7 @@ export default function AuthPage() {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">লোড হচ্ছে...</div>;
   }
 
-  // যদি ইউজার ইতিমধ্যে লগইন করা থাকে, তবে তার অ্যাকাউন্ট স্ট্যাটাস ও লগআউট বাটন দেখাবে (যতক্ষণ না লগআউট করছে)
+  // যদি ইউজার ইতিমধ্যে লগইন করা থাকে, তবে তার অ্যাকাউন্ট স্ট্যাটাস ও লগআউট বাটন দেখাবে
   if (user) {
     return (
       <div className="bg-[#f8f9fa] min-h-screen flex items-center justify-center p-4 font-sans">
@@ -79,9 +82,16 @@ export default function AuthPage() {
           
           <button 
             onClick={handleLogout}
-            className="w-full bg-[#e63946] hover:bg-[#c52a36] text-white p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition"
+            className="w-full bg-[#e63946] hover:bg-[#c52a36] text-white p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition mb-3"
           >
             লগআউট করুন
+          </button>
+
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="w-full bg-gray-800 hover:bg-gray-900 text-white p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition"
+          >
+            ড্যাশবোর্ডে যান
           </button>
         </div>
       </div>

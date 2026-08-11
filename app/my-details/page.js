@@ -31,40 +31,29 @@ function DetailsContent() {
   // পেজ লোড হলে লোকালস্টোরেজ ও ফায়ারস্টোর থেকে ডাটা ফেচ করা
   useEffect(() => {
     async function loadUserData() {
-      const localUserStr = localStorage.getItem('ayaat_user');
+      // ড্যাশবোর্ডের সাথে মিলিয়ে সঠিক কি (ayaat_user_phone) চেক করা হচ্ছে
+      const savedPhone = localStorage.getItem('ayaat_user_phone');
       
-      if (!localUserStr) {
+      if (!savedPhone) {
         alert('দয়া করে প্রথমে লগইন বা রেজিস্ট্রেশন করুন!');
         router.push('/');
         return;
       }
 
-      const localUser = JSON.parse(localUserStr);
-      
-      if (!localUser.phone) {
-        alert('দয়া করে প্রথমে লগইন বা রেজিস্ট্রেশন করুন!');
-        router.push('/');
-        return;
-      }
-
-      // ফর্ম ফিল্ডগুলোতে লোকাল ডাটা সেট করা
-      setFirstName(localUser.firstName || '');
-      setLastName(localUser.lastName || '');
-      setManualPhone(localUser.phone || '');
-      setManualAddress(localUser.address || '');
-
-      // ফায়ারস্টোর থেকে লেটেস্ট ডাটা ফেচ করে সিংক রাখা
+      // ফায়ারস্টোর থেকে লেটেস্ট ডাটা ফেচ করে ফর্ম ফিল্ড সিংক রাখা
       try {
-        const userId = localUser.uid || ('user_' + localUser.phone);
-        const userRef = doc(db, "users", userId);
+        const userRef = doc(db, "users", savedPhone);
         const docSnap = await getDoc(userRef);
         
         if (docSnap.exists()) {
           const firestoreData = docSnap.data();
           setFirstName(firestoreData.firstName || '');
           setLastName(firestoreData.lastName || '');
-          setManualPhone(firestoreData.phone || '');
+          setManualPhone(firestoreData.phone || savedPhone);
           setManualAddress(firestoreData.address || '');
+        } else {
+          alert('ইউজার ডাটা পাওয়া যায়নি!');
+          router.push('/');
         }
       } catch (err) {
         console.error("Error fetching user data:", err);
@@ -81,31 +70,31 @@ function DetailsContent() {
     setBtnText('আপডেট হচ্ছে...');
 
     try {
-      const localUser = JSON.parse(localStorage.getItem('ayaat_user')) || {};
-      const userId = localUser.uid || ('user_' + manualPhone);
+      const phoneClean = manualPhone.trim();
+      const userId = 'user_' + phoneClean;
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-      // নতুন আপডেট অবজেক্ট (ছবি ছাড়া)
+      // ডাটাবেজে পাঠানোর জন্য আপডেট অবজেক্ট তৈরি
       const updatedUserData = {
-        ...localUser,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         name: fullName,
-        phone: manualPhone.trim(),
+        phone: phoneClean,
         address: manualAddress.trim(),
-        uid: userId
+        uid: userId,
+        updatedAt: new Date().toISOString()
       };
 
-      // ফায়ারস্টোরে ডেটা আপডেট করা
-      await setDoc(doc(db, "users", userId), updatedUserData, { merge: true });
+      // ফায়ারস্টোরে ডেটা আপডেট করা (merge সহ)
+      await setDoc(doc(db, "users", phoneClean), updatedUserData, { merge: true });
 
-      // লোকালস্টোরেজ আপডেট করা
-      localStorage.setItem('ayaat_user', JSON.stringify(updatedUserData));
+      // লোকালস্টোরেজ সঠিক কি দিয়ে আপডেট করা
+      localStorage.setItem('ayaat_user_phone', phoneClean);
 
       // সফল মেসেজ দেখানো এবং ১.৫ সেকেন্ড পর ড্যাশবোর্ডে রিডাইরেক্ট করা
       setShowAlert(true);
       setTimeout(() => {
-        router.push('/');
+        router.push('/'); // আপনার ড্যাশবোর্ড পেজ রুট প্রয়োজন অনুযায়ী এখানে পরিবর্তন করতে পারেন
       }, 1500);
 
     } catch (error) {

@@ -9,8 +9,8 @@ export default function CategoryManagement() {
   const uploadPreset = "tho4ycz8";
 
   const [mainCatName, setMainCatName] = useState('');
-  const [mainCatImageFile, setMainCatImageFile] = useState(null);
-  const [mainCatImagePreview, setMainCatImagePreview] = useState('');
+  const [mainCatImageFiles, setMainCatImageFiles] = useState([]);
+  const [mainCatImagePreviews, setMainCatImagePreviews] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const [parentMainCatSelect, setParentMainCatSelect] = useState('');
@@ -28,10 +28,12 @@ export default function CategoryManagement() {
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setMainCatImageFile(file);
-    setMainCatImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setMainCatImageFiles(files);
+    const previews = files.map(file => URL.createObjectURL(file));
+    setMainCatImagePreviews(previews);
   };
 
   const loadAllCategoriesData = async () => {
@@ -54,7 +56,7 @@ export default function CategoryManagement() {
     loadAllCategoriesData();
   }, []);
 
-  // Cloudinary Upload Helper (প্রোডাক্ট পেজের মতো হুবহু একই পদ্ধতি)
+  // Cloudinary Upload Helper (একাধিক ছবি আপলোড করার লজিক)
   const uploadToCloudinary = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -76,28 +78,30 @@ export default function CategoryManagement() {
       alert("দয়া করে মেইন ক্যাটাগরির নাম দিন!");
       return;
     }
-    if (!mainCatImageFile) {
-      alert("দয়া করে ক্যাটাগরির একটি ছবি সিলেক্ট করুন!");
+    if (mainCatImageFiles.length === 0) {
+      alert("দয়া করে ক্যাটাগরির অন্তত একটি ছবি সিলেক্ট করুন!");
       return;
     }
 
     setUploadingImage(true);
 
     try {
-      // Cloudinary তে ছবি আপলোড করা হচ্ছে
-      const imageUrl = await uploadToCloudinary(mainCatImageFile);
+      // সব ছবি Cloudinary তে একযোগে আপলোড করা হচ্ছে
+      const uploadPromises = mainCatImageFiles.map(file => uploadToCloudinary(file));
+      const imageUrls = await Promise.all(uploadPromises);
 
-      // ডেটাবেজে সেভ করা হচ্ছে
+      // ডেটাবেজে একাধিক ছবিসহ (imageUrls এবং ব্যাকওয়ার্ড কম্প্যাটিবিলিটির জন্য imageUrl) সেভ করা হচ্ছে
       await addDoc(collection(db, "mainCategories"), { 
         name, 
-        imageUrl, 
+        imageUrl: imageUrls[0], // ব্যাকআপ বা সিঙ্গেল ব্যবহারের জন্য
+        imageUrls, // একাধিক ছবির অ্যারে
         createdAt: serverTimestamp() 
       });
 
       showAlert("🎉 মেইন ক্যাটাগরি সফলভাবে সেভ হয়েছে!");
       setMainCatName('');
-      setMainCatImageFile(null);
-      setMainCatImagePreview('');
+      setMainCatImageFiles([]);
+      setMainCatImagePreviews([]);
       
       const fileInput = document.getElementById('mainCatImageInput');
       if (fileInput) fileInput.value = '';
@@ -165,7 +169,7 @@ export default function CategoryManagement() {
 
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-            📁 ১. মেইন ক্যাটাগরি যোগ করুন (গোল ছবিসহ)
+            📁 ১. মেইন ক্যাটাগরি যোগ করুন (একাধিক ছবি সহ)
           </h3>
           <form onSubmit={handleMainCategorySubmit} className="space-y-4">
             <div>
@@ -180,18 +184,25 @@ export default function CategoryManagement() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ক্যাটাগরি গোল ছবি (Image)</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">ক্যাটাগরির ছবিসমূহ (একাধিক সিলেক্ট করতে পারেন)</label>
               <input 
                 id="mainCatImageInput"
                 type="file" 
                 onChange={handleImageChange} 
                 accept="image/*"
+                multiple
                 className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
               />
-              {mainCatImagePreview && (
-                <div className="mt-2 flex items-center gap-2">
-                  <img src={mainCatImagePreview} alt="Preview" className="w-12 h-12 rounded-full object-cover border" />
-                  <span className="text-xs text-green-600 font-bold">ছবি সিলেক্ট করা হয়েছে!</span>
+              {mainCatImagePreviews.length > 0 && (
+                <div className="mt-3">
+                  <span className="text-xs text-slate-500 font-semibold block mb-1">সিলেক্ট করা ছবিগুলো ({mainCatImagePreviews.length}টি):</span>
+                  <div className="flex flex-wrap gap-2">
+                    {mainCatImagePreviews.map((src, idx) => (
+                      <div key={idx} className="relative">
+                        <img src={src} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500 shadow-sm" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -200,7 +211,7 @@ export default function CategoryManagement() {
               disabled={uploadingImage}
               className={`w-full text-white font-semibold py-2.5 rounded-lg transition duration-200 text-xs ${uploadingImage ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'}`}
             >
-              {uploadingImage ? 'ছবি আপলোড ও সেভ হচ্ছে, অপেক্ষা করুন...' : '➕ মেইন ক্যাটাগরি সেভ করুন'}
+              {uploadingImage ? 'ছবিগুলো আপলোড ও সেভ হচ্ছে, অপেক্ষা করুন...' : '➕ মেইন ক্যাটাগরি সেভ করুন'}
             </button>
           </form>
 
@@ -212,13 +223,18 @@ export default function CategoryManagement() {
               ) : allMainCategories.length === 0 ? (
                 <span className="text-xs text-slate-400">কোনো মেইন ক্যাটাগরি নেই</span>
               ) : (
-                allMainCategories.map((cat) => (
-                  <span key={cat.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm">
-                    {cat.imageUrl && <img src={cat.imageUrl} alt="" className="w-5 h-5 rounded-full object-cover" />}
-                    📁 {cat.name}
-                    <button type="button" onClick={() => deleteMainCat(cat.id, cat.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
-                  </span>
-                ))
+                allMainCategories.map((cat) => {
+                  const displayImg = (cat.imageUrls && cat.imageUrls[0]) || cat.imageUrl;
+                  const totalImgs = cat.imageUrls ? cat.imageUrls.length : (cat.imageUrl ? 1 : 0);
+
+                  return (
+                    <span key={cat.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm">
+                      {displayImg && <img src={displayImg} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                      📁 {cat.name} <span className="text-[10px] text-gray-400">({totalImgs} img)</span>
+                      <button type="button" onClick={() => deleteMainCat(cat.id, cat.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
+                    </span>
+                  );
+                })
               )}
             </div>
           </div>

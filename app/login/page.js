@@ -16,6 +16,14 @@ export default function AuthPage() {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // সাইন-আপের জন্য অতিরিক্ত স্টেট (First Name, Last Name, Phone, Bio)
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [countryCode, setCountryCode] = useState('+966');
+  const [phone, setPhone] = useState('');
+  const [bio, setBio] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -48,11 +56,15 @@ export default function AuthPage() {
         if (!docSnap.exists()) {
           // যদি ডাটাবেজে প্রোফাইল না থাকে তবে অটো তৈরি করে নেবে
           const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
+          const defaultName = email.split('@')[0];
           const newUserData = {
-            name: email.split('@')[0],
-            phone: email,
+            firstName: defaultName,
+            lastName: '',
+            name: defaultName,
+            phone: 'Not provided',
             email: email,
             address: 'Not provided',
+            bio: 'No bio added yet',
             photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`,
             promo: autoPromo,
             points: 50,
@@ -69,13 +81,19 @@ export default function AuthPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const authUser = userCredential.user;
 
+        const fullName = `${firstName.trim()} ${lastName.trim()}`;
+        const fullPhone = `${countryCode} ${phone.trim()}`;
         const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
+        
         const userData = {
-          name: email.split('@')[0],
-          phone: email,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          name: fullName,
+          phone: fullPhone,
           email: email,
           address: 'Not provided',
-          photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`,
+          bio: bio.trim() || 'No bio added yet',
+          photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`,
           promo: autoPromo,
           points: 50,
           referrals: 0,
@@ -161,6 +179,72 @@ export default function AuthPage() {
         </h2>
         
         <form onSubmit={handleSubmit}>
+          
+          {/* সাইন-আপ মোডে অতিরিক্ত ফিল্ডগুলো দেখাবে */}
+          {!isLoginMode && (
+            <>
+              <div className="mb-4">
+                <label className="text-[13px] font-bold block mb-1 text-[#333]">First name:</label>
+                <input 
+                  type="text" 
+                  value={firstName} 
+                  onChange={(e) => setFirstName(e.target.value)} 
+                  placeholder="First name" 
+                  required 
+                  className="w-full p-3 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946]"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="text-[13px] font-bold block mb-1 text-[#333]">Last name:</label>
+                <input 
+                  type="text" 
+                  value={lastName} 
+                  onChange={(e) => setLastName(e.target.value)} 
+                  placeholder="Last name" 
+                  required 
+                  className="w-full p-3 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946]"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="text-[13px] font-bold block mb-1 text-[#333]">Mobile phone:</label>
+                <div className="flex gap-2">
+                  <select 
+                    value={countryCode} 
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="p-3 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946]"
+                  >
+                    <option value="+966">+966</option>
+                    <option value="+880">+880</option>
+                    <option value="+971">+971</option>
+                    <option value="+1">+1</option>
+                  </select>
+
+                  <input 
+                    type="tel" 
+                    value={phone} 
+                    onChange={(e) => setPhone(e.target.value)} 
+                    placeholder="Mobile phone" 
+                    required 
+                    className="w-full p-3 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946]"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="text-[13px] font-bold block mb-1 text-[#333]">Bio:</label>
+                <textarea 
+                  value={bio} 
+                  onChange={(e) => setBio(e.target.value)} 
+                  rows="2" 
+                  placeholder="আপনার সম্পর্কে কিছু লিখুন..." 
+                  className="w-full p-3 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946]"
+                ></textarea>
+              </div>
+            </>
+          )}
+
           <div className="mb-4">
             <label className="text-[13px] font-bold block mb-1 text-[#333]">ইমেইল:</label>
             <input 

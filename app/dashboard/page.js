@@ -23,7 +23,7 @@ function DashboardContent() {
   const [lastName, setLastName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualAddress, setManualAddress] = useState('');
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState('');
   
   // OTP States
   const [verificationCode, setVerificationCode] = useState('');
@@ -63,7 +63,7 @@ function DashboardContent() {
     checkStoredUser();
   }, [searchParams]);
 
-  // Profile Image Selection
+  // Profile Image Selection (Choose File System)
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -116,14 +116,14 @@ function DashboardContent() {
     setIsSubmitting(true);
 
     try {
-      await confirmationResult.confirm(verificationCode);
+      const userCredential = await confirmationResult.confirm(verificationCode);
+      const authUser = userCredential.user;
 
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       let photoUrl = previewImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
       
       const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
       const phoneClean = manualPhone.trim();
-      const userId = 'user_' + phoneClean;
       const referredBy = localStorage.getItem('referred_by') || 'Direct';
 
       const userData = {
@@ -137,10 +137,11 @@ function DashboardContent() {
         points: 50,
         referrals: 0,
         referredBy: referredBy,
-        uid: userId,
+        uid: authUser.uid,
         createdAt: new Date().toISOString()
       };
 
+      // Firestore-এ ফোন নম্বরকে আইডি হিসেবে সেভ করা
       await setDoc(doc(db, 'users', phoneClean), userData);
       localStorage.setItem('ayaat_user_phone', phoneClean);
       setUser(userData);
@@ -158,6 +159,7 @@ function DashboardContent() {
       const result = await signInWithPopup(auth, provider);
       const loggedUser = result.user;
 
+      // জিমেইলকে ফায়ারস্টোর আইডি ফ্রেন্ডলি করার জন্য ক্লিন করা
       const emailKey = loggedUser.email.replace(/[.#$[\]]/g, '_');
       const docRef = doc(db, 'users', emailKey);
       const docSnap = await getDoc(docRef);
@@ -204,7 +206,7 @@ function DashboardContent() {
     setLastName('');
     setManualPhone('');
     setManualAddress('');
-    setPreviewImage(null);
+    setPreviewImage('');
   };
 
   const openSubPage = (pageName) => {
@@ -230,7 +232,7 @@ function DashboardContent() {
               <div>
                 <form onSubmit={handleSendOTP}>
                   
-                  {/* Profile Image */}
+                  {/* Profile Image - Choose File System */}
                   <div className="flex justify-start mb-[15px]">
                     <div className="w-[65px] h-[65px] rounded-full bg-[#f1f3f5] border-2 border-dashed border-[#e63946] flex items-center justify-center overflow-hidden relative cursor-pointer">
                       {previewImage ? (
@@ -376,7 +378,7 @@ function DashboardContent() {
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
               <div onClick={() => openSubPage('return-management')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
-                <div className="flex items-center gap-2.5"><span>🔄</span> return-management</div>
+                <div className="flex items-center gap-2.5"><span>🔄</span> Return-management</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
               <div onClick={() => openSubPage('my-coupons')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">

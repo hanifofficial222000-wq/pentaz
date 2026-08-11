@@ -491,11 +491,11 @@ function DashboardContent() {
             <div className="text-[14px] font-bold text-[#888] mt-5 mb-2 ml-1 uppercase">More</div>
             <div className="bg-[#f8f9fa] rounded-[12px] border border-[#eaeaea] overflow-hidden mb-4">
               <div onClick={() => openSubPage('shop-plus')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
-                <div className="flex items-center gap-2.5"><span>⭐</span> Ayaat sports shop plus</div>
+                <div className="flex items-center gap-2.5"><span>⭐</span> shop plus PenTazz</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
               <div onClick={() => openSubPage('shop-assistant')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
-                <div className="flex items-center gap-2.5"><span>🤖</span> Ayaat sports shop assistant</div>
+                <div className="flex items-center gap-2.5"><span>🤖</span> assistant PenTazz</div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
               <div onClick={() => openSubPage('help')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium border-b border-[#eaeaea] bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
@@ -515,7 +515,7 @@ function DashboardContent() {
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
               <div onClick={() => openSubPage('add-product')} className="flex items-center justify-between p-[13px_15px] text-[#333] text-[14px] font-medium bg-white cursor-pointer hover:bg-[#f1f3f5] hover:text-[#e63946] transition">
-                <div className="flex items-center gap-2.5"><span>🏷️</span> On sell you</div>
+                <div className="flex items-center gap-2.5"><span>🏷️</span> On sell PenTazz </div>
                 <div className="text-[#aaa] text-[14px]">❯</div>
               </div>
             </div>

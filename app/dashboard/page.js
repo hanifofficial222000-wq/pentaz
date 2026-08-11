@@ -3,8 +3,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { RecaptchaVerifier, signInWithPhoneNumber, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 export default function UserDashboardPage() {
   return (
@@ -18,23 +18,22 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Form State
+  // User Dashboard State
+  const [user, setUser] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Email/Password Login States
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoginMode, setIsLoginMode] = useState(true); // true = Login, false = Register
+
+  // Registration Extra States
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualAddress, setManualAddress] = useState('');
   const [previewImage, setPreviewImage] = useState('');
-  
-  // OTP States
-  const [verificationCode, setVerificationCode] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const [step, setStep] = useState('form'); // 'form' or 'otp'
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitBtnText, setSubmitBtnText] = useState('OTP কোড পাঠান');
-
-  // User Dashboard State
-  const [user, setUser] = useState(null);
-  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -43,10 +42,10 @@ function DashboardContent() {
     }
 
     const checkStoredUser = async () => {
-      const savedPhone = localStorage.getItem('ayaat_user_phone');
-      if (savedPhone) {
+      const savedUserKey = localStorage.getItem('ayaat_user_phone');
+      if (savedUserKey) {
         try {
-          const docRef = doc(db, 'users', savedPhone);
+          const docRef = doc(db, 'users', savedUserKey);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             setUser(docSnap.data());
@@ -75,79 +74,64 @@ function DashboardContent() {
     }
   };
 
-  // Setup reCAPTCHA and Send OTP
-  const handleSendOTP = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitBtnText('ওটিপি পাঠানো হচ্ছে...');
-
-    try {
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-        });
-      }
-
-      const appVerifier = window.recaptchaVerifier;
-      let formattedPhone = manualPhone.trim();
-      if (!formattedPhone.startsWith('+')) {
-        if (formattedPhone.startsWith('0')) {
-          formattedPhone = '+88' + formattedPhone;
-        } else {
-          formattedPhone = '+880' + formattedPhone;
-        }
-      }
-
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-      setConfirmationResult(confirmation);
-      setStep('otp');
-      setIsSubmitting(false);
-    } catch (error) {
-      console.error("Error sending OTP:", error);
-      alert('ওটিপি পাঠাতে সমস্যা হয়েছে: ' + error.message);
-      setIsSubmitting(false);
-      setSubmitBtnText('OTP কোড পাঠান');
-    }
-  };
-
-  // Verify OTP and Register User
-  const handleVerifyOTP = async (e) => {
+  // Email / Password Authentication Handler (Login & Register)
+  const handleEmailAuth = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const userCredential = await confirmationResult.confirm(verificationCode);
-      const authUser = userCredential.user;
-
-      const fullName = `${firstName.trim()} ${lastName.trim()}`;
-      let photoUrl = previewImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
+      // যেহেতু আপনার ফায়ারবেস অথেন্টিকেশনে ইমেইল/পাসওয়ার্ড মেথড চালু করা হয়েছে
+      const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import('firebase/auth');
       
-      const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
-      const phoneClean = manualPhone.trim();
-      const referredBy = localStorage.getItem('referred_by') || 'Direct';
+      let userCredential;
+      const emailKey = email.replace(/[.#$[\]]/g, '_');
 
-      const userData = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        name: fullName,
-        phone: phoneClean,
-        address: manualAddress.trim(),
-        photo: photoUrl,
-        promo: autoPromo,
-        points: 50,
-        referrals: 0,
-        referredBy: referredBy,
-        uid: authUser.uid,
-        createdAt: new Date().toISOString()
-      };
+      if (isLoginMode) {
+        // লগইন করার জন্য
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const docRef = doc(db, 'users', emailKey);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setUser(docSnap.data());
+          localStorage.setItem('ayaat_user_phone', emailKey);
+        } else {
+          alert('ইউজার ডাটাবেজে পাওয়া যায়নি!');
+        }
+      } else {
+        // নতুন অ্যাকাউন্ট তৈরির জন্য
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const authUser = userCredential.user;
 
-      // Firestore-এ ফোন নম্বরকে আইডি হিসেবে সেভ করা
-      await setDoc(doc(db, 'users', phoneClean), userData);
-      localStorage.setItem('ayaat_user_phone', phoneClean);
-      setUser(userData);
-    } catch (error)  {
-      console.error("Invalid OTP:", error);
-      alert('ভুল ওটিপি কোড দেওয়া হয়েছে। আবার চেষ্টা করুন।');
+        const fullName = `${firstName.trim()} ${lastName.trim()}`;
+        let photoUrl = previewImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
+        const autoPromo = 'AYAAT' + Math.floor(100000 + Math.random() * 900000);
+        const referredBy = localStorage.getItem('referred_by') || 'Direct';
+
+        const userData = {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          name: fullName,
+          phone: manualPhone.trim() || email,
+          email: email,
+          address: manualAddress.trim(),
+          photo: photoUrl,
+          promo: autoPromo,
+          points: 50,
+          referrals: 0,
+          referredBy: referredBy,
+          uid: authUser.uid,
+          createdAt: new Date().toISOString()
+        };
+
+        await setDoc(doc(db, 'users', emailKey), userData);
+        localStorage.setItem('ayaat_user_phone', emailKey);
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error("Auth Error:", error);
+      alert('সমস্যা হয়েছে: ' + error.message);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -159,7 +143,6 @@ function DashboardContent() {
       const result = await signInWithPopup(auth, provider);
       const loggedUser = result.user;
 
-      // জিমেইলকে ফায়ারস্টোর আইডি ফ্রেন্ডলি করার জন্য ক্লিন করা
       const emailKey = loggedUser.email.replace(/[.#$[\]]/g, '_');
       const docRef = doc(db, 'users', emailKey);
       const docSnap = await getDoc(docRef);
@@ -177,6 +160,7 @@ function DashboardContent() {
           lastName: nameParts.slice(1).join(' ') || '',
           name: loggedUser.displayName || 'Google User',
           phone: loggedUser.phoneNumber || loggedUser.email,
+          email: loggedUser.email,
           address: 'Not provided',
           photo: loggedUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(loggedUser.displayName || 'User')}`,
           promo: autoPromo,
@@ -201,12 +185,8 @@ function DashboardContent() {
   const handleLogout = () => {
     localStorage.removeItem('ayaat_user_phone');
     setUser(null);
-    setStep('form');
-    setFirstName('');
-    setLastName('');
-    setManualPhone('');
-    setManualAddress('');
-    setPreviewImage('');
+    setEmail('');
+    setPassword('');
   };
 
   const openSubPage = (pageName) => {
@@ -221,17 +201,24 @@ function DashboardContent() {
     <div className="bg-[#f8f9fa] min-h-screen pb-[50px] text-[#333] font-sans">
       <div className="max-w-[500px] mx-auto mt-[15px] px-[15px]">
 
-        {/* REGISTRATION & OTP SECTION */}
+        {/* LOGIN / REGISTRATION SECTION */}
         {!user ? (
-          <div className="bg-white rounded-[16px] p-[25px_20px] shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-[#eee] relative">
+          <div className="bg-white rounded-[16px] p-[25px_20px] shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-[#eee]">
             
-            {/* Hidden reCAPTCHA container */}
-            <div id="recaptcha-container"></div>
+            <div className="text-center mb-6">
+              <h2 className="text-[18px] font-bold text-[#e63946]">
+                {isLoginMode ? 'AYAAT SHOP-এ লগইন করুন' : 'নতুন অ্যাকাউন্ট তৈরি করুন'}
+              </h2>
+              <p className="text-[13px] text-[#666] mt-1">
+                {isLoginMode ? 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন' : 'আপনার সঠিক তথ্য দিয়ে রেজিস্টার করুন'}
+              </p>
+            </div>
 
-            {step === 'form' ? (
-              <div>
-                <form onSubmit={handleSendOTP}>
-                  
+            <form onSubmit={handleEmailAuth}>
+              
+              {/* Register হলে অতিরিক্ত ফিল্ডগুলো দেখাবে */}
+              {!isLoginMode && (
+                <>
                   {/* Profile Image - Choose File System */}
                   <div className="flex justify-start mb-[15px]">
                     <div className="w-[65px] h-[65px] rounded-full bg-[#f1f3f5] border-2 border-dashed border-[#e63946] flex items-center justify-center overflow-hidden relative cursor-pointer">
@@ -297,76 +284,86 @@ function DashboardContent() {
                       className="w-full p-[11px] border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946] focus:bg-white transition"
                     ></textarea>
                   </div>
+                </>
+              )}
 
-                  <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="w-full bg-[#e63946] hover:bg-[#c52a36] text-white border-none p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition mt-[5px] disabled:opacity-50"
-                  >
-                    {submitBtnText}
-                  </button>
-                </form>
-
-                {/* Divider */}
-                <div className="flex items-center my-4">
-                  <div className="flex-grow border-t border-[#ddd]"></div>
-                  <span className="px-3 text-xs text-[#778]">অথবা</span>
-                  <div className="flex-grow border-t border-[#ddd]"></div>
-                </div>
-
-                {/* Google Sign-In Button */}
-                <button 
-                  onClick={handleGoogleLogin}
-                  className="w-full bg-white hover:bg-[#f1f3f5] text-[#333] border border-[#ddd] p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                  </svg>
-                  গেমেইল (Google) দিয়ে লগইন করুন
-                </button>
+              {/* Email Field */}
+              <div className="text-left mb-[15px]">
+                <label className="text-[13px] font-bold block mb-[5px] text-[#333]">ইমেইল:</label>
+                <input 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  placeholder="example@gmail.com" 
+                  required 
+                  className="w-full p-[11px] border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946] focus:bg-white transition"
+                />
               </div>
-            ) : (
-              /* OTP VERIFICATION STEP */
-              <form onSubmit={handleVerifyOTP}>
-                <div className="text-center mb-5">
-                  <h3 className="text-[16px] font-bold text-[#e63946] mb-2">ওটিপি যাচাই করুন</h3>
-                  <p className="text-[13px] text-[#666]">আপনার <b>{manualPhone}</b> নম্বরে একটি ৬ ডিজিটের কোড পাঠানো হয়েছে।</p>
-                </div>
 
-                <div className="text-left mb-[15px]">
-                  <label className="text-[13px] font-bold block mb-[5px] text-[#333]">৬ ডিজিটের ওটিপি কোড:</label>
-                  <input 
-                    type="text" 
-                    value={verificationCode} 
-                    onChange={(e) => setVerificationCode(e.target.value)} 
-                    placeholder="যেমন: 123456" 
-                    required 
-                    maxLength={6}
-                    className="w-full p-[11px] border border-[#ddd] rounded-[10px] text-[16px] tracking-widest text-center outline-none bg-[#fafafa] text-black focus:border-[#e63946] focus:bg-white transition"
-                  />
-                </div>
+              {/* Password Field */}
+              <div className="text-left mb-[15px]">
+                <label className="text-[13px] font-bold block mb-[5px] text-[#333]">পাসওয়ার্ড:</label>
+                <input 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder="কমপক্ষে ৬ ডিজিটের পাসওয়ার্ড" 
+                  required 
+                  className="w-full p-[11px] border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-[#fafafa] text-black focus:border-[#e63946] focus:bg-white transition"
+                />
+              </div>
 
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="w-full bg-[#e63946] hover:bg-[#c52a36] text-white border-none p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition mt-[5px] disabled:opacity-50"
-                >
-                  {isSubmitting ? 'যাচাই করা হচ্ছে...' : 'যাচাই করুন ও রেজিস্টার করুন'}
-                </button>
-              </form>
-            )}
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full bg-[#e63946] hover:bg-[#c52a36] text-white border-none p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition mt-[5px] disabled:opacity-50"
+              >
+                {isSubmitting ? 'অপেক্ষা করুন...' : (isLoginMode ? 'লগইন করুন' : 'রেজিস্ট্রেশন সম্পন্ন করুন')}
+              </button>
+            </form>
+
+            {/* Toggle between Login and Register */}
+            <div className="text-center mt-4">
+              <button 
+                type="button"
+                onClick={() => setIsLoginMode(!isLoginMode)}
+                className="text-[13px] text-[#e63946] font-medium bg-transparent border-none cursor-pointer hover:underline"
+              >
+                {isLoginMode ? 'অ্যাকাউন্ট নেই? নতুন রেজিস্টার করুন' : 'ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center my-4">
+              <div className="flex-grow border-t border-[#ddd]"></div>
+              <span className="px-3 text-xs text-[#778]">অথবা</span>
+              <div className="flex-grow border-t border-[#ddd]"></div>
+            </div>
+
+            {/* Google Sign-In Button */}
+            <button 
+              onClick={handleGoogleLogin}
+              className="w-full bg-white hover:bg-[#f1f3f5] text-[#333] border border-[#ddd] p-3 rounded-[12px] font-bold text-[14px] cursor-pointer transition flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              গেমেইল (Google) দিয়ে লগইন করুন
+            </button>
 
           </div>
         ) : (
-          /* DASHBOARD SECTION */
+          /* DASHBOARD SECTION (আপনার পূর্বের চমৎকার ডিজাইন বিন্যাস অনুযায়ী) */
           <div className="bg-white rounded-[16px] p-[25px_20px] shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-[#eee] text-left">
+            
+            {/* Profile Info Header */}
             <div className="bg-[#fff5f5] border border-dashed border-[#e63946] rounded-[12px] p-[15px] text-center mb-5">
               <img src={user.photo} alt="Profile" className="w-[70px] h-[70px] rounded-full object-cover border-2 border-[#e63946] mx-auto mb-2" />
               <h3 className="text-[16px] text-[#e63946] mb-1 font-bold">স্বাগতম, {user.name}!</h3>
-              <p className="text-[13px] text-[#555] mb-0.5">যোগাযোগ: {user.phone}</p>
+              <p className="text-[13px] text-[#555] mb-0.5">যোগাযোগ: {user.phone || user.email}</p>
               <p className="text-[13px] text-[#555] mb-0.5">প্রোমো কোড: {user.promo}</p>
             </div>
 
@@ -449,6 +446,7 @@ function DashboardContent() {
               </div>
             </div>
 
+            {/* Logout Button */}
             <button onClick={handleLogout} className="block w-full bg-[#e63946] hover:bg-[#c52a36] text-white border-none p-3 rounded-[12px] font-bold text-[14px] cursor-pointer text-center transition mt-5">
               Logout
             </button>

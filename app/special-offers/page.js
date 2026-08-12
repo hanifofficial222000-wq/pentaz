@@ -12,27 +12,31 @@ function FlashSaleTimer({ endsAt }) {
   useEffect(() => {
     if (!endsAt) return;
 
-    const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
+    try {
+      const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
 
-    const updateTimer = () => {
-      const now = new Date();
-      const difference = targetTime - now;
+      const updateTimer = () => {
+        const now = new Date();
+        const difference = targetTime - now;
 
-      if (difference <= 0) {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
-        return;
-      }
+        if (difference <= 0) {
+          setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+          return;
+        }
 
-      const hours = Math.floor((difference / (1000 * 60 * 60)));
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-      const seconds = Math.floor((difference / 1000) % 60);
+        const hours = Math.floor((difference / (1000 * 60 * 60)));
+        const minutes = Math.floor((difference / 1000 / 60) % 60);
+        const seconds = Math.floor((difference / 1000) % 60);
 
-      setTimeLeft({ hours, minutes, seconds, isExpired: false });
-    };
+        setTimeLeft({ hours, minutes, seconds, isExpired: false });
+      };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    } catch (e) {
+      console.error("Timer error:", e);
+    }
   }, [endsAt]);
 
   if (timeLeft.isExpired) {
@@ -77,12 +81,28 @@ export default function SpecialOffersPage() {
         if (data.flashSaleEndsAt) {
           const endTime = data.flashSaleEndsAt?.toDate ? data.flashSaleEndsAt.toDate() : new Date(data.flashSaleEndsAt);
           if (endTime <= now) {
-            return; // সময় শেষ হলে এই প্রডাক্ট অফার লিস্টে দেখাবে না
+            return; 
           }
         }
 
         if (data.isSpecialOffer || data.isFlashSale || data.category?.toLowerCase() === 'special-offers') {
-          list.push({ id: docSnap.id, ...data });
+          // নিখুঁতভাবে ফাইনাল প্রাইস ক্যালকুলেশন
+          const regPrice = Number(data.price) || 0;
+          const disc = Number(data.discount) || 0;
+          let calculatedPrice = regPrice;
+          
+          if (data.discountPrice) {
+            calculatedPrice = Number(data.discountPrice);
+          } else if (disc > 0) {
+            calculatedPrice = Math.round(regPrice - (regPrice * disc) / 100);
+          }
+
+          list.push({ 
+            id: docSnap.id, 
+            ...data, 
+            calculatedPrice,
+            regularPrice: regPrice 
+          });
         }
       });
       setProducts(list);
@@ -95,25 +115,21 @@ export default function SpecialOffersPage() {
     fetchProducts();
   }, []);
 
-  // অর্ডার মডাল ওপেন করা
   const openOrderModal = (product) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
 
-  // অর্ডার মডাল বন্ধ করা
   const closeOrderModal = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
     setFormData({ name: '', phone: '', address: '', size: '' });
   };
 
-  // ফর্ম ইনপুট হ্যান্ডলার
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // অর্ডার সাবমিট হ্যান্ডলার (specialOrders কালেকশনে সেভ হবে)
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -122,8 +138,8 @@ export default function SpecialOffersPage() {
       const newOrder = {
         orderId: 'ORD_' + Math.floor(100000 + Math.random() * 900000),
         productId: selectedProduct.id,
-        productName: selectedProduct.title,
-        productPrice: selectedProduct.discountPrice || selectedProduct.price,
+        productName: selectedProduct.title || selectedProduct.name,
+        productPrice: selectedProduct.calculatedPrice,
         customerName: formData.name,
         customerPhone: formData.phone,
         customerAddress: formData.address,
@@ -154,7 +170,7 @@ export default function SpecialOffersPage() {
             </Link>
             <h1 className="text-base md:text-lg font-extrabold uppercase tracking-wide">🔥 স্পেশাল ডিসকাউন্ট অফার</h1>
           </div>
-          <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-semibold">AYAAT SPORT SHOP</span>
+          <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-semibold">AYAAT SHOP</span>
         </div>
       </header>
 
@@ -174,7 +190,7 @@ export default function SpecialOffersPage() {
                 <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
                   <div>
                     <div className="relative w-full h-48 bg-slate-100">
-                      <img src={mainImg} alt={p.title} className="w-full h-full object-cover" />
+                      <img src={mainImg} alt={p.title || p.name} className="w-full h-full object-cover" />
                       {p.isFlashSale && (
                         <span className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded shadow">
                           ⚡ FLASH SALE
@@ -185,10 +201,10 @@ export default function SpecialOffersPage() {
                     <div className="p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="bg-pink-100 text-pink-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Special Offer</span>
-                        {p.discount && <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">save {p.discount}%</span>}
+                        {p.discount > 0 && <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">save {p.discount}%</span>}
                       </div>
 
-                      <h3 className="font-bold text-slate-900 text-sm">{p.title}</h3>
+                      <h3 className="font-bold text-slate-900 text-sm">{p.title || p.name}</h3>
                       <p className="text-xs text-slate-600 line-clamp-2">{p.description}</p>
                       
                       {/* লাইভ কাউন্টডাউন টাইমার */}
@@ -199,8 +215,8 @@ export default function SpecialOffersPage() {
                       )}
 
                       <div className="flex items-center gap-2 pt-1">
-                        <span className="text-pink-600 font-extrabold text-sm">SAR {p.discountPrice || p.price}</span>
-                        {p.regularPrice && <span className="text-slate-400 line-through text-xs">SAR {p.regularPrice}</span>}
+                        <span className="text-pink-600 font-extrabold text-sm">৳ {p.calculatedPrice}</span>
+                        {p.discount > 0 && <span className="text-slate-400 line-through text-xs">৳ {p.regularPrice}</span>}
                       </div>
                     </div>
                   </div>
@@ -231,8 +247,8 @@ export default function SpecialOffersPage() {
             
             <h3 className="text-base font-bold text-slate-800">অর্ডার কনফার্ম করুন</h3>
             <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border">
-              <b>প্রডাক্ট:</b> {selectedProduct.title}<br />
-              <b>মূল্য:</b> SAR {selectedProduct.discountPrice || selectedProduct.price}
+              <b>প্রডাক্ট:</b> {selectedProduct.title || selectedProduct.name}<br />
+              <b>মূল্য:</b> ৳ {selectedProduct.calculatedPrice}
             </div>
 
             <form onSubmit={handleSubmitOrder} className="space-y-3">
@@ -257,7 +273,7 @@ export default function SpecialOffersPage() {
                   value={formData.phone}
                   onChange={handleChange}
                   required 
-                  placeholder="05xxxxxxxx" 
+                  placeholder="017xxxxxxxx" 
                   className="w-full border p-2.5 rounded-xl text-xs focus:ring-2 focus:ring-pink-500 outline-none text-black bg-white"
                 />
               </div>

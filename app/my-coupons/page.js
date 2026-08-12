@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -6,19 +5,50 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
+// গ্লোবাল ব্যানার কম্পোনেন্ট
+export function GlobalBanner({ type = 'top', message, onClose }) {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) return null;
+
+  const styles = {
+    top: 'bg-[#e63946] text-white py-2 px-4 text-xs font-medium text-center',
+    bottom: 'bg-[#333] text-white py-3 px-4 text-xs rounded-xl shadow-md my-4 text-center mx-4',
+  };
+
+  return (
+    <div className={`flex justify-between items-center max-w-md mx-auto ${styles[type] || styles.top}`}>
+      <span className="flex-1">{message}</span>
+      <button 
+        onClick={() => {
+          setIsVisible(false);
+          if (onClose) onClose();
+        }} 
+        className="bg-transparent border-none text-inherit font-bold cursor-pointer text-sm ml-2 p-1"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 // ১. মূল এক্সপোর্ট করা পেজ কম্পোনেন্ট যা Suspense বাউন্ডারি দিয়ে মোড়ানো থাকবে
-export default function MyCouponsPage() {
+export default function MyCouponsPage({ 
+  globalTopBanner = '🎟️ যেকোনো কুপন কোড ব্যবহার করে লুফে নিন নিশ্চিত ডিসকাউন্ট!', 
+  globalBottomBanner = '📢 নিয়মিত নতুন নতুন অফার ও কুপন পেতে আয়াাত শপের সাথেই থাকুন।' 
+}) {
   return (
     <Suspense fallback={<div className="text-center py-20 text-xs text-slate-400">লোড হচ্ছে...</div>}>
-      <CouponsContent />
+      <CouponsContent globalTopBanner={globalTopBanner} globalBottomBanner={globalBottomBanner} />
     </Suspense>
   );
 }
 
 // ২. আসল কুপন লজিক এবং ইউজার ইন্টারফেস কম্পোনেন্ট
-function CouponsContent() {
+function CouponsContent({ globalTopBanner, globalBottomBanner }) {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showTopPopup, setShowTopPopup] = useState(true);
 
   useEffect(() => {
     async function loadCustomerCoupons() {
@@ -53,6 +83,18 @@ function CouponsContent() {
 
   return (
     <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans">
+      
+      {/* গ্লোবাল টপ ব্যানার স্লট */}
+      {showTopPopup && (
+        <div className="mb-4">
+          <GlobalBanner 
+            type="top" 
+            message={globalTopBanner} 
+            onClose={() => setShowTopPopup(false)} 
+          />
+        </div>
+      )}
+
       <div className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-xl space-y-6">
         
         {/* Header */}
@@ -100,6 +142,10 @@ function CouponsContent() {
         </div>
 
       </div>
+
+      {/* গ্লোবাল বটম ব্যানার স্লট */}
+      <GlobalBanner type="bottom" message={globalBottomBanner} />
+
     </div>
   );
 }

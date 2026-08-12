@@ -3,16 +3,47 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase'; // firebase.js থেকে db ইমপোর্ট করা হলো
+import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
-export default function FavoritesPage() {
+// গ্লোবাল ব্যানার কম্পোনেন্ট
+export function GlobalBanner({ type = 'top', message, onClose }) {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) return null;
+
+  const styles = {
+    top: 'bg-[#e63946] text-white py-2 px-4 text-xs font-medium text-center',
+    bottom: 'bg-[#333] text-white py-3 px-4 text-xs rounded-xl shadow-md my-4 text-center mx-2.5',
+  };
+
+  return (
+    <div className={`flex justify-between items-center max-w-[600px] mx-auto ${styles[type] || styles.top}`}>
+      <span className="flex-1">{message}</span>
+      <button 
+        onClick={() => {
+          setIsVisible(false);
+          if (onClose) onClose();
+        }} 
+        className="bg-transparent border-none text-inherit font-bold cursor-pointer text-sm ml-2 p-1"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+export default function FavoritesPage({ 
+  globalTopBanner = '❤️ আপনার পছন্দের আইটেমগুলোতে চলছে আকর্ষণীয় ডিসকাউন্ট অফার!', 
+  globalBottomBanner = '📢 আয়াাত শপের যেকোনো অফার ও আপডেট পেতে আমাদের সাথেই থাকুন।' 
+}) {
   const router = useRouter();
 
   const [favorites, setFavorites] = useState([]);
   const [cart, setCart] = useState([]);
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showTopPopup, setShowTopPopup] = useState(true);
 
   // LocalStorage থেকে ফেভারিট এবং কার্ট ডাটা লোড করা
   useEffect(() => {
@@ -64,6 +95,15 @@ export default function FavoritesPage() {
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-[90px] font-sans">
       
+      {/* গ্লোবাল টপ ব্যানার স্লট */}
+      {showTopPopup && (
+        <GlobalBanner 
+          type="top" 
+          message={globalTopBanner} 
+          onClose={() => setShowTopPopup(false)} 
+        />
+      )}
+
       {/* Header */}
       <div className="bg-white p-4 text-center text-[16px] font-bold text-[#e63946] border-b border-[#eee]">
         ❤️ আমার পছন্দের তালিকা (Favorites)
@@ -108,6 +148,9 @@ export default function FavoritesPage() {
             })
           )}
         </div>
+
+        {/* গ্লোবাল বটম ব্যানার স্লট */}
+        <GlobalBanner type="bottom" message={globalBottomBanner} />
       </div>
 
       {/* BOTTOM NAVIGATION BAR */}

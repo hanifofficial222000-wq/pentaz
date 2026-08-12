@@ -30,7 +30,7 @@ export default function AboutUsPage() {
           
           {/* Header */}
           <div className="flex items-center justify-between mb-5 border-b border-[#eee] pb-3">
-            <h3 className="text-[18px] text-[#e63946] font-bold">AYAAT SHOP</h3>
+            <h3 className="text-[18px] text-[#e63946] font-bold">PenTazz</h3>
             <Link 
               href="/" 
               className="bg-[#f1f3f5] hover:bg-[#e2e6ea] border-none py-2 px-3.5 rounded-lg font-bold text-[13px] no-underline text-[#333] transition"
@@ -51,10 +51,10 @@ export default function AboutUsPage() {
 
             {/* Highlight Box */}
             <div className="bg-[#fff5f5] border border-dashed border-[#e63946] rounded-xl p-4 mt-5 text-left">
-              <h4 className="text-[#e63946] mb-2 text-[15px] font-bold">AYAAT SHOP</h4>
-              <p className="mb-2"><b className="text-black">Owners:</b> AYAAT SHOP LTD</p>
+              <h4 className="text-[#e63946] mb-2 text-[15px] font-bold">PenTazz</h4>
+              <p className="mb-2"><b className="text-black">Owners:</b> PENTAZZ LTD</p>
               <p className="mb-2"><b className="text-black">Location:</b> Bangladesh</p>
-              <p className="mb-0"><b className="text-black">Opening:</b> 20-08-2026</p>
+              <p className="mb-0"><b className="text-black">Opening:</b> 01-12-2026</p>
             </div>
 
           </div>

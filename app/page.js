@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 // ⏱️ ক্লিন ও কম্প্যাক্ট রিয়েল-টাইম কাউন্টডাউন টাইমার
 function FlashSaleTimer({ endsAt }) {
@@ -54,7 +54,6 @@ function FlashSaleTimer({ endsAt }) {
 
 // 🖼️ ক্যাটাগরি কার্ড কম্পোনেন্ট যার ভেতরে একাধিক ছবি থাকলে অটো-প্লে হবে
 function CategoryCardItem({ cat, isActive, onClick }) {
-  // ক্যাটাগরির একাধিক ছবি হ্যান্ডেল করার জন্য (imageUrls অ্যারে অথবা সিঙ্গেল imageUrl)
   const images = cat.imageUrls && Array.isArray(cat.imageUrls) && cat.imageUrls.length > 0 
     ? cat.imageUrls 
     : [cat.imageUrl || 'https://via.placeholder.com/150'];
@@ -66,7 +65,7 @@ function CategoryCardItem({ cat, isActive, onClick }) {
 
     const interval = setInterval(() => {
       setCurrentImgIndex((prev) => (prev + 1) % images.length);
-    }, 2500); // প্রতি ২.৫ সেকেন্ড পর পর ছবি পরিবর্তন হবে
+    }, 2500);
 
     return () => clearInterval(interval);
   }, [images.length]);
@@ -93,6 +92,18 @@ function CategoryCardItem({ cat, isActive, onClick }) {
 function MainContent() {
   const searchParams = useSearchParams();
   const searchParamValue = searchParams.get('search');
+
+  // গ্লোবাল কনফিগারেশন স্টেট
+  const [globalConfig, setGlobalConfig] = useState({
+    siteName: 'AYAAT SHOP LTD',
+    currency: 'SAR',
+    phoneNumber: '',
+    isMaintenance: false,
+    announcementText: '',
+    showPopup: false,
+    popupMessage: '',
+    productCardSize: 'normal'
+  });
 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -178,6 +189,20 @@ function MainContent() {
   }, [isDragging]);
 
   useEffect(() => {
+    // ফায়ারবেস থেকে গ্লোবাল কনফিগারেশন ফেচ করা
+    const fetchGlobalConfig = async () => {
+      try {
+        const configDocRef = doc(db, 'settings', 'globalConfig');
+        const configSnap = await getDoc(configDocRef);
+        if (configSnap.exists()) {
+          setGlobalConfig(configSnap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching global config:", err);
+      }
+    };
+    fetchGlobalConfig();
+
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const now = new Date();
       const prodList = snapshot.docs.map(doc => {
@@ -362,29 +387,49 @@ function MainContent() {
     localStorage.setItem('ayaat_favorites', JSON.stringify(updatedFavs));
   };
 
+  // যদি মেইনটেনেন্স মোড অন থাকে
+  if (globalConfig.isMaintenance) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-3xl font-bold mb-3">⚠️ সাইট আপডেট চলছে</h1>
+        <p className="text-gray-400 text-sm">খুব শীঘ্রই আমাদের ওয়েবসাইটটি আবার সচল করা হবে। আমাদের সাথে থাকার জন্য ধন্যবাদ!</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800 relative">
       
-      {showFullPopupModal && activePopupAd && (
+      {/* গ্লোবাল অ্যানাউন্সমেন্ট টেক্সট বার */}
+      {globalConfig.announcementText && (
+        <div className="bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs font-bold text-center py-2 px-3 shadow-sm z-50">
+          📢 {globalConfig.announcementText}
+        </div>
+      )}
+
+      {/* গ্লোবাল পপআপ নোটিশ (যদি কন্ট্রোল প্যানেল থেকে অন করা থাকে) */}
+      {globalConfig.showPopup && globalConfig.popupMessage && showFullPopupModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn p-6 text-center">
             <button 
               onClick={() => setShowFullPopupModal(false)}
-              className="absolute top-3 right-3 bg-black/60 hover:bg-black text-white w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 cursor-pointer"
+              className="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 cursor-pointer"
             >
               ✕
             </button>
-            <a href={activePopupAd.link || '#'} target="_blank" rel="noopener noreferrer" className="block">
-              <img src={activePopupAd.imageUrl} alt="Popup Ad" className="w-full h-auto max-h-[400px] object-cover" />
-            </a>
-            <div className="p-3 text-center bg-gray-50">
-              <button 
-                onClick={() => setShowFullPopupModal(false)}
-                className="bg-[#e63946] text-white px-6 py-2 rounded-xl text-xs font-bold w-full cursor-pointer"
-              >
-                পাস করুন / বন্ধ করুন
-              </button>
-            </div>
+            <h3 className="text-base font-bold text-gray-800 mb-2">বিশেষ ঘোষণা</h3>
+            <p className="text-sm text-gray-600 mb-4 whitespace-pre-line">{globalConfig.popupMessage}</p>
+            {activePopupAd && activePopupAd.imageUrl && (
+              <a href={activePopupAd.link || '#'} target="_blank" rel="noopener noreferrer" className="block mb-4">
+                <img src={activePopupAd.imageUrl} alt="Popup Ad" className="w-full h-auto max-h-[300px] object-cover rounded-xl" />
+              </a>
+            )}
+            <button 
+              onClick={() => setShowFullPopupModal(false)}
+              className="bg-[#e63946] text-white px-6 py-2.5 rounded-xl text-xs font-bold w-full cursor-pointer"
+            >
+              বন্ধ করুন / বুঝেছি
+            </button>
           </div>
         </div>
       )}
@@ -439,7 +484,7 @@ function MainContent() {
         </div>
       )}
 
-      {/* ক্যাটাগরি সেকশন (একাধিক ছবি স্বয়ংক্রিয় প্লে ফিচার সহ) */}
+      {/* ক্যাটাগরি সেকশন */}
       <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
         
         <div className="max-w-xl mx-auto px-3 py-2.5 bg-white border-b border-gray-100 overflow-x-auto no-scrollbar">
@@ -545,11 +590,12 @@ function MainContent() {
         </div>
       )}
 
+      {/* প্রডাক্ট লিস্ট (গ্লোবাল কার্ড সাইজ কন্ট্রোলসহ) */}
       <div className="max-w-xl mx-auto p-2">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-10 font-bold text-gray-500">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid gap-2 ${globalConfig.productCardSize === 'compact' ? 'grid-cols-4' : 'grid-cols-3'}`}>
             {filteredProducts.map((item) => {
               const isFav = favorites.includes(item.id);
               const mainImg = item.imageUrl || item.image || (item.imageUrls && item.imageUrls[0]) || item.img || 'https://via.placeholder.com/300?text=No+Image';
@@ -560,7 +606,7 @@ function MainContent() {
                   key={item.id} 
                   className="border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm relative no-underline hover:shadow-md transition-all cursor-pointer"
                 >
-                  <div className="relative w-full h-[140px] bg-gray-100 overflow-hidden">
+                  <div className={`relative w-full bg-gray-100 overflow-hidden ${globalConfig.productCardSize === 'compact' ? 'h-[100px]' : 'h-[140px]'}`}>
                     <img src={mainImg} alt={item.title} className="w-full h-full object-cover" />
                     {item.isFlashSale && (
                       <span className="absolute top-1 left-1 bg-amber-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow">
@@ -590,7 +636,7 @@ function MainContent() {
                     )}
 
                     <div className="flex items-start justify-between gap-1 mb-1">
-                      <h3 className="text-[11px] font-bold line-clamp-2 text-gray-800 flex-grow">{item.title}</h3>
+                      <h3 className={`font-bold line-clamp-2 text-gray-800 flex-grow ${globalConfig.productCardSize === 'compact' ? 'text-[10px]' : 'text-[11px]'}`}>{item.title}</h3>
                       
                       <button 
                         onClick={(e) => {
@@ -604,7 +650,9 @@ function MainContent() {
                       </button>
                     </div>
 
-                    <div className="text-[#e63946] text-xs font-bold mt-auto">SAR {item.price || item.discountPrice}</div>
+                    <div className="text-[#e63946] text-xs font-bold mt-auto">
+                      {globalConfig.currency || 'SAR'} {item.price || item.discountPrice}
+                    </div>
                   </div>
                 </Link>
               );

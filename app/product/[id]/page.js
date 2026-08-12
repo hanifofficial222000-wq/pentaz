@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
-  doc, getDoc, collection, getDocs, addDoc, query, where, limit, serverTimestamp 
+  doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
 } from 'firebase/firestore';
 
 // ⏱️ রিয়েল-টাইম ফ্ল্যাশ সেল কাউন্টডাউন টাইমার কম্পোনেন্ট
@@ -102,8 +102,8 @@ function ProductDetailsContent() {
   const [revName, setRevName] = useState('');
   const [revComment, setRevComment] = useState('');
 
-  // More Products State
-  const [moreProducts, setMoreProducts] = useState([]);
+  // Global Banner / Ads State for bottom section
+  const [bottomAds, setBottomAds] = useState([]);
 
   // URL থেকে নিখুঁতভাবে আইডি রিড করার হুক
   useEffect(() => {
@@ -135,11 +135,11 @@ function ProductDetailsContent() {
     }
   }, [searchParams]);
 
-  // প্রোডাক্ট ফেচ করার ইফেক্ট
+  // প্রোডাক্ট ও গ্লোবাল ব্যানার ফেচ করার ইফেক্ট
   useEffect(() => {
     if (!productId) return;
 
-    async function fetchProduct() {
+    async function fetchProductAndAds() {
       setLoading(true);
       setNotFound(false);
       setNotApproved(false);
@@ -209,7 +209,7 @@ function ProductDetailsContent() {
           setAppliedDiscount(0);
 
           loadReviews(productId);
-          loadMoreProducts(data.category, productId);
+          loadBottomAds();
         } else {
           setNotFound(true);
         }
@@ -221,7 +221,7 @@ function ProductDetailsContent() {
       }
     }
 
-    fetchProduct();
+    fetchProductAndAds();
   }, [productId]);
 
   async function loadReviews(prodId) {
@@ -255,35 +255,16 @@ function ProductDetailsContent() {
     }
   }
 
-  async function loadMoreProducts(categoryName, currentId) {
+  // ফায়ারবেস থেকে গ্লোবাল ব্যানার বা প্রমোশনাল বিজ্ঞাপন ফেচ করার ফাংশন
+  async function loadBottomAds() {
     try {
-      let q;
-      if (categoryName) {
-        q = query(
-          collection(db, "products"),
-          where("category", "==", categoryName),
-          where("approved", "==", true),
-          limit(7)
-        );
-      } else {
-        q = query(
-          collection(db, "products"),
-          where("approved", "==", true),
-          limit(7)
-        );
+      const adSnap = await getDocs(collection(db, "banners")); // অথবা আপনার নির্দিষ্ট ব্যানার কালেকশন
+      if (!adSnap.empty) {
+        const adsList = adSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => !a.hidden);
+        setBottomAds(adsList);
       }
-
-      const snapshot = await getDocs(q);
-      let list = [];
-
-      snapshot.forEach((d) => {
-        if (d.id === currentId) return;
-        list.push({ id: d.id, ...d.data() });
-      });
-
-      setMoreProducts(list.slice(0, 6));
     } catch (err) {
-      console.error("Error loading more products:", err);
+      console.error("Error loading bottom ads:", err);
     }
   }
 
@@ -586,8 +567,8 @@ function ProductDetailsContent() {
           </div>
         </div>
 
-        {/* Reviews Section */}
-        <div className="bg-[#fafafa] p-4 mt-5 rounded-[10px] border border-[#eee]">
+        {/* Reviews Section (Moved to the bottom before global ads) */}
+        <div className="bg-[#fafafa] p-4 mt-6 rounded-[10px] border border-[#eee]">
           <div className="text-[16px] mb-2.5 font-bold text-[#333]">⭐ Customer Reviews ({avgRating}/5 - {revCount}টি রিভিউ)</div>
           
           <div className="space-y-2 mb-4">
@@ -631,60 +612,22 @@ function ProductDetailsContent() {
           </form>
         </div>
 
-        {/* You May Also Like Section */}
-        <div className="mt-6 pt-4 border-t-2 border-dashed border-[#eee]">
-          <div className="text-[16px] font-bold mb-3 text-[#222]">🛍️ You May Also Like</div>
-          <div className="grid grid-cols-3 gap-2">
-            {moreProducts.length === 0 ? (
-              <div className="col-span-3 text-center text-gray-500 text-[13px] py-4">এই ক্যাটাগরিতে আর কোনো প্রোডাক্ট নেই!</div>
-            ) : (
-              moreProducts.map((item) => {
-                let itemImg = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || item.image);
-                let itemRegPrice = Number(item.price) || 0;
-                let itemDiscount = Number(item.discount) || 0;
-                let finalDispPrice = itemRegPrice;
-                if (itemDiscount > 0) {
-                  finalDispPrice = Math.round(itemRegPrice - (itemRegPrice * itemDiscount) / 100);
-                }
-                let itemPin = item.productPin || (item.id ? item.id.slice(0, 6).toUpperCase() : '');
-
-                return (
-                  <div 
-                    key={item.id} 
-                    onClick={() => {
-                      // উইন্ডো লোকেশন ব্যবহার করা হয়েছে যাতে অন্য প্রোডাক্টে ক্লিক করলে পেজটি স্মুথলি রিলোড হয়ে নতুন ডাটা ফেচ করে
-                      window.location.href = `/product?id=${item.id}`;
-                    }}
-                    className="border border-[#eee] rounded-[10px] overflow-hidden bg-white no-underline text-[#333] flex flex-col shadow-sm relative cursor-pointer hover:border-[#e63946] transition-all"
-                  >
-                    <div className="relative w-full">
-                      {itemDiscount > 0 && (
-                        <div className="absolute top-1 right-1 bg-[#e63946] text-white text-[10px] font-bold p-[2px_6px] rounded-[4px] z-10">
-                          {itemDiscount}% OFF
-                        </div>
-                      )}
-                      <img src={itemImg} alt="Product" className="w-full h-[110px] object-cover block" />
-                    </div>
-
-                    <div className="p-2 flex flex-col flex-grow">
-                      <h3 className="text-[11px] font-bold mb-1 line-clamp-2 text-[#222]">
-                        {item.title || item.name}
-                      </h3>
-                      <div className="text-[10px] text-[#007bff] font-bold mb-1.5 bg-[#eef2f7] p-[2px_4px] rounded inline-block w-fit">
-                        ID: {itemPin}
-                      </div>
-                      <div className="flex items-center gap-1 mt-auto">
-                        <span className="text-[#e63946] text-[12px] font-bold">৳ {finalDispPrice}</span>
-                        {itemDiscount > 0 && (
-                          <span className="text-[#888] text-[10px] line-through">৳ {itemRegPrice}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+        {/* Global Ads & Banner Slot (রিভিউ সেকশনের ঠিক নিচে গ্লোবাল ব্যানার বা বিজ্ঞাপন প্রদর্শনের জন্য) */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="text-xs font-bold text-gray-400 mb-2 text-center uppercase tracking-wider">Sponsored / Global Banner</div>
+          {bottomAds.length > 0 ? (
+            <div className="space-y-3">
+              {bottomAds.map((ad, idx) => (
+                <a key={ad.id || idx} href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl shadow-sm border border-gray-200">
+                  <img src={ad.imageUrl} alt="Global Banner" className="w-full h-auto max-h-[150px] object-cover" />
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-gray-100 border border-dashed border-gray-300 rounded-xl p-6 text-center text-gray-500 text-xs">
+              এখানে গ্লোবাল ব্যানার বা বিজ্ঞাপন শো করবে।
+            </div>
+          )}
         </div>
 
       </div>

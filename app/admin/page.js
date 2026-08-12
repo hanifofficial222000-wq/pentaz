@@ -104,7 +104,7 @@ export default function AdminControlRoom() {
     );
   }
 
-  // অ্যাডমিন প্যানেলের অপশনগুলোর লিস্ট ও লিংক (সব রুট আগের মতো ঠিক রাখা হয়েছে)
+  // অ্যাডমিন প্যানেলের অপশনগুলোর লিস্ট ও লিংক (নতুন ৭টিসহ মোট ২০টি মেনু)
   const adminMenus = [
     { name: 'Customize', icon: '⚙️', route: '/admin/product-costumize' },
     { name: 'Approval', icon: '⏳', route: '/admin/product-approval' },
@@ -118,7 +118,14 @@ export default function AdminControlRoom() {
     { name: 'Global CP', icon: '💻', route: '/admin/GlobalControlPanel' },
     { name: 'Returns', icon: '🔄', route: '/admin/return-approval' },
     { name: 'Coupons', icon: '🎟️', route: '/admin/manage-coupon' },
-    { name: 'Q & A', icon: '❓', route: '/admin/question-answer' }
+    { name: 'Q & A', icon: '❓', route: '/admin/question-answer' },
+    { name: 'Home Editor', icon: '🏠', route: '/admin/home-editor' },
+    { name: 'Page 1', icon: '📄', route: '/admin/page-1' },
+    { name: 'Page 2', icon: '📄', route: '/admin/page-2' },
+    { name: 'Page 3', icon: '📄', route: '/admin/page-3' },
+    { name: 'Page 4', icon: '📄', route: '/admin/page-4' },
+    { name: 'Page 5', icon: '📄', route: '/admin/page-5' },
+    { name: 'Page 6', icon: '📄', route: '/admin/page-6' }
   ];
 
   // লগইন সফল হলে মূল অ্যাডমিন কন্ট্রোল রুম ড্যাশবোর্ড দেখাবে

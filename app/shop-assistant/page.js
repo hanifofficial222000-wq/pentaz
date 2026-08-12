@@ -2,55 +2,81 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 
 export default function ShopAssistantPage() {
-  const [messages, setMessages] = useState([
-    { sender: 'admin', text: 'আসসালামু আলাইকুম! Ayaat Sport Shop-এ আপনাকে স্বাগতম। আপনার কি সাহায্য প্রয়োজন?' }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [loading, setLoading] = useState(true);
   const chatBoxRef = useRef(null);
 
-  // পেজ লোড হলে localStorage থেকে পূর্বের চ্যাট মেসেজগুলো লোড করা
+  // ১. ইউনিক কাস্টমার আইডি তৈরি বা লোকালস্টোরেজ থেকে ফেচ করা
   useEffect(() => {
-    const savedMessages = localStorage.getItem('ayaat_chat_messages');
-    if (savedMessages) {
-      try {
-        setMessages(JSON.parse(savedMessages));
-      } catch (e) {
-        console.error("Error parsing chat messages:", e);
-      }
+    let id = localStorage.getItem('ayaat_customer_id');
+    if (!id) {
+      id = 'user_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+      localStorage.setItem('ayaat_customer_id', id);
     }
+    setCustomerId(id);
   }, []);
 
-  // চ্যাট বক্সের স্ক্রল সবসময় নিচে রাখার জন্য
+  // ২. ফায়ারবেস থেকে রিয়েল-টাইমে মেসেজ ফেচ করা
+  useEffect(() => {
+    if (!customerId) return;
+
+    const messagesRef = collection(db, "chats", customerId, "messages");
+    const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = [];
+      snapshot.forEach((docSnap) => {
+        msgs.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setMessages(msgs);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error loading customer messages:", err);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [customerId]);
+
+  // ৩. চ্যাট বক্সের স্ক্রল সবসময় নিচে অটো-স্ক্রল রাখা
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // মেসেজ পাঠানো এবং লোকালস্টোরেজে সেভ করার ফাংশন
-  const handleSendMessage = (e) => {
+  // ৪. ফায়ারবেসে মেসেজ পাঠানোর ফাংশন
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     const text = inputText.trim();
-    if (!text) return;
+    if (!text || !customerId) return;
 
-    const newMessages = [
-      ...messages, 
-      { sender: 'customer', text: text }
-    ];
+    try {
+      // মূল চ্যাট ডকুমেন্টে লাস্ট আপডেট সেভ রাখা (অ্যাডমিন লিস্টের সুবিধার জন্য)
+      await setDoc(doc(db, "chats", customerId), {
+        lastMessage: text,
+        updatedAt: serverTimestamp(),
+        status: 'open'
+      }, { merge: true });
 
-    // অটো রিপ্লাই বা অ্যাসিস্ট্যান্ট রেসপন্স (ঐচ্ছিক)
-    const autoReply = { 
-      sender: 'admin', 
-      text: 'আপনার মেসেজটি আমাদের কাছে পৌঁছেছে। খুব শীঘ্রই আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।' 
-    };
+      // সাব-কালেকশন messages এ নতুন মেসেজ সেভ করা
+      await addDoc(collection(db, "chats", customerId, "messages"), {
+        text: text,
+        sender: 'customer',
+        timestamp: serverTimestamp()
+      });
 
-    const updatedWithReply = [...newMessages, autoReply];
-
-    setMessages(updatedWithReply);
-    localStorage.setItem('ayaat_chat_messages', JSON.stringify(updatedWithReply));
-    setInputText('');
+      setInputText('');
+    } catch (err) {
+      console.error("Error sending message:", err);
+      alert("⚠️ মেসেজ পাঠানো যায়নি! আবার চেষ্টা করুন।");
+    }
   };
 
   return (
@@ -62,9 +88,12 @@ export default function ShopAssistantPage() {
           
           {/* Header */}
           <div className="flex items-center justify-between mb-[15px] border-b border-[#eee] pb-[12px]">
-            <h3 className="text-[18px] text-[#e63946] flex items-center gap-[6px] font-bold">
-              🤖 Shop Assistant
-            </h3>
+            <div>
+              <h3 className="text-[18px] text-[#e63946] flex items-center gap-[6px] font-bold">
+                🤖 Shop Assistant
+              </h3>
+              <p className="text-[10px] text-gray-400">ID: {customerId || 'Loading...'}</p>
+            </div>
             <Link 
               href="/" 
               className="bg-[#f1f3f5] border-none py-[8px] px-[14px] rounded-[8px] font-bold cursor-pointer text-[13px] no-underline text-[#333] transition hover:bg-[#e2e6ea]"
@@ -78,18 +107,27 @@ export default function ShopAssistantPage() {
             ref={chatBoxRef} 
             className="flex-1 bg-[#f8f9fa] border border-[#e9ecef] rounded-[12px] p-[15px] overflow-y-auto flex flex-col gap-[10px] mb-[15px]"
           >
-            {messages.map((msg, index) => (
-              <div 
-                key={index} 
-                className={`max-w-[75%] p-[10px_14px] rounded-[12px] text-[13.5px] leading-[1.5] break-words ${
-                  msg.sender === 'customer' 
-                    ? 'bg-[#e63946] text-white self-end rounded-br-[2px]' 
-                    : 'bg-[#e9ecef] text-[#333] self-start rounded-bl-[2px]'
-                }`}
-              >
-                {msg.text}
+            {loading ? (
+              <p className="text-center text-xs text-gray-400 my-auto">মেসেজ লোড হচ্ছে...</p>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-xs text-gray-500 my-auto">
+                <p className="font-bold text-gray-700 mb-1">আসসালামু আলাইকুম! 👋</p>
+                <p>Ayaat Sport Shop-এ আপনাকে স্বাগতম। আপনার প্রশ্নটি নিচে লিখে পাঠান।</p>
               </div>
-            ))}
+            ) : (
+              messages.map((msg) => (
+                <div 
+                  key={msg.id} 
+                  className={`max-w-[75%] p-[10px_14px] rounded-[12px] text-[13.5px] leading-[1.5] break-words ${
+                    msg.sender === 'customer' 
+                      ? 'bg-[#e63946] text-white self-end rounded-br-[2px]' 
+                      : 'bg-[#e9ecef] text-[#333] self-start rounded-bl-[2px]'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              ))
+            )}
           </div>
 
           {/* Chat Input Area */}
@@ -105,7 +143,7 @@ export default function ShopAssistantPage() {
             />
             <button 
               type="submit" 
-              className="bg-[#e63946] color-white text-white border-none px-[20px] rounded-[10px] font-bold cursor-pointer transition hover:bg-[#c52a36]"
+              className="bg-[#e63946] text-white border-none px-[20px] rounded-[10px] font-bold cursor-pointer transition hover:bg-[#c52a36]"
             >
               Send
             </button>

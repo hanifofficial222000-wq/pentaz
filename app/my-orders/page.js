@@ -2,13 +2,44 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase'; // firebase.js থেকে db ইমপোর্ট করা হলো
+import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 
-export default function MyOrdersPage() {
+// গ্লোবাল ব্যানার কম্পোনেন্ট
+export function GlobalBanner({ type = 'top', message, onClose }) {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) return null;
+
+  const styles = {
+    top: 'bg-[#e63946] text-white py-2 px-4 text-xs font-medium text-center',
+    bottom: 'bg-[#333] text-white py-3 px-4 text-xs rounded-xl shadow-md my-4 text-center mx-auto',
+  };
+
+  return (
+    <div className={`flex justify-between items-center max-w-[500px] mx-auto ${styles[type] || styles.top}`}>
+      <span className="flex-1">{message}</span>
+      <button 
+        onClick={() => {
+          setIsVisible(false);
+          if (onClose) onClose();
+        }} 
+        className="bg-transparent border-none text-inherit font-bold cursor-pointer text-sm ml-2 p-1"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+export default function MyOrdersPage({ 
+  globalTopBanner = '📦 আপনার প্রতিটি অর্ডারের লাইভ আপডেট ও স্ট্যাটাস এখানে দেখতে পাবেন!', 
+  globalBottomBanner = '📢 আয়াাত শপের অর্ডার সংক্রান্ত যেকোনো প্রয়োজনে আমাদের সাপোর্ট টিম আপনার সাথে আছে।' 
+}) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('অর্ডারগুলো খোঁজা হচ্ছে...');
+  const [showTopPopup, setShowTopPopup] = useState(true);
 
   // স্ট্যাটাস ক্লাস নির্ধারণ করার ফাংশন
   const getStatusClass = (status) => {
@@ -139,6 +170,18 @@ export default function MyOrdersPage() {
 
   return (
     <div className="bg-[#f4f6f9] min-h-screen p-[15px] font-sans">
+      
+      {/* গ্লোবাল টপ ব্যানার স্লট */}
+      {showTopPopup && (
+        <div className="mb-3">
+          <GlobalBanner 
+            type="top" 
+            message={globalTopBanner} 
+            onClose={() => setShowTopPopup(false)} 
+          />
+        </div>
+      )}
+
       <div className="max-w-[500px] mx-auto">
         
         {/* Header */}
@@ -203,6 +246,10 @@ export default function MyOrdersPage() {
         </div>
 
       </div>
+
+      {/* গ্লোবাল বটম ব্যানার স্লট */}
+      <GlobalBanner type="bottom" message={globalBottomBanner} />
+
     </div>
   );
 }

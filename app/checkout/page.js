@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase'; // firebase.js থেকে db ইমপোর্ট করা হলো
+import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function CheckoutPage() {
@@ -32,6 +32,12 @@ export default function CheckoutPage() {
       return;
     }
 
+    // ফোন নম্বর সঠিক কিনা যাচাই (কমপক্ষে ৯ ডিজিট)
+    if (custPhone.trim().length < 9) {
+      alert('দয়া করে একটি সঠিক মোবাইল নম্বর লিখুন!');
+      return;
+    }
+
     if (!checkoutProduct) {
       alert('কোনো প্রোডাক্ট সিলেক্ট করা হয়নি!');
       return;
@@ -54,9 +60,10 @@ export default function CheckoutPage() {
 
       alert('অভিনন্দন! আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে। আমরা খুব শীঘ্রই আপনার সাথে যোগাযোগ করব।');
       
-      // লোকাল স্টোরেজ থেকে চেকআউট এবং কার্ট ডাটা মুছে ফেলা
+      // লোকাল স্টোরেজ থেকে চেকআউট, কার্ট এবং প্রিভিয়াস ডাটা মুছে ফেলা
       localStorage.removeItem('checkoutProduct');
-      localStorage.removeItem('ayaat_cart'); 
+      localStorage.removeItem('ayaat_cart');
+      localStorage.removeItem('ayaat_previously_added'); 
 
       router.push('/'); // হোমপেজে রিডাইরেক্ট করা
 
@@ -108,7 +115,7 @@ export default function CheckoutPage() {
                 type="tel" 
                 value={custPhone}
                 onChange={(e) => setCustPhone(e.target.value)}
-                placeholder="০১৮xxxxxxxx" 
+                placeholder="মোবাইল নম্বর লিখুন" 
                 required
                 className="w-full p-2.5 border border-[#ddd] rounded-lg text-[14px] outline-none bg-white text-black focus:border-[#e63946]"
               />
@@ -119,7 +126,7 @@ export default function CheckoutPage() {
               <textarea 
                 value={custAddress}
                 onChange={(e) => setCustAddress(e.target.value)}
-                placeholder="বাসা নং, রোড, এলাকা, থানা, জেলা" 
+                placeholder="বাসা নং, রোড, এলাকা, শহর" 
                 required
                 className="w-full p-2.5 border border-[#ddd] rounded-lg text-[14px] outline-none bg-white text-black h-[80px] resize-vertical focus:border-[#e63946]"
               ></textarea>

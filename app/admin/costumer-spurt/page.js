@@ -56,17 +56,22 @@ export default function CustomerSupport() {
     }
   }, [messages]);
 
-  // ৪. অ্যাডমিন থেকে উত্তর পাঠানোর ফাংশন
+  // ৪. অ্যাডমিন থেকে উত্তর পাঠানোর ফাংশন (সিকিউরিটি রুলস অনুযায়ী আপডেট করা)
   const handleSendAdminMessage = async (e) => {
     e.preventDefault();
     const text = adminReplyText.trim();
     if (!text || !activeChatId) return;
 
     try {
-      // মেসেজ সাব-কালেকশনে যুক্ত করা
+      // বর্তমান সিলেক্ট করা চ্যাটের কাস্টমার ইমেল বা আইডি খুঁজে বের করা
+      const activeChat = chatList.find(c => c.id === activeChatId);
+      const customerEmail = activeChat?.customerEmail || `${activeChatId}@ayaatshop.com`;
+
+      // মেসেজ সাব-কালেকশনে যুক্ত করা (কাস্টমার ইমেল সহ, যাতে সিকিউরিটি রুলসে বাধা না দেয়)
       await addDoc(collection(db, "chats", activeChatId, "messages"), {
         text: text,
         sender: 'admin',
+        customerEmail: customerEmail,
         timestamp: serverTimestamp()
       });
 
@@ -79,7 +84,7 @@ export default function CustomerSupport() {
       setAdminReplyText('');
     } catch (err) {
       console.error("Error sending admin reply:", err);
-      alert("⚠️ মেসেজ পাঠানো যায়নি!");
+      alert("⚠️ মেসেজ পাঠানো যায়নি! ফায়ারবেস পারমিশন চেক করুন।");
     }
   };
 
@@ -127,6 +132,9 @@ export default function CustomerSupport() {
                         <p className="font-bold text-xs text-slate-800">👤 {chat.id}</p>
                         <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Active</span>
                       </div>
+                      {chat.customerEmail && (
+                        <p className="text-[10px] text-indigo-600 truncate mb-1">✉️ {chat.customerEmail}</p>
+                      )}
                       {chat.lastMessage && (
                         <p className="text-[11px] text-slate-500 truncate">{chat.lastMessage}</p>
                       )}

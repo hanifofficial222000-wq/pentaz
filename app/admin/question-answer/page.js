@@ -58,7 +58,7 @@ export default function CustomerSupportPage() {
       loadAdminSupportRequests();
     } catch (err) {
       console.error(err);
-      alert("⚠️ উত্তর পাঠাতে সমস্যা হয়েছে!");
+      alert("⚠️ উত্তর পাঠাতে সমস্যা হয়েছে! আপনি অ্যাডমিন হিসেবে লগইন করা আছেন কি না চেক করুন।");
     }
   };
 
@@ -70,7 +70,7 @@ export default function CustomerSupportPage() {
         loadAdminSupportRequests();
       } catch (err) {
         console.error(err);
-        alert("⚠️ ডিলিট করতে সমস্যা হয়েছে!");
+        alert("⚠️ ডিলিট করতে সমস্যা হয়েছে! ফায়ারবেস পারমিশন চেক করুন।");
       }
     }
   };

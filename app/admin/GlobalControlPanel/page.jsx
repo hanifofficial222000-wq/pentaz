@@ -1,232 +1,166 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export default function GlobalControlPanel() {
-  const [settings, setSettings] = useState({
-    siteName: 'Ayaat Shop',
+  const [config, setConfig] = useState({
+    siteName: '',
+    currency: '',
+    phoneNumber: '',
+    isMaintenance: false,
     announcementText: '',
-    showAnnouncement: false,
-    showFlashSale: true,
-    showBestSellers: true,
-    showPromoBanners: true,
-    maintenanceMode: false,
-    customFeatureTitle: '',
-    customFeatureContent: '',
-    isCustomFeatureActive: false,
+    showPopup: false,
+    popupMessage: '',
+    productCardSize: 'normal'
   });
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [alert, setAlert] = useState({ show: false, msg: '' });
+  const [updating, setUpdating] = useState(false);
 
-  const showAlert = (msg) => {
-    setAlert({ show: true, msg });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
-  };
-
-  // ডেটাবেজ থেকে বর্তমান সেটিংস লোড করা
+  // ফায়ারবেস থেকে বর্তমান সেটিংস লোড করা
   useEffect(() => {
-    const fetchSettings = async () => {
+    async function fetchConfig() {
       try {
         const docRef = doc(db, 'settings', 'globalConfig');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setSettings(docSnap.data());
+          setConfig(docSnap.data());
         }
-      } catch (err) {
-        console.error("Error loading settings:", err);
+      } catch (error) {
+        console.error("Error fetching config:", error);
       } finally {
         setLoading(false);
       }
-    };
-    fetchSettings();
+    }
+    fetchConfig();
   }, []);
 
-  const handleChange = (field, value) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSaveSettings = async (e) => {
+  // ফায়ারবেসে ডেটা আপডেট করার ফাংশন
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    setSaving(true);
+    setUpdating(true);
     try {
       const docRef = doc(db, 'settings', 'globalConfig');
-      await setDoc(docRef, {
-        ...settings,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-
-      showAlert("🚀 গ্লোবাল সেটিংস এবং ফিচার সফলভাবে আপডেট করা হয়েছে!");
-    } catch (err) {
-      console.error("Save error:", err);
-      alert("⚠️ সেটিংস সেভ করতে সমস্যা হয়েছে!");
+      await updateDoc(docRef, config);
+      alert('সফলভাবে আপডেট করা হয়েছে!');
+    } catch (error) {
+      console.error("Error updating config: ", error);
+      alert('আপডেট করতে সমস্যা হয়েছে!');
     } finally {
-      setSaving(false);
+      setUpdating(false);
     }
   };
 
   if (loading) {
-    return <div className="text-center py-10 text-xs font-bold text-gray-500">লোড হচ্ছে...</div>;
+    return <div className="p-6 text-white bg-slate-900 min-h-screen text-center">লোড হচ্ছে...</div>;
   }
 
   return (
-    <div className="bg-slate-100 min-h-screen py-8 px-4 md:px-8 font-sans">
-      <div className="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl space-y-6">
+    <div className="p-6 text-white bg-slate-900 min-h-screen">
+      <h1 className="text-2xl font-bold mb-6">Global Control Panel</h1>
+      
+      <form onSubmit={handleUpdate} className="space-y-4 max-w-xl bg-slate-800 p-6 rounded-2xl border border-slate-700">
         
-        <div className="border-b pb-4">
-          <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
-            ⚙️ গ্লোবাল ফিচার ও সাইট কন্ট্রোল প্যানেল
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            এই প্যানেল থেকে পুরো ওয়েবসাইটের যেকোনো সেকশন বা নতুন ফিচার কোড পরিবর্তন ছাড়াই নিয়ন্ত্রণ করতে পারবেন।
-          </p>
+        {/* সাইটের নাম */}
+        <div>
+          <label className="block text-xs font-bold mb-1">সাইটের নাম (Site Name):</label>
+          <input 
+            type="text" 
+            value={config.siteName || ''} 
+            onChange={(e) => setConfig({...config, siteName: e.target.value})}
+            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none"
+          />
         </div>
 
-        {alert.show && (
-          <div className="p-4 rounded-xl text-center font-bold text-xs bg-green-100 text-green-700 border border-green-300">
-            {alert.msg}
-          </div>
-        )}
+        {/* কারেন্সি */}
+        <div>
+          <label className="block text-xs font-bold mb-1">কারেন্সি (Currency):</label>
+          <input 
+            type="text" 
+            value={config.currency || ''} 
+            onChange={(e) => setConfig({...config, currency: e.target.value})}
+            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none"
+          />
+        </div>
 
-        <form onSubmit={handleSaveSettings} className="space-y-6">
-          
-          {/* ১. জেনারেল কনফিগারেশন */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-            <h3 className="text-sm font-bold text-slate-700">📌 ১. বেসিক সাইট কনফিগারেশন</h3>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ওয়েবসাইটের নাম</label>
-              <input 
-                type="text" 
-                value={settings.siteName}
-                onChange={(e) => handleChange('siteName', e.target.value)}
-                className="w-full border border-slate-300 p-2.5 rounded-lg text-xs text-black bg-white"
-              />
-            </div>
-          </div>
+        {/* ফোন নম্বর */}
+        <div>
+          <label className="block text-xs font-bold mb-1">যোগাযোগের ফোন নম্বর:</label>
+          <input 
+            type="text" 
+            value={config.phoneNumber || ''} 
+            onChange={(e) => setConfig({...config, phoneNumber: e.target.value})}
+            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none"
+          />
+        </div>
 
-          {/* ২. রানিং অ্যানাউন্সমেন্ট বার কন্ট্রোল */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-            <h3 className="text-sm font-bold text-slate-700">📢 ২. অ্যানাউন্সমেন্ট বা নোটিশ বার কন্ট্রোল</h3>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">নোটিশ বার অন/অফ করুন</span>
-              <input 
-                type="checkbox"
-                checked={settings.showAnnouncement}
-                onChange={(e) => handleChange('showAnnouncement', e.target.checked)}
-                className="w-4 h-4 accent-red-600 cursor-pointer"
-              />
-            </div>
-            {settings.showAnnouncement && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">নোটিশের টেক্সট</label>
-                <input 
-                  type="text" 
-                  value={settings.announcementText}
-                  onChange={(e) => handleChange('announcementText', e.target.value)}
-                  placeholder="যেমন: ঈদে বিশেষ ছাড় চলছে!"
-                  className="w-full border border-slate-300 p-2.5 rounded-lg text-xs text-black bg-white"
-                />
-              </div>
-            )}
-          </div>
+        {/* মেইনটেনেন্স মোড */}
+        <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-700">
+          <label className="text-xs font-bold">মেইনটেনেন্স মোড (Maintenance Mode):</label>
+          <input 
+            type="checkbox" 
+            checked={config.isMaintenance || false} 
+            onChange={(e) => setConfig({...config, isMaintenance: e.target.checked})}
+            className="w-5 h-5 accent-red-600 cursor-pointer"
+          />
+        </div>
 
-          {/* ৩. হোমপেজ সেকশন ভিজিবিলিটি টগল */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-            <h3 className="text-sm font-bold text-slate-700">👁️ ৩. হোমপেজ সেকশন ভিজিবিলিটি (অন/অফ সুইচ)</h3>
-            
-            <div className="flex items-center justify-between py-1 border-b border-slate-200">
-              <span className="text-xs font-semibold text-slate-600">⚡ ফ্ল্যাশ সেল সেকশন দেখাবেন?</span>
-              <input 
-                type="checkbox"
-                checked={settings.showFlashSale}
-                onChange={(e) => handleChange('showFlashSale', e.target.checked)}
-                className="w-4 h-4 accent-red-600 cursor-pointer"
-              />
-            </div>
+        {/* বিজ্ঞপ্তির টেক্সট */}
+        <div>
+          <label className="block text-xs font-bold mb-1">বিজ্ঞপ্তি বা অ্যানাউন্সমেন্ট টেক্সট:</label>
+          <input 
+            type="text" 
+            value={config.announcementText || ''} 
+            onChange={(e) => setConfig({...config, announcementText: e.target.value})}
+            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none"
+          />
+        </div>
 
-            <div className="flex items-center justify-between py-1 border-b border-slate-200">
-              <span className="text-xs font-semibold text-slate-600">🔥 বেস্ট সেলার সেকশন দেখাবেন?</span>
-              <input 
-                type="checkbox"
-                checked={settings.showBestSellers}
-                onChange={(e) => handleChange('showBestSellers', e.target.checked)}
-                className="w-4 h-4 accent-red-600 cursor-pointer"
-              />
-            </div>
+        {/* পপআপ স্ট্যাটাস টগল */}
+        <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-700">
+          <label className="text-xs font-bold">পপআপ নোটিশ দেখাবেন কি না (Show Popup):</label>
+          <input 
+            type="checkbox" 
+            checked={config.showPopup || false} 
+            onChange={(e) => setConfig({...config, showPopup: e.target.checked})}
+            className="w-5 h-5 accent-red-600 cursor-pointer"
+          />
+        </div>
 
-            <div className="flex items-center justify-between py-1">
-              <span className="text-xs font-semibold text-slate-600">🖼️ প্রমোশনাল ব্যানার স্লাইডার দেখাবেন?</span>
-              <input 
-                type="checkbox"
-                checked={settings.showPromoBanners}
-                onChange={(e) => handleChange('showPromoBanners', e.target.checked)}
-                className="w-4 h-4 accent-red-600 cursor-pointer"
-              />
-            </div>
-          </div>
+        {/* পপআপ মেসেজ */}
+        <div>
+          <label className="block text-xs font-bold mb-1">পপআপ নোটিশ মেসেজ:</label>
+          <textarea 
+            rows="3"
+            value={config.popupMessage || ''} 
+            onChange={(e) => setConfig({...config, popupMessage: e.target.value})}
+            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none"
+          />
+        </div>
 
-          {/* ৪. ডাইনামিক কাস্টম ফিচার ইনজেকশন */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-            <h3 className="text-sm font-bold text-slate-700">✨ ৪. নতুন কাস্টম ফিচার / উইজেট যোগ করুন</h3>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">এই ফিচারটি সাইটে সক্রিয় করুন</span>
-              <input 
-                type="checkbox"
-                checked={settings.isCustomFeatureActive}
-                onChange={(e) => handleChange('isCustomFeatureActive', e.target.checked)}
-                className="w-4 h-4 accent-red-600 cursor-pointer"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ফিচারের শিরোনাম (Title)</label>
-              <input 
-                type="text" 
-                value={settings.customFeatureTitle}
-                onChange={(e) => handleChange('customFeatureTitle', e.target.value)}
-                placeholder="যেমন: মেগা উইন্টার অফার"
-                className="w-full border border-slate-300 p-2.5 rounded-lg text-xs text-black bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ফিচারের বিবরণ বা বিস্তারিত</label>
-              <textarea 
-                value={settings.customFeatureContent}
-                onChange={(e) => handleChange('customFeatureContent', e.target.value)}
-                placeholder="ফিচার সম্পর্কিত বিবরণ লিখুন..."
-                rows={3}
-                className="w-full border border-slate-300 p-2.5 rounded-lg text-xs text-black bg-white"
-              />
-            </div>
-          </div>
-
-          {/* ৫. মেইনটেন্যান্স মোড */}
-          <div className="bg-red-50 p-4 rounded-xl border border-red-200 flex items-center justify-between">
-            <div>
-              <h4 className="text-xs font-bold text-red-700">🛠️ মেইনটেন্যান্স মোড (Maintenance Mode)</h4>
-              <p className="text-[10px] text-red-500">চালু করলে পুরো সাইটে মেইনটেন্যান্স পেজ দেখাবে।</p>
-            </div>
-            <input 
-              type="checkbox"
-              checked={settings.maintenanceMode}
-              onChange={(e) => handleChange('maintenanceMode', e.target.checked)}
-              className="w-4 h-4 accent-red-600 cursor-pointer"
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={saving}
-            className={`w-full text-white font-bold py-3 rounded-xl transition duration-200 text-xs shadow-md ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-black cursor-pointer'}`}
+        {/* প্রডাক্ট কার্ড সাইজ অপশন */}
+        <div>
+          <label className="block text-xs font-bold mb-1">প্রডাক্ট কার্ড সাইজ:</label>
+          <select 
+            value={config.productCardSize || 'normal'} 
+            onChange={(e) => setConfig({...config, productCardSize: e.target.value})}
+            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none"
           >
-            {saving ? 'সংরক্ষণ হচ্ছে...' : '💾 সমস্ত সেটিংস ও ফিচার সেভ করুন'}
-          </button>
+            <option value="normal">Normal (স্বাভাবিক)</option>
+            <option value="compact">Compact (ছোট)</option>
+          </select>
+        </div>
 
-        </form>
-      </div>
+        <button 
+          type="submit" 
+          disabled={updating}
+          className="w-full bg-red-600 hover:bg-red-700 transition text-white px-6 py-3 rounded-xl font-bold cursor-pointer shadow-lg"
+        >
+          {updating ? 'আপডেট হচ্ছে...' : 'সেভ করুন'}
+        </button>
+      </form>
     </div>
   );
 }

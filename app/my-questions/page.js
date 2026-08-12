@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase'; // firebase.js থেকে db ইমপোর্ট করা হলো
+import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export default function MyQuestionsPage() {
@@ -69,7 +69,7 @@ export default function MyQuestionsPage() {
       loadCustomerQuestions(userPhone);
     } catch (err) {
       console.error(err);
-      alert("⚠️ প্রশ্ন জমা দিতে সমস্যা হয়েছে!");
+      alert("⚠️ প্রশ্ন জমা দিতে সমস্যা হয়েছে! ফায়ারবেস পারমিশন চেক করুন।");
     } finally {
       setSubmitting(false);
     }
@@ -88,7 +88,7 @@ export default function MyQuestionsPage() {
           <div></div>
         </div>
 
-        {/* Ask Question Form (প্রশ্ন করার বক্স) */}
+        {/* Ask Question Form */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
           <h3 className="text-xs font-bold text-slate-700">নতুন প্রশ্ন বা জিজ্ঞাসা পাঠান:</h3>
           <form onSubmit={handleSubmit} className="space-y-3">

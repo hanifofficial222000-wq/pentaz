@@ -51,15 +51,19 @@ export default function ShopAssistantPage() {
     }
   }, [messages]);
 
-  // ৪. ফায়ারবেসে মেসেজ পাঠানোর ফাংশন
+  // ৪. ফায়ারবেসে মেসেজ পাঠানোর ফাংশন (সিকিউরিটি রুলস অনুযায়ী আপডেট করা)
   const handleSendMessage = async (e) => {
     e.preventDefault();
     const text = inputText.trim();
     if (!text || !customerId) return;
 
+    // ইউজার লগইন করা থাকলে তার ইমেল ব্যবহার করা, না থাকলে গেস্ট হিসেবে সেভ করা
+    const customerEmail = localStorage.getItem('userEmail') || `${customerId}@ayaatshop.com`;
+
     try {
-      // মূল চ্যাট ডকুমেন্টে লাস্ট আপডেট সেভ রাখা (অ্যাডমিন লিস্টের সুবিধার জন্য)
+      // মূল চ্যাট ডকুমেন্টে কাস্টমার ইমেলসহ লাস্ট আপডেট সেভ রাখা
       await setDoc(doc(db, "chats", customerId), {
+        customerEmail: customerEmail,
         lastMessage: text,
         updatedAt: serverTimestamp(),
         status: 'open'
@@ -69,13 +73,14 @@ export default function ShopAssistantPage() {
       await addDoc(collection(db, "chats", customerId, "messages"), {
         text: text,
         sender: 'customer',
+        customerEmail: customerEmail,
         timestamp: serverTimestamp()
       });
 
       setInputText('');
     } catch (err) {
       console.error("Error sending message:", err);
-      alert("⚠️ মেসেজ পাঠানো যায়নি! আবার চেষ্টা করুন।");
+      alert("⚠️ মেসেজ পাঠানো যায়নি! ফায়ারবেস পারমিশন চেক করুন।");
     }
   };
 

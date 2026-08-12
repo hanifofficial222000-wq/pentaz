@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import NewFeatureSection from '@/components/NewFeatureSection'; // আপনার পাথ অনুযায়ী
+import NewFeatureSection from '@/components/NewFeatureSection';
 
 // ⏱️ ক্লিন ও কম্প্যাক্ট রিয়েল-টাইম কাউন্টডাউন টাইমার
 function FlashSaleTimer({ endsAt }) {
@@ -659,9 +659,11 @@ function MainContent() {
               );
             })}
           </div>
-          <NewFeatureSection/>
         )}
       </div>
+
+      {/* নতুন ফিচার সেকশন একদম নিচে যুক্ত করা হলো */}
+      <NewFeatureSection />
 
     </div>
   );

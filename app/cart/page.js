@@ -87,7 +87,7 @@ export default function CartPage() {
   }, 0);
 
   return (
-    <div className="bg-[#f8f9fa] min-h-screen pb-[110px] text-[#333] font-sans">
+    <div className="bg-[#f8f9fa] min-h-screen pb-[50px] text-[#333] font-sans">
       
       {/* Header */}
       <div className="bg-white p-4 text-center text-[16px] font-bold text-[#e63946] border-b border-[#eee]">
@@ -100,7 +100,7 @@ export default function CartPage() {
         {cart.length === 0 ? (
           <div className="bg-white rounded-[10px] p-[30px_15px] text-center border border-[#eee] shadow-[0_2px_5px_rgba(0,0,0,0.02)] mb-4">
             <div className="w-[70px] h-[70px] bg-[#fff5f5] rounded-full flex items-center justify-center mx-auto mb-4 text-[#e63946] text-[28px]">
-              <i className="fa-solid fa-cart-shopping"></i>
+              🛒
             </div>
             <h3 className="text-[16px] mb-1.5 text-[#333]">Your cart</h3>
             <p className="text-[#666] text-[14px] mb-5">No items in your cart</p>
@@ -205,32 +205,6 @@ export default function CartPage() {
           )}
         </div>
       </div>
-
-      {/* Bottom Navbar */}
-      <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-[#eaeaea] flex justify-around items-center py-2 z-[1000]">
-        <Link href="/" className="flex flex-col items-center no-underline text-[#666] text-[11px] font-bold relative">
-          <svg className="w-[22px] h-[22px] mb-1 fill-none stroke-current stroke-2 stroke-linecap-round stroke-linejoin-round" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-          Home
-        </Link>
-        <Link href="/categories" className="flex flex-col items-center no-underline text-[#666] text-[11px] font-bold relative">
-          <svg className="w-[22px] h-[22px] mb-1 fill-none stroke-current stroke-2 stroke-linecap-round stroke-linejoin-round" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          Categories
-        </Link>
-        <Link href="/favorites" className="flex flex-col items-center no-underline text-[#666] text-[11px] font-bold relative">
-          <svg className="w-[22px] h-[22px] mb-1 fill-none stroke-current stroke-2 stroke-linecap-round stroke-linejoin-round" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-          Favorites
-          <span className="absolute -top-[3px] right-1 bg-[#e63946] text-white text-[9px] px-1.5 py-0.2 rounded-[10px] font-bold">{favorites.length}</span>
-        </Link>
-        <Link href="/cart" className="flex flex-col items-center no-underline text-[#e63946] text-[11px] font-bold relative">
-          <svg className="w-[22px] h-[22px] mb-1 fill-none stroke-current stroke-2 stroke-linecap-round stroke-linejoin-round" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-          Cart
-          <span className="absolute -top-[3px] right-1 bg-[#e63946] text-white text-[9px] px-1.5 py-0.2 rounded-[10px] font-bold">{cart.length}</span>
-        </Link>
-        <Link href="/register" className="flex flex-col items-center no-underline text-[#666] text-[11px] font-bold relative">
-          <svg className="w-[22px] h-[22px] mb-1 fill-none stroke-current stroke-2 stroke-linecap-round stroke-linejoin-round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          Account
-        </Link>
-      </nav>
 
     </div>
   );

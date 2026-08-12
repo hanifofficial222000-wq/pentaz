@@ -102,9 +102,6 @@ function ProductDetailsContent() {
   const [revName, setRevName] = useState('');
   const [revComment, setRevComment] = useState('');
 
-  // Global Banner / Ads State for bottom section
-  const [bottomAds, setBottomAds] = useState([]);
-
   // URL থেকে নিখুঁতভাবে আইডি রিড করার হুক
   useEffect(() => {
     try {
@@ -135,11 +132,11 @@ function ProductDetailsContent() {
     }
   }, [searchParams]);
 
-  // প্রোডাক্ট ও গ্লোবাল ব্যানার ফেচ করার ইফেক্ট
+  // প্রোডাক্ট ফেচ করার ইফেক্ট
   useEffect(() => {
     if (!productId) return;
 
-    async function fetchProductAndAds() {
+    async function fetchProduct() {
       setLoading(true);
       setNotFound(false);
       setNotApproved(false);
@@ -209,7 +206,6 @@ function ProductDetailsContent() {
           setAppliedDiscount(0);
 
           loadReviews(productId);
-          loadBottomAds();
         } else {
           setNotFound(true);
         }
@@ -221,7 +217,7 @@ function ProductDetailsContent() {
       }
     }
 
-    fetchProductAndAds();
+    fetchProduct();
   }, [productId]);
 
   async function loadReviews(prodId) {
@@ -252,19 +248,6 @@ function ProductDetailsContent() {
       }
     } catch (err) {
       console.error("Error loading reviews:", err);
-    }
-  }
-
-  // ফায়ারবেস থেকে গ্লোবাল ব্যানার বা প্রমোশনাল বিজ্ঞাপন ফেচ করার ফাংশন
-  async function loadBottomAds() {
-    try {
-      const adSnap = await getDocs(collection(db, "banners")); // অথবা আপনার নির্দিষ্ট ব্যানার কালেকশন
-      if (!adSnap.empty) {
-        const adsList = adSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => !a.hidden);
-        setBottomAds(adsList);
-      }
-    } catch (err) {
-      console.error("Error loading bottom ads:", err);
     }
   }
 
@@ -567,7 +550,7 @@ function ProductDetailsContent() {
           </div>
         </div>
 
-        {/* Reviews Section (Moved to the bottom before global ads) */}
+        {/* Reviews Section */}
         <div className="bg-[#fafafa] p-4 mt-6 rounded-[10px] border border-[#eee]">
           <div className="text-[16px] mb-2.5 font-bold text-[#333]">⭐ Customer Reviews ({avgRating}/5 - {revCount}টি রিভিউ)</div>
           
@@ -610,24 +593,6 @@ function ProductDetailsContent() {
               রিভিউ সেভ করুন
             </button>
           </form>
-        </div>
-
-        {/* Global Ads & Banner Slot (রিভিউ সেকশনের ঠিক নিচে গ্লোবাল ব্যানার বা বিজ্ঞাপন প্রদর্শনের জন্য) */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <div className="text-xs font-bold text-gray-400 mb-2 text-center uppercase tracking-wider">Sponsored / Global Banner</div>
-          {bottomAds.length > 0 ? (
-            <div className="space-y-3">
-              {bottomAds.map((ad, idx) => (
-                <a key={ad.id || idx} href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl shadow-sm border border-gray-200">
-                  <img src={ad.imageUrl} alt="Global Banner" className="w-full h-auto max-h-[150px] object-cover" />
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-100 border border-dashed border-gray-300 rounded-xl p-6 text-center text-gray-500 text-xs">
-              এখানে গ্লোবাল ব্যানার বা বিজ্ঞাপন শো করবে।
-            </div>
-          )}
         </div>
 
       </div>

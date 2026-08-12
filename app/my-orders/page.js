@@ -5,53 +5,22 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 
-// গ্লোবাল ব্যানার কম্পোনেন্ট
-export function GlobalBanner({ type = 'top', message, onClose }) {
-  const [isVisible, setIsVisible] = useState(true);
-
-  if (!isVisible) return null;
-
-  const styles = {
-    top: 'bg-[#e63946] text-white py-2 px-4 text-xs font-medium text-center',
-    bottom: 'bg-[#333] text-white py-3 px-4 text-xs rounded-xl shadow-md my-4 text-center mx-auto',
-  };
-
-  return (
-    <div className={`flex justify-between items-center max-w-[500px] mx-auto ${styles[type] || styles.top}`}>
-      <span className="flex-1">{message}</span>
-      <button 
-        onClick={() => {
-          setIsVisible(false);
-          if (onClose) onClose();
-        }} 
-        className="bg-transparent border-none text-inherit font-bold cursor-pointer text-sm ml-2 p-1"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-export default function MyOrdersPage({ 
-  globalTopBanner = '📦 আপনার প্রতিটি অর্ডারের লাইভ আপডেট ও স্ট্যাটাস এখানে দেখতে পাবেন!', 
-  globalBottomBanner = '📢 আয়াাত শপের অর্ডার সংক্রান্ত যেকোনো প্রয়োজনে আমাদের সাপোর্ট টিম আপনার সাথে আছে।' 
-}) {
+export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('অর্ডারগুলো খোঁজা হচ্ছে...');
-  const [showTopPopup, setShowTopPopup] = useState(true);
 
   // স্ট্যাটাস ক্লাস নির্ধারণ করার ফাংশন
   const getStatusClass = (status) => {
-    if (!status) return 'bg-[#fff3e0] text-[#f57c00]';
+    if (!status) return 'bg-amber-50 text-amber-600 border border-amber-200';
     const s = status.toLowerCase();
-    if (s.includes('pending')) return 'bg-[#fff3e0] text-[#f57c00]';
-    if (s.includes('packaging')) return 'bg-[#e3f2fd] text-[#1976d2]';
-    if (s.includes('processing')) return 'bg-[#ede7f6] text-[#512da8]';
-    if (s.includes('received')) return 'bg-[#e8f5e9] text-[#388e3c]';
-    if (s.includes('delivery') || s.includes('delivered')) return 'bg-[#e0f2f1] text-[#00796b]';
-    if (s.includes('cancel')) return 'bg-[#ffebee] text-[#c62828]';
-    return 'bg-[#fff3e0] text-[#f57c00]';
+    if (s.includes('pending')) return 'bg-amber-50 text-amber-600 border border-amber-200';
+    if (s.includes('packaging')) return 'bg-blue-50 text-blue-600 border border-blue-200';
+    if (s.includes('processing')) return 'bg-purple-50 text-purple-600 border border-purple-200';
+    if (s.includes('received')) return 'bg-emerald-50 text-emerald-600 border border-emerald-200';
+    if (s.includes('delivery') || s.includes('delivered')) return 'bg-teal-50 text-teal-600 border border-teal-200';
+    if (s.includes('cancel')) return 'bg-rose-50 text-rose-600 border border-rose-200';
+    return 'bg-amber-50 text-amber-600 border border-amber-200';
   };
 
   // অর্ডার ফেচ করার ফাংশন
@@ -84,7 +53,7 @@ export default function MyOrdersPage({
         localStorage.setItem("userPhone", cleanNum);
       } else {
         setLoading(false);
-        setStatusMessage('নম্বর পাওয়া যায়নি। দয়া করে ওপরের নম্বর পরিবর্তন এ ক্লিক করে আপনার নম্বর দিন।');
+        setStatusMessage('নম্বর পাওয়া যায়নি। দয়া করে ওপরের নম্বর পরিবর্তন অপশনে ক্লিক করে আপনার নম্বর দিন।');
         setOrders([]);
         return;
       }
@@ -162,52 +131,45 @@ export default function MyOrdersPage({
   // নম্বর পরিবর্তন হ্যান্ডলার
   const handleChangePhone = () => {
     let currentMain = localStorage.getItem("userPhone") || "";
-    const newNum = prompt("আপনার অর্ডার করা মোবাইল নম্বরটি লিখুন (একাধিক নম্বর কমা দিয়ে বা আলাদাভাবে দেখতে নতুন নম্বর দিন):", currentMain);
+    const newNum = prompt("আপনার অর্ডার করা মোবাইল নম্বরটি লিখুন:", currentMain);
     if (newNum && newNum.trim() !== "") {
       fetchUserOrders(newNum);
     }
   };
 
   return (
-    <div className="bg-[#f4f6f9] min-h-screen p-[15px] font-sans">
+    <div className="bg-[#f8f9fa] min-h-screen py-6 px-4 font-sans">
       
-      {/* গ্লোবাল টপ ব্যানার স্লট */}
-      {showTopPopup && (
-        <div className="mb-3">
-          <GlobalBanner 
-            type="top" 
-            message={globalTopBanner} 
-            onClose={() => setShowTopPopup(false)} 
-          />
-        </div>
-      )}
-
       <div className="max-w-[500px] mx-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between bg-white p-[15px] rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.05)] mb-[15px]">
-          <Link href="/profile" className="no-underline text-[#333] text-[18px] font-bold">←</Link>
-          <h2 className="text-[16px] text-[#333] font-bold m-0">My Orders</h2>
+        <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.04)] mb-4 border border-slate-100">
+          <Link href="/profile" className="no-underline text-slate-700 text-lg font-bold bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-lg transition">
+            ←
+          </Link>
+          <h2 className="text-[16px] text-slate-800 font-extrabold m-0">📦 My Orders</h2>
           <button 
             onClick={handleChangePhone}
-            className="text-[12px] text-[#007bff] bg-transparent border-none cursor-pointer underline font-bold"
+            className="text-[12px] text-[#d9363e] bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border-none cursor-pointer font-bold transition"
           >
             নম্বর পরিবর্তন
           </button>
         </div>
 
         {/* Orders List Container */}
-        <div>
+        <div className="space-y-3">
           {loading ? (
-            <div className="text-center p-[40px] text-[#777] bg-white rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.05)] text-[14px]">
+            <div className="text-center py-12 text-slate-500 bg-white rounded-2xl shadow-sm border border-slate-100 text-[14px] font-medium">
+              <div className="animate-spin text-2xl mb-2">⏳</div>
               অর্ডারগুলো খোঁজা হচ্ছে...
             </div>
           ) : orders.length === 0 ? (
-            <div className="text-center p-[40px] text-[#777] bg-white rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.05)] text-[14px]">
-              {statusMessage}<br/><br/>
+            <div className="text-center py-10 px-4 text-slate-600 bg-white rounded-2xl shadow-sm border border-slate-100 text-[14px]">
+              <span className="text-3xl block mb-2">📭</span>
+              <p className="font-semibold mb-3">{statusMessage}</p>
               <button 
                 onClick={handleChangePhone}
-                className="text-[#007bff] bg-transparent border-none cursor-pointer font-bold underline text-[13px]"
+                className="bg-[#d9363e] hover:bg-[#b52b32] text-white px-4 py-2 rounded-xl text-xs font-bold border-none cursor-pointer shadow-sm transition"
               >
                 অন্য নম্বর দিয়ে সার্চ করুন
               </button>
@@ -216,28 +178,35 @@ export default function MyOrdersPage({
             orders.map((order) => (
               <div 
                 key={order.id}
-                className="bg-white p-4 rounded-[12px] shadow-[0_3px_10px_rgba(0,0,0,0.06)] mb-3.5 border-l-[5px] border-[#d9363e] flex gap-3 items-center"
+                className="bg-white p-4 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100 border-l-[6px] border-l-[#d9363e] flex gap-3.5 items-center transition hover:shadow-md"
               >
-                <img src={order.imageUrl} alt="Product" className="w-[70px] h-[70px] object-cover rounded-[8px] bg-[#eee] shrink-0" />
-                <div className="grow">
-                  <div className="flex justify-between items-center mb-1.5 text-[13px] font-bold">
-                    <span className="text-[#555]">ID: #{order.id.slice(0, 6)}</span>
-                    <span className={`px-2 py-0.5 rounded-[6px] text-[11px] font-bold uppercase ${order.statusClass}`}>
+                <img 
+                  src={order.imageUrl} 
+                  alt="Product" 
+                  className="w-[75px] h-[75px] object-cover rounded-xl bg-slate-100 shrink-0 border border-slate-200" 
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-1 text-[12px]">
+                    <span className="text-slate-400 font-semibold">ID: #{order.id.slice(0, 6)}</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${order.statusClass}`}>
                       {order.status}
                     </span>
                   </div>
-                  <div className="text-[12px] text-[#555] mb-0.5 flex justify-between">
-                    <span>প্রোডাক্ট: <b className="text-black">{order.productName}</b></span>
+                  
+                  <div className="text-[13px] text-slate-800 font-bold mb-1 truncate">
+                    {order.productName}
                   </div>
-                  <div className="text-[12px] text-[#555] mb-0.5 flex justify-between">
+
+                  <div className="text-[11px] text-slate-500 mb-0.5 flex justify-between">
                     <span>তারিখ: {order.date}</span>
                   </div>
-                  <div className="text-[12px] text-[#555] mb-0.5 flex justify-between">
-                    <span>গ্রাহক: {order.customerName} ({order.customerPhone})</span>
+                  <div className="text-[11px] text-slate-500 mb-1.5 flex justify-between">
+                    <span>গ্রাহক: {order.customerName}</span>
                   </div>
-                  <div className="font-bold text-[#d9363e] text-[14px] mt-1.5 border-t border-dashed border-[#eee] pt-1.5 flex justify-between items-center">
-                    <span>মূল্য:</span>
-                    <span className="text-[#d9363e] text-[15px]">{order.price} SAR</span>
+
+                  <div className="font-bold text-[#d9363e] text-[13px] pt-1.5 border-t border-dashed border-slate-200 flex justify-between items-center">
+                    <span className="text-slate-600 text-[11px]">সর্বমোট মূল্য:</span>
+                    <span className="text-[#d9363e] text-[14px] font-extrabold">{order.price} SAR</span>
                   </div>
                 </div>
               </div>
@@ -246,9 +215,6 @@ export default function MyOrdersPage({
         </div>
 
       </div>
-
-      {/* গ্লোবাল বটম ব্যানার স্লট */}
-      <GlobalBanner type="bottom" message={globalBottomBanner} />
 
     </div>
   );

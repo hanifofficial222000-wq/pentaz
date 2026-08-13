@@ -51,17 +51,15 @@ export default function ShopAssistantPage() {
     }
   }, [messages]);
 
-  // ৪. ফায়ারবেসে মেসেজ পাঠানোর ফাংশন (সিকিউরিটি রুলস অনুযায়ী আপডেট করা)
+  // ৪. ফায়ারবেসে মেসেজ পাঠানোর ফাংশন
   const handleSendMessage = async (e) => {
     e.preventDefault();
     const text = inputText.trim();
     if (!text || !customerId) return;
 
-    // ইউজার লগইন করা থাকলে তার ইমেল ব্যবহার করা, না থাকলে গেস্ট হিসেবে সেভ করা
     const customerEmail = localStorage.getItem('userEmail') || `${customerId}@ayaatshop.com`;
 
     try {
-      // মূল চ্যাট ডকুমেন্টে কাস্টমার ইমেলসহ লাস্ট আপডেট সেভ রাখা
       await setDoc(doc(db, "chats", customerId), {
         customerEmail: customerEmail,
         lastMessage: text,
@@ -69,7 +67,6 @@ export default function ShopAssistantPage() {
         status: 'open'
       }, { merge: true });
 
-      // সাব-কালেকশন messages এ নতুন মেসেজ সেভ করা
       await addDoc(collection(db, "chats", customerId, "messages"), {
         text: text,
         sender: 'customer',
@@ -166,15 +163,6 @@ export default function ShopAssistantPage() {
       >
         💬
       </a>
-
-      {/* Footer */}
-      <footer className="bg-[#2b2b2b] text-[#e5e5e5] p-[25px_15px] mt-[40px] text-center rounded-t-[12px] max-w-[500px] mx-auto">
-        <h3 className="text-[#ff4d4d] mb-[12px] text-[18px] font-bold">AYAAT SPORT SHOP</h3>
-        <p className="text-[13px] leading-[1.9] my-[6px] text-[#cccccc]"><b>প্রতিষ্ঠাতা:</b> Md Hanif Cox</p>
-        <p className="text-[13px] leading-[1.9] my-[6px] text-[#cccccc]"><b>ঠিকানা:</b> মাইজপাড়া, কালারমারছড়া, মহেশখালী | বাংলাদেশ</p>
-        <p className="text-[13px] leading-[1.9] my-[6px] text-[#cccccc]"><b>ফোন:</b> +8801835302525</p>
-        <p className="mt-[15px] text-[12px] text-[#aaa]">© ২০২৬ AYAAT SPORT SHOP. সর্বস্বত্ব সংরক্ষিত।</p>
-      </footer>
     </div>
   );
 }

@@ -56,7 +56,6 @@ export default function CategoryManagement() {
     loadAllCategoriesData();
   }, []);
 
-  // Cloudinary Upload Helper (একাধিক ছবি আপলোড করার লজিক)
   const uploadToCloudinary = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -86,15 +85,13 @@ export default function CategoryManagement() {
     setUploadingImage(true);
 
     try {
-      // সব ছবি Cloudinary তে একযোগে আপলোড করা হচ্ছে
       const uploadPromises = mainCatImageFiles.map(file => uploadToCloudinary(file));
       const imageUrls = await Promise.all(uploadPromises);
 
-      // ডেটাবেজে একাধিক ছবিসহ (imageUrls এবং ব্যাকওয়ার্ড কম্প্যাটিবিলিটির জন্য imageUrl) সেভ করা হচ্ছে
       await addDoc(collection(db, "mainCategories"), { 
         name, 
-        imageUrl: imageUrls[0], // ব্যাকআপ বা সিঙ্গেল ব্যবহারের জন্য
-        imageUrls, // একাধিক ছবির অ্যারে
+        imageUrl: imageUrls[0], 
+        imageUrls, 
         createdAt: serverTimestamp() 
       });
 

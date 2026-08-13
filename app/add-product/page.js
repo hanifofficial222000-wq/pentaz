@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
-import { db, storage } from '@/lib/firebase';
+import React, { useState, useEffect } from 'react';
+import { db, storage, auth } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 
 export default function SellerRegistration() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -23,6 +27,25 @@ export default function SellerRegistration() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
 
+  // ইউজারের লগইন স্টেট ট্র্যাক করা
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUser(user);
+        // লগইন করা ইউজারের জিমেইল বা ফোন নম্বর অটো-ফিল বা সেট করে দেওয়া
+        setFormData(prev => ({
+          ...prev,
+          gmail: user.email || '',
+          number: user.phoneNumber || ''
+        }));
+      } else {
+        setCurrentUser(null);
+      }
+      setLoadingUser(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -30,7 +53,7 @@ export default function SellerRegistration() {
   // ফায়ারবেস স্টোরেজে ফাইল আপলোড করার ফাংশন
   const uploadToFirebaseStorage = async (file, folderName) => {
     try {
-      const fileRef = ref(storage, `${folderName}/${Date.now()}_${file.name}`);
+      const fileRef = ref(storage, `${folderName}/${currentUser.uid}_${Date.now()}_${file.name}`);
       const snapshot = await uploadBytes(fileRef, file);
       const downloadUrl = await getDownloadURL(snapshot.ref);
       return downloadUrl;
@@ -43,6 +66,11 @@ export default function SellerRegistration() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!currentUser) {
+      alert("দয়া করে প্রথমে আপনার অ্যাকাউন্টে লগইন করুন!");
+      return;
+    }
+
     if (!profileImg || !licenseImg || !nidImg) {
       alert("দয়া করে প্রফাইল ছবি, ট্রেড লাইসেন্স এবং এনআইডি কার্ডের ছবি সিলেক্ট করুন!");
       return;
@@ -63,11 +91,13 @@ export default function SellerRegistration() {
       const nidUrl = await uploadToFirebaseStorage(nidImg, 'seller_nids');
 
       setUploadStatus('ফায়ারস্টোরে তথ্য সেভ করা হচ্ছে...');
-      const sellerId = `seller_${Date.now()}`;
+      
+      // ডকুমেন্টের আইডি হিসেবে ইউজারের নিজস্ব UID ব্যবহার করা হলো (ডুপ্লিকেট এন্ট্রি এড়াতে)
+      const sellerDocRef = doc(db, "pending_sellers", currentUser.uid);
 
       // ২. ফায়ারস্টোর ডাটাবেসের 'pending_sellers' কালেকশনে ডাটা সেভ করা
-      await setDoc(doc(db, "pending_sellers", sellerId), {
-        id: sellerId,
+      await setDoc(sellerDocRef, {
+        uid: currentUser.uid,
         ...formData,
         profileUrl,
         licenseUrl,
@@ -79,8 +109,14 @@ export default function SellerRegistration() {
       setUploading(false);
       alert("🎉 আপনার রেজিস্ট্রেশন সফলভাবে সাবমিট হয়েছে! অ্যাডমিন অনুমোদন করার পর আপনি এক্সেস পাবেন।");
       
-      // ফর্ম রিসেট
-      setFormData({ firstName: '', lastName: '', number: '', gmail: '', brandName: '', address: '' });
+      // ফর্ম রিসেট (জিমেইল ও নম্বর বাদে)
+      setFormData(prev => ({
+        ...prev,
+        firstName: '',
+        lastName: '',
+        brandName: '',
+        address: ''
+      }));
       setProfileImg(null);
       setLicenseImg(null);
       setNidImg(null);
@@ -92,6 +128,20 @@ export default function SellerRegistration() {
     }
   };
 
+  if (loadingUser) {
+    return <div className="text-center py-20 font-bold text-gray-500">লোড হচ্ছে...</div>;
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 text-center">
+        <h3 className="text-sm font-bold text-red-600 mb-2">⚠️ আপনি লগইন করা নেই!</h3>
+        <p className="text-xs text-gray-600 mb-4">সেলার অ্যাকাউন্ট তৈরি করতে প্রথমে আপনার অ্যাকাউন্টে লগইন করুন।</p>
+        <Link href="/" className="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold">হোমে ফিরে যান</Link>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen p-4 font-sans pb-20">
       <div className="max-w-lg mx-auto bg-white rounded-2xl p-5 shadow-md">
@@ -99,6 +149,10 @@ export default function SellerRegistration() {
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-sm font-extrabold text-gray-800">🛍️ সেলার অ্যাকাউন্ট রেজিস্ট্রেশন</h2>
           <Link href="/" className="text-xs text-red-600 font-bold">← হোম</Link>
+        </div>
+
+        <div className="mb-3 p-2.5 bg-blue-50 rounded-xl text-[11px] text-blue-800">
+          লগইন করা অ্যাকাউন্ট: <b>{currentUser.email || currentUser.phoneNumber || currentUser.uid}</b>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">

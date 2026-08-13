@@ -1,57 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
-// গ্লোবাল ব্যানার কম্পোনেন্ট
-export function GlobalBanner({ type = 'top', message, onClose }) {
-  const [isVisible, setIsVisible] = useState(true);
-
-  if (!isVisible) return null;
-
-  const styles = {
-    top: 'bg-[#e63946] text-white py-2 px-4 text-xs font-medium text-center',
-    bottom: 'bg-[#333] text-white py-3 px-4 text-xs rounded-xl shadow-md my-4 text-center mx-4',
-  };
-
-  return (
-    <div className={`flex justify-between items-center max-w-md mx-auto ${styles[type] || styles.top}`}>
-      <span className="flex-1">{message}</span>
-      <button 
-        onClick={() => {
-          setIsVisible(false);
-          if (onClose) onClose();
-        }} 
-        className="bg-transparent border-none text-inherit font-bold cursor-pointer text-sm ml-2 p-1"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-// ১. মূল এক্সপোর্ট করা পেজ কম্পোনেন্ট যা Suspense বাউন্ডারি দিয়ে মোড়ানো থাকবে
-export default function MyCouponsPage({ 
-  globalTopBanner = '🎟️ যেকোনো কুপন কোড ব্যবহার করে লুফে নিন নিশ্চিত ডিসকাউন্ট!', 
-  globalBottomBanner = '📢 নিয়মিত নতুন নতুন অফার ও কুপন পেতে আয়াাত শপের সাথেই থাকুন।' 
-}) {
-  return (
-    <Suspense fallback={<div className="text-center py-20 text-xs text-slate-400">লোড হচ্ছে...</div>}>
-      <CouponsContent globalTopBanner={globalTopBanner} globalBottomBanner={globalBottomBanner} />
-    </Suspense>
-  );
-}
-
-// ২. আসল কুপন লজিক এবং ইউজার ইন্টারফেস কম্পোনেন্ট
-function CouponsContent({ globalTopBanner, globalBottomBanner }) {
+export default function MyCouponsPage() {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showTopPopup, setShowTopPopup] = useState(true);
+  const [copiedCode, setCopiedCode] = useState(null);
+  const [filter, setFilter] = useState('all'); // all, discount, shipping
 
   useEffect(() => {
-    async function loadCustomerCoupons() {
+    async function loadCoupons() {
       try {
         const q = query(collection(db, "coupons"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
@@ -59,93 +20,136 @@ function CouponsContent({ globalTopBanner, globalBottomBanner }) {
         if (snap.empty) {
           setCoupons([]);
         } else {
-          const couponList = [];
+          const list = [];
+          const now = new Date();
+
           snap.forEach(docSnap => {
-            couponList.push({ id: docSnap.id, ...docSnap.data() });
+            const data = docSnap.data();
+            // মেয়াদ ঠিক থাকলে লিস্টে যোগ করা
+            if (!data.expireDate || new Date(data.expireDate) >= now) {
+              list.push({ id: docSnap.id, ...data });
+            }
           });
-          setCoupons(couponList);
+          setCoupons(list);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Coupon load error:", err);
         setCoupons([]);
       } finally {
         setLoading(false);
       }
     }
 
-    loadCustomerCoupons();
+    loadCoupons();
   }, []);
 
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(code);
-    alert(`কুপন কোড কপি হয়েছে: ${code}`);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2500);
   };
 
-  return (
-    <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans">
-      
-      {/* গ্লোবাল টপ ব্যানার স্লট */}
-      {showTopPopup && (
-        <div className="mb-4">
-          <GlobalBanner 
-            type="top" 
-            message={globalTopBanner} 
-            onClose={() => setShowTopPopup(false)} 
-          />
-        </div>
-      )}
+  // ফিল্টার অনুযায়ী কুপন আলাদা করা
+  const filteredCoupons = coupons.filter(item => {
+    if (filter === 'shipping') return item.type && item.type.toLowerCase().includes('shipping');
+    if (filter === 'discount') return !item.type || !item.type.toLowerCase().includes('shipping');
+    return true;
+  });
 
-      <div className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-xl space-y-6">
+  return (
+    <div className="bg-slate-50 min-h-screen py-6 px-4 md:px-8 font-sans">
+      <div className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <Link 
             href="/profile" 
-            className="text-slate-600 hover:text-slate-900 font-bold text-sm bg-slate-100 px-3 py-1.5 rounded-lg no-underline"
+            className="text-slate-600 hover:text-slate-900 font-bold text-xs bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl no-underline transition"
           >
             ← ব্যাক
           </Link>
-          <h2 className="text-lg font-bold text-slate-800">🎟️ আমার কুপনসমূহ</h2>
-          <div></div>
+          <h2 className="text-base font-extrabold text-slate-800 m-0">🎟️ আমার কুপনসমূহ</h2>
+          <div className="w-10"></div>
         </div>
 
-        {/* Coupons Container */}
-        <div className="space-y-3">
+        {/* Filter Tabs */}
+        <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
+          <button 
+            onClick={() => setFilter('all')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition border-none cursor-pointer ${filter === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 bg-transparent'}`}
+          >
+            সব কুপন
+          </button>
+          <button 
+            onClick={() => setFilter('discount')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition border-none cursor-pointer ${filter === 'discount' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 bg-transparent'}`}
+          >
+            ডিসকাউন্ট
+          </button>
+          <button 
+            onClick={() => setFilter('shipping')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition border-none cursor-pointer ${filter === 'shipping' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 bg-transparent'}`}
+          >
+            ফ্রি ডেলিভারি
+          </button>
+        </div>
+
+        {/* Coupons List */}
+        <div className="space-y-3.5">
           {loading ? (
-            <div className="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-xl border border-slate-200">
-              কুপন লোড হচ্ছে...
+            <div className="text-center py-12 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200 animate-pulse">
+              ⏳ কুপন লোড হচ্ছে...
             </div>
-          ) : coupons.length === 0 ? (
-            <div className="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-xl border border-slate-200">
-              বর্তমানে কোনো কুপন উপলব্ধ নেই।
+          ) : filteredCoupons.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-2">
+              <span className="text-3xl block">📭</span>
+              <p className="font-semibold text-slate-600">এই ক্যাটাগরিতে কোনো কুপন নেই।</p>
             </div>
           ) : (
-            coupons.map((item) => (
+            filteredCoupons.map((item) => (
               <div 
                 key={item.id}
-                className="bg-gradient-to-r from-red-500 to-rose-600 text-white p-4 rounded-xl shadow-md space-y-1.5 relative overflow-hidden"
+                className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative transition hover:border-red-200 hover:shadow-md"
               >
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] bg-black/20 px-2 py-0.5 rounded-md font-bold">সবার জন্য প্রযোজ্য</span>
-                  <span className="text-xs font-semibold opacity-90">{item.discount}</span>
+                {/* Top Badge Section */}
+                <div className="bg-gradient-to-r from-red-500 to-rose-600 px-4 py-3 text-white flex justify-between items-center">
+                  <span className="text-[10px] bg-black/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    {item.type || 'ডিসকাউন্ট অফার'}
+                  </span>
+                  <span className="text-xs font-extrabold tracking-wide">{item.discount}</span>
                 </div>
-                <div className="text-lg font-extrabold tracking-wider">{item.code}</div>
-                <button 
-                  onClick={() => copyToClipboard(item.code)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg backdrop-blur-sm transition cursor-pointer border-none"
-                >
-                  📋 কপি কোড
-                </button>
+
+                {/* Content Section */}
+                <div className="p-4 flex justify-between items-center gap-3">
+                  <div className="space-y-1 min-w-0">
+                    <div className="text-base font-mono font-extrabold text-slate-800 tracking-wider bg-slate-100 px-2.5 py-1 rounded-lg inline-block border border-slate-200">
+                      {item.code}
+                    </div>
+                    
+                    <p className="text-[11px] text-slate-500 m-0 truncate">
+                      {item.description || 'শপের যেকোনো পণ্যে ব্যবহারযোগ্য'}
+                    </p>
+
+                    {item.expireDate && (
+                      <p className="text-[10px] text-rose-500 font-medium m-0 pt-0.5">
+                        ⏳ মেয়াদ শেষ: {new Date(item.expireDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  <button 
+                    onClick={() => copyToClipboard(item.code)}
+                    className="bg-[#d9363e] hover:bg-[#b52b32] text-white text-[11px] font-bold px-3.5 py-2.5 rounded-xl shadow-sm transition shrink-0 cursor-pointer border-none flex items-center gap-1"
+                  >
+                    {copiedCode === item.code ? '✅ কপিড' : '📋 কপি'}
+                  </button>
+                </div>
               </div>
             ))
           )}
         </div>
 
       </div>
-
-      {/* গ্লোবাল বটম ব্যানার স্লট */}
-      <GlobalBanner type="bottom" message={globalBottomBanner} />
-
     </div>
   );
 }

@@ -121,7 +121,7 @@ export default function AdminControlRoom() {
     { name: 'Q & A', icon: '❓', route: '/admin/question-answer' },
     { name: 'Home Editor', icon: '🏠', route: '/admin/home-editor' },
     { name: 'sellers', icon: '📁', route: '/admin/sellers' },
-    { name: 'Page 2', icon: '📄', route: '/admin/page-2' },
+    { name: 'notifications', icon: '⚠️', route: '/admin/notifications' },
     { name: 'Page 3', icon: '📄', route: '/admin/page-3' },
     { name: 'Page 4', icon: '📄', route: '/admin/page-4' },
     { name: 'Page 5', icon: '📄', route: '/admin/page-5' },

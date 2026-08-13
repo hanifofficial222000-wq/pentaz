@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function ProductManagement() {
-  const cloudName = "b3gsgcpl";
-  const uploadPreset = "tho4ycz8";
-
   const [allMainCategories, setAllMainCategories] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
   const [filteredSubCategories, setFilteredSubCategories] = useState([]);
@@ -24,7 +22,7 @@ export default function ProductManagement() {
   const [isFlashSale, setIsFlashSale] = useState(false);
   const [flashSaleEndsAt, setFlashSaleEndsAt] = useState('');
 
-  // 🏷️ নতুন ট্যাব ফিল্টার সম্পর্কিত স্টেট (Best Seller, Discount Offer, Promo)
+  // 🏷️ ট্যাব ফিল্টার সম্পর্কিত স্টেট (Best Seller, Discount Offer, Promo)
   const [isBestSeller, setIsBestSeller] = useState(false);
   const [isDiscountOffer, setIsDiscountOffer] = useState(false);
   const [isPromoProduct, setIsPromoProduct] = useState(false);
@@ -33,7 +31,7 @@ export default function ProductManagement() {
   const [productImageFiles, setProductImageFiles] = useState([]);
   const [productImagePreviews, setProductImagePreviews] = useState([]);
 
-  // Color Variants State [{colorName: '', imageFile: null, preview: ''}]
+  // Color Variants State [{name: '', file: null, preview: ''}]
   const [colors, setColors] = useState([]);
   const [newColorName, setNewColorName] = useState('');
   const [newColorFile, setNewColorFile] = useState(null);
@@ -113,18 +111,12 @@ export default function ProductManagement() {
     setColors(updated);
   };
 
-  // Cloudinary Upload Helper
-  const uploadToCloudinary = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', uploadPreset);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (!data.secure_url) throw new Error("Image Upload Failed");
-    return data.secure_url;
+  // Firebase Storage Upload Helper
+  const uploadToFirebaseStorage = async (file, folderName) => {
+    const fileRef = ref(storage, `${folderName}/${Date.now()}_${file.name}`);
+    const snapshot = await uploadBytes(fileRef, file);
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    return downloadUrl;
   };
 
   const handleProductSubmit = async (e) => {
@@ -140,20 +132,19 @@ export default function ProductManagement() {
       setUploadProgress("প্রোডাক্টের ছবি আপলোড হচ্ছে...");
       let imageUrls = [];
       for (let file of productImageFiles) {
-        const url = await uploadToCloudinary(file);
+        const url = await uploadToFirebaseStorage(file, 'product_images');
         imageUrls.push(url);
       }
 
       setUploadProgress("কালার ভ্যারিয়েন্ট ছবি আপলোড হচ্ছে...");
       let colorVariants = [];
       for (let col of colors) {
-        const colUrl = await uploadToCloudinary(col.file);
+        const colUrl = await uploadToFirebaseStorage(col.file, 'color_variant_images');
         colorVariants.push({ name: col.name, imageUrl: colUrl });
       }
 
       const sizesArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s !== '') : [];
 
-      // ফ্ল্যাশ সেলের শেষ সময় ডেট অবজেক্টে রূপান্তর
       let formattedEndsAt = null;
       if (isFlashSale && flashSaleEndsAt) {
         formattedEndsAt = new Date(flashSaleEndsAt);
@@ -174,12 +165,11 @@ export default function ProductManagement() {
         isFlashSale: isFlashSale,
         isSpecialOffer: isFlashSale,
         flashSaleEndsAt: formattedEndsAt,
-        // হোমপেজের ৩টি নতুন ট্যাব ফিল্টারের প্রপার্টি
         bestseller: isBestSeller,
         isBestSeller: isBestSeller,
         isDiscountOffer: isDiscountOffer,
         isPromoProduct: isPromoProduct,
-        coupon: isPromoProduct ? "ACTIVE" : null, // হোমপেজ ফিল্টারের সাথে সামঞ্জস্য রাখতে
+        coupon: isPromoProduct ? "ACTIVE" : null,
         sellerName: 'AYAAT SPORT SHOP',
         sellerPhone: '01835302525',
         approved: true,
@@ -206,7 +196,7 @@ export default function ProductManagement() {
 
     } catch (err) {
       console.error(err);
-      alert("⚠️ প্রোডাক্ট সেভ করতে সমস্যা হয়েছে!");
+      alert("⚠️ প্রোডাক্ট সেভ করতে সমস্যা হয়েছে: " + err.message);
     } finally {
       setLoading(false);
       setUploadProgress('');
@@ -225,7 +215,7 @@ export default function ProductManagement() {
 
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            🛍️ নতুন প্রোডাক্ট যোগ করুন (ট্যাব লিংক ও কালারসহ)
+            🛍️ নতুন প্রোডাক্ট যোগ করুন (ফায়ারবেস স্টোরেজ)
           </h3>
 
           <form onSubmit={handleProductSubmit} className="space-y-5">
@@ -291,17 +281,16 @@ export default function ProductManagement() {
                     required={isFlashSale}
                     className="w-full border border-amber-300 p-2.5 rounded-xl bg-white text-xs text-black outline-none focus:ring-2 focus:ring-amber-500"
                   />
-                  <p className="text-[11px] text-amber-700 mt-1">এই সময় পার হয়ে গেলে প্রডাক্টটি অটোমেটিক অফার পেজ ও হোম পেজের ফ্ল্যাশ সেল থেকে সরে যাবে।</p>
                 </div>
               )}
             </div>
 
-            {/* 🔗 হোমপেজ ট্যাব লিংক সেকশন (Best Seller, Discount Offer, Promo) */}
+            {/* 🔗 হোমপেজ ট্যাব লিংক সেকশন */}
             <div className="bg-red-50 border border-red-200 p-4 rounded-xl space-y-3">
-              <label className="block text-sm font-bold text-red-900">📌 হোমপেজ ট্যাব লিংক সেকশন (যে ট্যাবে দেখাতে চান সিলেক্ট করুন)</label>
+              <label className="block text-sm font-bold text-red-900">📌 হোমপেজ ট্যাব লিংক সেকশন</label>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100 shadow-xs">
+                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100">
                   <input 
                     type="checkbox" 
                     id="bestSellerCheck"
@@ -309,12 +298,10 @@ export default function ProductManagement() {
                     onChange={(e) => setIsBestSeller(e.target.checked)}
                     className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer"
                   />
-                  <label htmlFor="bestSellerCheck" className="text-xs font-bold text-slate-700 cursor-pointer">
-                    🔥 Best Seller
-                  </label>
+                  <label htmlFor="bestSellerCheck" className="text-xs font-bold text-slate-700 cursor-pointer">🔥 Best Seller</label>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100 shadow-xs">
+                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100">
                   <input 
                     type="checkbox" 
                     id="discountOfferCheck"
@@ -322,12 +309,10 @@ export default function ProductManagement() {
                     onChange={(e) => setIsDiscountOffer(e.target.checked)}
                     className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer"
                   />
-                  <label htmlFor="discountOfferCheck" className="text-xs font-bold text-slate-700 cursor-pointer">
-                    🏷️ Discount Offer
-                  </label>
+                  <label htmlFor="discountOfferCheck" className="text-xs font-bold text-slate-700 cursor-pointer">🏷️ Discount Offer</label>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100 shadow-xs">
+                <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-red-100">
                   <input 
                     type="checkbox" 
                     id="promoCheck"
@@ -335,9 +320,7 @@ export default function ProductManagement() {
                     onChange={(e) => setIsPromoProduct(e.target.checked)}
                     className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer"
                   />
-                  <label htmlFor="promoCheck" className="text-xs font-bold text-slate-700 cursor-pointer">
-                    🎟️ Promo
-                  </label>
+                  <label htmlFor="promoCheck" className="text-xs font-bold text-slate-700 cursor-pointer">🎟️ Promo</label>
                 </div>
               </div>
             </div>
@@ -397,7 +380,7 @@ export default function ProductManagement() {
 
             {/* Multiple Product Images */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">🖼️ প্রোডাক্টের একাধিক ছবি (একাধিক সিলেক্ট করুন)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">🖼️ প্রোডাক্টের একাধিক ছবি</label>
               <input 
                 type="file" 
                 accept="image/*" 

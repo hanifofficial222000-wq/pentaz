@@ -130,6 +130,7 @@ function MainContent() {
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
   const [isTopAdTransitioning, setIsTopAdTransitioning] = useState(true);
 
+  // ফুল-পেজ পপআপ অ্যাড স্টেট (অ্যাডমিন প্যানেলের fullPageAds সিস্টেম অনুযায়ী)
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
@@ -264,9 +265,11 @@ function MainContent() {
           }
         }
 
+        // 📱 অ্যাডমিন প্যানেলের fullPageAds সিস্টেম থেকে ফুল ডিসপ্লে পপআপ ফেচ করা
         const fullSnap = await getDocs(collection(db, 'fullPageAds'));
         if (!fullSnap.empty) {
-          const fList = fullSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(f => !f.hidden && f.isActive);
+          // hidden নয় এবং isActive সত্য এমন পপআপগুলো ফিল্টার করা
+          const fList = fullSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(f => !f.hidden && f.isActive !== false);
           if (fList.length > 0) {
             setActivePopupAd(fList[0]);
             setShowFullPopupModal(true);
@@ -422,23 +425,23 @@ function MainContent() {
         </div>
       )}
 
-      {/* গ্লোবাল পপআপ নোটিশ */}
-      {globalConfig.showPopup && globalConfig.popupMessage && showFullPopupModal && (
+      {/* 📱 অ্যাডমিন প্যানেলের ফুল-পেজ পপআপ অ্যাড ডিসপ্লে মডাল */}
+      {showFullPopupModal && activePopupAd && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn p-6 text-center">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn p-4 text-center">
             <button 
               onClick={() => setShowFullPopupModal(false)}
               className="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 cursor-pointer"
             >
               ✕
             </button>
-            <h3 className="text-base font-bold text-gray-800 mb-2">বিশেষ ঘোষণা</h3>
-            <p className="text-sm text-gray-600 mb-4 whitespace-pre-line">{globalConfig.popupMessage}</p>
-            {activePopupAd && activePopupAd.imageUrl && (
-              <a href={activePopupAd.link || '#'} target="_blank" rel="noopener noreferrer" className="block mb-4">
-                <img src={activePopupAd.imageUrl} alt="Popup Ad" className="w-full h-auto max-h-[300px] object-cover rounded-xl" />
+            
+            {activePopupAd.imageUrl && (
+              <a href={activePopupAd.link || '#'} target="_blank" rel="noopener noreferrer" className="block mt-4 mb-4">
+                <img src={activePopupAd.imageUrl} alt="Full Page Popup Ad" className="w-full h-auto max-h-[350px] object-cover rounded-xl" />
               </a>
             )}
+
             <button 
               onClick={() => setShowFullPopupModal(false)}
               className="bg-[#e63946] text-white px-6 py-2.5 rounded-xl text-xs font-bold w-full cursor-pointer"
@@ -590,7 +593,7 @@ function MainContent() {
         </div>
       </div>
 
-      {/* 🌟 ভেরিফাইড সেলার/ব্র্যান্ড সার্কেল সেকশন (ফিল্টারের ঠিক নিচে ১ লাইনে সাইড-স্ক્રોલ হবে) */}
+      {/* 🌟 ভেরিফাইড সেলার/ব্র্যান্ড সার্কেল সেকশন */}
       {approvedSellers.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100 my-2">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">

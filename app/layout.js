@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getToken } from "firebase/messaging";
+import { db, messaging } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import "./globals.css";
 
 const globalTranslations = {
@@ -19,6 +22,34 @@ export default function RootLayout({ children }) {
   const [searchKeyword, setSearchKeyword] = useState('');
   const lastScrollY = useRef(0);
   const router = useRouter();
+
+  // ফায়ারবেস পুশ নোটিফিকেশন পারমিশন ও টোকেন সেভ করার ইফেক্ট
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      try {
+        if (!messaging) return;
+        
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          const currentToken = await getToken(messaging, { 
+            vapidKey: 'BLwSLjiLW2wobaUOogbMO5Sk8Tac7ZqUHaMWaztAv_ob-44OpD4EBgK4ISpArg8xBH7H-5enWAW9yklUWPNkXpA' 
+          });
+          
+          if (currentToken) {
+            await setDoc(doc(db, "fcm_tokens", currentToken), {
+              token: currentToken,
+              updatedAt: new Date()
+            }, { merge: true });
+            console.log("FCM Token saved successfully!");
+          }
+        }
+      } catch (error) {
+        console.error("Error handling notification permission: ", error);
+      }
+    };
+
+    requestNotificationPermission();
+  }, []);
 
   useEffect(() => {
     const savedLang = localStorage.getItem('selected_language') || 'bn';
@@ -148,7 +179,6 @@ export default function RootLayout({ children }) {
               <span className="text-[11px] font-medium mt-0.5">Cart</span>
             </Link>
 
-            {/* আপডেট করা Account বাটন */}
             <div 
               onClick={() => {
                 const savedUser = localStorage.getItem('ayaat_user_phone');

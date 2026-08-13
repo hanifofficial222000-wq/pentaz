@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, doc, query, orderBy } from 'firebase/firestore';
 import NewFeatureSection from '@/components/NewFeatureSection';
 
 // ⏱️ ক্লিন ও কম্প্যাক্ট রিয়েল-টাইম কাউন্টডাউন টাইমার
@@ -94,25 +94,13 @@ function MainContent() {
   const searchParams = useSearchParams();
   const searchParamValue = searchParams.get('search');
 
-  // গ্লোবাল কনফিগারেশন স্টেট
-  const [globalConfig, setGlobalConfig] = useState({
-    siteName: 'AYAAT SHOP LTD',
-    currency: 'SAR',
-    phoneNumber: '',
-    isMaintenance: false,
-    announcementText: '',
-    showPopup: false,
-    popupMessage: '',
-    productCardSize: 'normal'
-  });
-
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [promoBanners, setPromoBanners] = useState([]);
   const [topThinAds, setTopThinAds] = useState([]);
   const [fullPageAds, setFullPageAds] = useState([]);
   const [smallPopups, setSmallPopups] = useState([]);
-  const [approvedSellers, setApprovedSellers] = useState([]); // সেলার/ব্র্যান্ড সার্কেল ডেটা
+  const [approvedSellers, setApprovedSellers] = useState([]);
   
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -130,7 +118,7 @@ function MainContent() {
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
   const [isTopAdTransitioning, setIsTopAdTransitioning] = useState(true);
 
-  // ফুল-পেজ পপআপ অ্যাড স্টেট (অ্যাডমিন প্যানেলের fullPageAds সিস্টেম অনুযায়ী)
+  // ফুল-পেজ পপআপ অ্যাড স্টেট
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
@@ -192,20 +180,6 @@ function MainContent() {
   }, [isDragging]);
 
   useEffect(() => {
-    // ফায়ারবেস থেকে গ্লোবাল কনফিগারেশন ফেচ করা
-    const fetchGlobalConfig = async () => {
-      try {
-        const configDocRef = doc(db, 'settings', 'globalConfig');
-        const configSnap = await getDoc(configDocRef);
-        if (configSnap.exists()) {
-          setGlobalConfig(configSnap.data());
-        }
-      } catch (err) {
-        console.error("Error fetching global config:", err);
-      }
-    };
-    fetchGlobalConfig();
-
     // এপ্রুভড সেলার ফেচ করা
     const fetchApprovedSellers = async () => {
       try {
@@ -265,10 +239,10 @@ function MainContent() {
           }
         }
 
-        // 📱 অ্যাডমিন প্যানেলের fullPageAds সিস্টেম থেকে ফুল ডিসপ্লে পপআপ ফেচ করা
-        const fullSnap = await getDocs(collection(db, 'fullPageAds'));
+        // 📱 ফুল ডিসপ্লে পপআপ ফেচ করার সঠিক সিস্টেম (orderBy createdAt desc)
+        const fullQuery = query(collection(db, 'fullPageAds'), orderBy('createdAt', 'desc'));
+        const fullSnap = await getDocs(fullQuery);
         if (!fullSnap.empty) {
-          // hidden নয় এবং isActive সত্য এমন পপআপগুলো ফিল্টার করা
           const fList = fullSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(f => !f.hidden && f.isActive !== false);
           if (fList.length > 0) {
             setActivePopupAd(fList[0]);
@@ -377,15 +351,15 @@ function MainContent() {
     }
 
     if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase().trim();
+      const queryStr = searchQuery.toLowerCase().trim();
       result = result.filter(
         p =>
-          p.title?.toLowerCase().includes(query) ||
-          p.id?.toLowerCase().includes(query) ||
-          p.productPin?.toLowerCase().includes(query) ||
-          p.category?.toLowerCase().includes(query) ||
-          p.mainCategory?.toLowerCase().includes(query) ||
-          p.subCategory?.toLowerCase().includes(query)
+          p.title?.toLowerCase().includes(queryStr) ||
+          p.id?.toLowerCase().includes(queryStr) ||
+          p.productPin?.toLowerCase().includes(queryStr) ||
+          p.category?.toLowerCase().includes(queryStr) ||
+          p.mainCategory?.toLowerCase().includes(queryStr) ||
+          p.subCategory?.toLowerCase().includes(queryStr)
       );
     }
 
@@ -405,30 +379,13 @@ function MainContent() {
     localStorage.setItem('ayaat_favorites', JSON.stringify(updatedFavs));
   };
 
-  // যদি মেইনটেনেন্স মোড অন থাকে
-  if (globalConfig.isMaintenance) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
-        <h1 className="text-3xl font-bold mb-3">⚠️ সাইট আপডেট চলছে</h1>
-        <p className="text-gray-400 text-sm">খুব শীঘ্রই আমাদের ওয়েবসাইটটি আবার সচল করা হবে। আমাদের সাথে থাকার জন্য ধন্যবাদ!</p>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800 relative">
       
-      {/* গ্লোবাল অ্যানাউন্সমেন্ট টেক্সট বার */}
-      {globalConfig.announcementText && (
-        <div className="bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs font-bold text-center py-2 px-3 shadow-sm z-50">
-          📢 {globalConfig.announcementText}
-        </div>
-      )}
-
-      {/* 📱 অ্যাডমিন প্যানেলের ফুল-পেজ পপআপ অ্যাড ডিসপ্লে মডাল */}
+      {/* 📱 ফুল ডিসপ্লে পপআপ অ্যাড ডিসপ্লে মডাল */}
       {showFullPopupModal && activePopupAd && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn p-4 text-center">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl p-4 text-center">
             <button 
               onClick={() => setShowFullPopupModal(false)}
               className="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 cursor-pointer"
@@ -639,7 +596,7 @@ function MainContent() {
         {filteredProducts.length === 0 ? (
           <div className="text-center py-10 font-bold text-gray-500">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
         ) : (
-          <div className={`grid gap-2 ${globalConfig.productCardSize === 'compact' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <div className="grid gap-2 grid-cols-3">
             {filteredProducts.map((item) => {
               const isFav = favorites.includes(item.id);
               const mainImg = item.imageUrl || item.image || (item.imageUrls && item.imageUrls[0]) || item.img || 'https://via.placeholder.com/300?text=No+Image';
@@ -650,7 +607,7 @@ function MainContent() {
                   key={item.id} 
                   className="border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm relative no-underline hover:shadow-md transition-all cursor-pointer"
                 >
-                  <div className={`relative w-full bg-gray-100 overflow-hidden ${globalConfig.productCardSize === 'compact' ? 'h-[100px]' : 'h-[140px]'}`}>
+                  <div className="relative w-full bg-gray-100 overflow-hidden h-[140px]">
                     <img src={mainImg} alt={item.title} className="w-full h-full object-cover" />
                     {item.isFlashSale && (
                       <span className="absolute top-1 left-1 bg-amber-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow">
@@ -680,7 +637,7 @@ function MainContent() {
                     )}
 
                     <div className="flex items-start justify-between gap-1 mb-1">
-                      <h3 className={`font-bold line-clamp-2 text-gray-800 flex-grow ${globalConfig.productCardSize === 'compact' ? 'text-[10px]' : 'text-[11px]'}`}>{item.title}</h3>
+                      <h3 className="font-bold line-clamp-2 text-gray-800 flex-grow text-[11px]">{item.title}</h3>
                       
                       <button 
                         onClick={(e) => {
@@ -695,7 +652,7 @@ function MainContent() {
                     </div>
 
                     <div className="text-[#e63946] text-xs font-bold mt-auto">
-                      {globalConfig.currency || 'SAR'} {item.price || item.discountPrice}
+                      SAR {item.price || item.discountPrice}
                     </div>
                   </div>
                 </Link>

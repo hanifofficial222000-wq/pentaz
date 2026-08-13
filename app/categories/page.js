@@ -6,20 +6,24 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
 export default function CategoryPage() {
-  const [categories, setCategories] = useState([]);
+  const [mainCategories, setMainCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ফায়ারবেস থেকে ক্যাটেগরি লোড করার ফাংশন
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesData = async () => {
       try {
-        const q = query(collection(db, "categories"), orderBy("name", "asc"));
-        const snapshot = await getDocs(q);
-        const list = [];
-        snapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        setCategories(list);
+        // ১. মেইন ক্যাটাগরি ফেচ করা
+        const mainQuery = query(collection(db, "mainCategories"), orderBy("createdAt", "desc"));
+        const mainSnap = await getDocs(mainQuery);
+        const mainList = mainSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setMainCategories(mainList);
+
+        // ২. সাব-ক্যাটাগরি ফেচ করা
+        const subSnap = await getDocs(collection(db, "subCategories"));
+        const subList = subSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSubCategories(subList);
+
       } catch (err) {
         console.error("Error fetching categories:", err);
       } finally {
@@ -27,7 +31,7 @@ export default function CategoryPage() {
       }
     };
 
-    fetchCategories();
+    fetchCategoriesData();
   }, []);
 
   return (
@@ -47,40 +51,66 @@ export default function CategoryPage() {
           </Link>
         </div>
 
-        {/* Categories Grid/List */}
+        {/* Categories List */}
         {loading ? (
           <div className="text-center py-10 text-xs text-gray-400">
             ক্যাটেগরি লোড হচ্ছে...
           </div>
-        ) : categories.length === 0 ? (
+        ) : mainCategories.length === 0 ? (
           <div className="text-center py-10 text-xs text-gray-500 bg-white rounded-[16px] p-6 shadow-sm border border-[#eee]">
             <p className="font-bold text-gray-700 mb-1">কোনো ক্যাটেগরি পাওয়া যায়নি!</p>
             <p>দয়া করে অ্যাডমিন প্যানেল থেকে ক্যাটেগরি যুক্ত করুন।</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-[12px]">
-            {categories.map((cat) => (
-              <Link 
-                key={cat.id} 
-                href={`/?category=${encodeURIComponent(cat.name)}`}
-                className="bg-white p-[14px] rounded-[14px] shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-[#eee] flex flex-col items-center text-center no-underline transition hover:border-[#e63946] hover:shadow-md group"
-              >
-                {cat.imageUrl ? (
-                  <img 
-                    src={cat.imageUrl} 
-                    alt={cat.name} 
-                    className="w-[50px] h-[50px] object-cover rounded-full mb-[10px] border border-gray-200 group-hover:scale-105 transition" 
-                  />
-                ) : (
-                  <div className="w-[50px] h-[50px] bg-red-50 text-[#e63946] rounded-full flex items-center justify-center text-[20px] mb-[10px] font-bold border border-red-100">
-                    📦
-                  </div>
-                )}
-                <h3 className="text-[13px] font-bold text-[#333] group-hover:text-[#e63946] transition line-clamp-1 m-0">
-                  {cat.name}
-                </h3>
-              </Link>
-            ))}
+          <div className="space-y-4">
+            {mainCategories.map((cat) => {
+              // এই মেইন ক্যাটাগরির অধীনে থাকা সাব-ক্যাটাগরিগুলো ফিল্টার করা
+              const relatedSubs = subCategories.filter(sub => sub.mainCat === cat.name);
+              const displayImg = (cat.imageUrls && cat.imageUrls[0]) || cat.imageUrl;
+
+              return (
+                <div key={cat.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                  {/* Main Category Header */}
+                  <Link 
+                    href={`/?category=${encodeURIComponent(cat.name)}`}
+                    className="flex items-center gap-3 pb-3 border-b border-slate-100 no-underline group"
+                  >
+                    {displayImg ? (
+                      <img 
+                        src={displayImg} 
+                        alt={cat.name} 
+                        className="w-12 h-12 object-cover rounded-full border border-gray-200 group-hover:scale-105 transition" 
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-red-50 text-[#e63946] rounded-full flex items-center justify-center text-lg font-bold border border-red-100">
+                        📦
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 group-hover:text-[#e63946] transition m-0">
+                        {cat.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 m-0">সকল পণ্য দেখতে ক্লিক করুন</p>
+                    </div>
+                  </Link>
+
+                  {/* Sub Categories List */}
+                  {relatedSubs.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {relatedSubs.map((sub) => (
+                        <Link
+                          key={sub.id}
+                          href={`/?category=${encodeURIComponent(cat.name)}&subCategory=${encodeURIComponent(sub.name)}`}
+                          className="bg-slate-50 hover:bg-red-50 hover:text-[#e63946] hover:border-red-200 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 transition no-underline"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

@@ -112,6 +112,7 @@ function MainContent() {
   const [topThinAds, setTopThinAds] = useState([]);
   const [fullPageAds, setFullPageAds] = useState([]);
   const [smallPopups, setSmallPopups] = useState([]);
+  const [approvedSellers, setApprovedSellers] = useState([]); // সেলার/ব্র্যান্ড সার্কেল ডেটা
   
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -203,6 +204,19 @@ function MainContent() {
       }
     };
     fetchGlobalConfig();
+
+    // এপ্রুভড সেলার ফেচ করা
+    const fetchApprovedSellers = async () => {
+      try {
+        const sellerSnap = await getDocs(collection(db, 'approved_sellers'));
+        if (!sellerSnap.empty) {
+          setApprovedSellers(sellerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
+      } catch (err) {
+        console.error("Error fetching approved sellers:", err);
+      }
+    };
+    fetchApprovedSellers();
 
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const now = new Date();
@@ -408,7 +422,7 @@ function MainContent() {
         </div>
       )}
 
-      {/* গ্লোবাল পপআপ নোটিশ (যদি কন্ট্রোল প্যানেল থেকে অন করা থাকে) */}
+      {/* গ্লোবাল পপআপ নোটিশ */}
       {globalConfig.showPopup && globalConfig.popupMessage && showFullPopupModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl animate-scaleIn p-6 text-center">
@@ -576,6 +590,32 @@ function MainContent() {
         </div>
       </div>
 
+      {/* 🌟 ভেরিফাইড সেলার/ব্র্যান্ড সার্কেল সেকশন (ফিল্টারের ঠিক নিচে ১ লাইনে সাইড-স্ক્રોલ হবে) */}
+      {approvedSellers.length > 0 && (
+        <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100 my-2">
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
+            {approvedSellers.map((seller) => (
+              <Link 
+                key={seller.id} 
+                href={`/brand/${seller.id}`} 
+                className="flex flex-col items-center flex-shrink-0 cursor-pointer w-[66px] no-underline"
+              >
+                <div className="w-[56px] h-[56px] rounded-full p-[2px] border-2 border-red-600 overflow-hidden shadow-sm bg-white hover:scale-105 transition-transform">
+                  <img 
+                    src={seller.profileUrl || 'https://via.placeholder.com/150'} 
+                    alt={seller.brandName} 
+                    className="w-full h-full object-cover rounded-full" 
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+                  {seller.brandName}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {searchQuery && (
         <div className="max-w-xl mx-auto px-3 py-1 flex items-center justify-between text-xs text-gray-600">
           <span>অনুসন্ধান ফলাফল: &quot;<b>{searchQuery}</b>&quot;</span>
@@ -591,7 +631,7 @@ function MainContent() {
         </div>
       )}
 
-      {/* প্রডাক্ট লিস্ট (গ্লোবাল কার্ড সাইজ কন্ট্রোলসহ) */}
+      {/* প্রডাক্ট লিস্ট */}
       <div className="max-w-xl mx-auto p-2">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-10 font-bold text-gray-500">কোনো প্রোডাক্ট পাওয়া যায়নি!</div>
@@ -662,7 +702,6 @@ function MainContent() {
         )}
       </div>
 
-      {/* নতুন ফিচার সেকশন একদম নিচে যুক্ত করা হলো */}
       <NewFeatureSection />
 
     </div>

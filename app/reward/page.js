@@ -1,9 +1,10 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 
 // ১. মূল পেজ কম্পোনেন্ট যা Suspense বাউন্ডারি দিয়ে মোড়ানো থাকবে
 export default function RewardPage() {
@@ -14,13 +15,14 @@ export default function RewardPage() {
   );
 }
 
-// ২. আসল কাউন্টডাউন এবং পয়েন্ট যুক্ত করার লজিক সম্পন্ন কম্পোনেন্ট
+// ২. আসল কাউন্টডাউন এবং ফায়ারবেসে পয়েন্ট যুক্ত করার লজিক সম্পন্ন কম্পোনেন্ট
 function RewardContent() {
   const searchParams = useSearchParams();
   const refPhone = searchParams.get('ref');
 
   const [timeLeft, setTimeLeft] = useState(10);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [statusText, setStatusText] = useState('দয়া করে নিচের সময় পর্যন্ত অপেক্ষা করুন...');
 
   useEffect(() => {
     if (timeLeft <= 0) return;
@@ -30,12 +32,12 @@ function RewardContent() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsCompleted(true);
-
-          // কাউন্টডাউন শেষ হলে লোকালস্টোরেজে পয়েন্ট যোগ করা
+          
+          // ফায়ারবেসে পয়েন্ট সেভ করার ফাংশন কল করা
           if (refPhone) {
-            const pointKey = `user_points_${refPhone}`;
-            const currentPoints = parseInt(localStorage.getItem(pointKey) || "0", 10);
-            localStorage.setItem(pointKey, (currentPoints + 10).toString());
+            updateFirebasePoints(refPhone);
+          } else {
+            setStatusText('🎉 সফলভাবে সম্পন্ন হয়েছে!');
           }
 
           return 0;
@@ -45,7 +47,50 @@ function RewardContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, refPhone]);
+  }, [refPhone]);
+
+  // ফায়ারবেসে পয়েন্ট আপডেট বা যোগ করার ফাংশন
+  const updateFirebasePoints = async (phone) => {
+    try {
+      const cleanPhone = phone.replace(/\D/g, '');
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("phone", "==", cleanPhone));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // যদি ইউজার ডাটাবেসে থাকে, তবে তার কয়েন/পয়েন্ট ১০ বাড়িয়ে আপডেট করা
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        const currentCoins = Number(userData.coins || userData.coinBalance || 0);
+        
+        await updateDoc(doc(db, "users", userDoc.id), {
+          coins: currentCoins + 10,
+          coinBalance: currentCoins + 10
+        });
+        
+        setStatusText('🎉 সফল! আপনার অ্যাকাউন্টে ১০ কয়েন যোগ হয়েছে!');
+      } else {
+        // যদি ইউজার ডাটাবেসে না থাকে, তবে নতুন ডকুমেন্ট তৈরি করে ১০ কয়েন দিয়ে দেওয়া
+        await setDoc(doc(collection(db, "users")), {
+          phone: cleanPhone,
+          coins: 10,
+          coinBalance: 10,
+          createdAt: new Date().toISOString()
+        });
+        
+        setStatusText('🎉 সফল! আপনার নতুন অ্যাকাউন্টে ১০ কয়েন যোগ হয়েছে!');
+      }
+
+      // ব্যাকআপ হিসেবে লোকালস্টোরেজেও সেভ করে রাখা
+      const pointKey = `user_points_${cleanPhone}`;
+      const localPoints = parseInt(localStorage.getItem(pointKey) || "0", 10);
+      localStorage.setItem(pointKey, (localPoints + 10).toString());
+
+    } catch (error) {
+      console.error("Firebase point update error:", error);
+      setStatusText('⚠️ পয়েন্ট যোগ করতে সমস্যা হয়েছে, তবে টাইম শেষ!');
+    }
+  };
 
   return (
     <div className="bg-[#f8f9fa] flex items-center justify-center min-h-screen p-4 font-sans">
@@ -56,12 +101,12 @@ function RewardContent() {
 
         {!isCompleted ? (
           <div className="bg-[#fff5f5] border-2 border-dashed border-[#e63946] rounded-[12px] p-4 mb-5">
-            <p className="text-[13px] font-bold text-[#333]">দয়া করে নিচের সময় পর্যন্ত অপেক্ষা করুন...</p>
+            <p className="text-[13px] font-bold text-[#333]">{statusText}</p>
             <div className="text-[32px] font-bold text-[#e63946] mt-1.5">{timeLeft}</div>
           </div>
         ) : (
           <div className="mb-4 text-[#28a745] font-bold text-[14px]">
-            🎉 সফলভাবে পয়েন্ট যোগ হয়েছে! ধন্যবাদ।
+            {statusText}
           </div>
         )}
 

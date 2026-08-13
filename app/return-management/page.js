@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase'; // firebase.js থেকে db ইমপোর্ট করা হলো
+import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, deleteDoc, query, where, serverTimestamp } from 'firebase/firestore';
 
 export default function ProductReturnPage() {
@@ -16,10 +16,6 @@ export default function ProductReturnPage() {
   const [submitting, setSubmitting] = useState(false);
   const [returnsList, setReturnsList] = useState([]);
   const [loadingReturns, setLoadingReturns] = useState(true);
-
-  // ক্লাউডিনারি কনফিগারেশন
-  const cloudName = "b3gsgcpl";
-  const uploadPreset = "tho4ycz8";
 
   // অ্যালার্ট মেসেজ দেখানোর ফাংশন
   const showAlertMessage = (msg) => {
@@ -41,12 +37,22 @@ export default function ProductReturnPage() {
     }
   }, []);
 
-  // ইমেজ ফাইল সিলেক্ট এবং প্রিভিউ হ্যান্ডলার
+  // ইমেজ ফাইল সিলেক্ট, প্রিভিউ এবং Base64 কনভার্ট হ্যান্ডলার
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      // ফাইল সাইজ ১ মেগাবাইটের নিচে রাখার পরামর্শ (ফায়ারবেস ডকুমেন্টের সাইজ লিমিট ঠিক রাখতে)
+      if (file.size > 1048576) {
+        alert("⚠️ ছবির সাইজ ১ এমবির কম দিন, অন্যথায় ফায়ারবেসে সেভ হতে সমস্যা হতে পারে।");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImageFile(reader.result); // Base64 string
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     } else {
       setSelectedImageFile(null);
       setImagePreview('');
@@ -78,7 +84,7 @@ export default function ProductReturnPage() {
     }
   }, [customerPhone]);
 
-  // নতুন রিটার্ন রিকোয়েস্ট সাবমিট হ্যান্ডলার
+  // নতুন রিটার্ন রিকোয়েস্ট সাবমিট হ্যান্ডলার (ফায়ারবেস ফায়ারস্টোরে সরাসরি সেভ)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedImageFile) {
@@ -89,20 +95,6 @@ export default function ProductReturnPage() {
     setSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedImageFile);
-      formData.append('upload_preset', uploadPreset);
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: formData
-      });
-      const cloudData = await res.json();
-      
-      if (!cloudData.secure_url) {
-        throw new Error("Cloudinary Image Upload Failed");
-      }
-
       const phoneVal = customerPhone.trim();
 
       await addDoc(collection(db, "returns"), {
@@ -110,7 +102,7 @@ export default function ProductReturnPage() {
         customerName: customerName.trim(),
         customerPhone: phoneVal,
         reason: returnReason.trim(),
-        imageUrl: cloudData.secure_url,
+        imageUrl: selectedImageFile, // Base64 ফরম্যাটে সরাসরি ফায়ারস্টোরে সেভ হচ্ছে
         status: "Pending",
         createdAt: serverTimestamp()
       });
@@ -253,7 +245,7 @@ export default function ProductReturnPage() {
               disabled={submitting}
               className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 cursor-pointer text-xs disabled:opacity-50"
             >
-              <span>{submitting ? "⏳ আপলোড হচ্ছে..." : "🚀 রিটার্ন রিকোয়েস্ট পাঠান"}</span>
+              <span>{submitting ? "⏳ সাবমিট হচ্ছে..." : "🚀 রিটার্ন রিকোয়েস্ট পাঠান"}</span>
             </button>
           </form>
         </div>

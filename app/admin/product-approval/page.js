@@ -1,17 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 
-export default function ProductApproval() {
+export default function AdminPendingProductsPage() {
   const [pendingProducts, setPendingProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load Pending Products
-  const loadPendingProducts = async () => {
-    setLoading(true);
+  const fetchPendingProducts = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "pending_products"));
       const list = querySnapshot.docs.map(docSnap => ({
@@ -20,112 +17,98 @@ export default function ProductApproval() {
       }));
       setPendingProducts(list);
     } catch (err) {
-      console.error("Error loading pending products:", err);
+      console.error("Error fetching pending products:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPendingProducts();
+    fetchPendingProducts();
   }, []);
 
-  // Approve Product
-  const approveProduct = async (docId) => {
-    if (!confirm("আপনি কি এই প্রোডাক্টটি অ্যাপ্রুভ করে মূল সাইটে প্রকাশ করতে চান?")) return;
+  // প্রোডাক্ট এপ্রুভ করার ফাংশন
+  const handleApproveProduct = async (product) => {
+    if (!confirm(`"${product.title}" প্রোডাক্টটি এপ্রুভ করে লাইভ করতে চান?`)) return;
 
     try {
-      const docRef = doc(db, "pending_products", docId);
-      const docSnap = await getDoc(docRef);
+      // ১. মূল 'products' কালেকশনে সেভ করা
+      await setDoc(doc(db, "products", product.id), {
+        ...product,
+        approved: true,
+        approvedAt: new Date()
+      });
 
-      if (docSnap.exists()) {
-        let productData = docSnap.data();
-        productData.approved = true;
+      // ২. 'pending_products' থেকে রিমুভ করা
+      await deleteDoc(doc(db, "pending_products", product.id));
 
-        await setDoc(doc(db, "products", docId), productData);
-        await deleteDoc(docRef);
-
-        alert("প্রোডাক্ট সফলভাবে অ্যাপ্রুভ করা হয়েছে!");
-        loadPendingProducts();
-      } else {
-        alert("প্রোডাক্টটি খুঁজে পাওয়া যায়নি!");
-      }
+      alert("🎉 প্রোডাক্টটি সফলভাবে এপ্রুভ ও লাইভ করা হয়েছে!");
+      fetchPendingProducts();
     } catch (err) {
-      console.error("Error approving product:", err);
-      alert("অ্যাপ্রুভ করতে সমস্যা হয়েছে!");
+      console.error("Product Approval Error:", err);
+      alert("প্রোডাক্ট এপ্রুভ করতে সমস্যা হয়েছে।");
     }
   };
 
-  // Reject Product
-  const rejectProduct = async (docId) => {
-    if (!confirm("আপনি কি নিশ্চিতভাবে এই প্রোডাক্টটি ডিলিট বা বাতিল করতে চান?")) return;
+  // প্রোডাক্ট ডিলিট বা রিজেক্ট করার ফাংশন
+  const handleDeleteProduct = async (id) => {
+    if (!confirm("প্রোডাক্টটি কি ডিলিট করতে চান?")) return;
 
     try {
-      await deleteDoc(doc(db, "pending_products", docId));
-      alert("প্রোডাক্টটি বাতিল করা হয়েছে!");
-      loadPendingProducts();
+      await deleteDoc(doc(db, "pending_products", id));
+      alert("❌ প্রোডাক্টটি মুছে ফেলা হয়েছে।");
+      fetchPendingProducts();
     } catch (err) {
-      console.error("Error rejecting product:", err);
-      alert("বাতিল করতে সমস্যা হয়েছে!");
+      console.error("Delete Error:", err);
     }
   };
+
+  if (loading) return <div className="text-center py-10 text-xs font-bold">লোড হচ্ছে...</div>;
 
   return (
-    <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans pb-12">
-      <div className="max-w-[700px] mx-auto my-5 p-4">
-        
-        {/* Back Link */}
-        <Link href="/admin/control-room" className="inline-block mb-4 text-[#e63946] no-underline font-bold text-[13px] hover:underline">
-          ← কন্ট্রোল রুমে ফিরে যান
-        </Link>
-        
-        {/* Header */}
-        <div className="bg-white p-5 rounded-xl shadow-sm mb-5 text-center">
-          <h2 className="text-[#e63946] text-xl font-bold mb-1">⏳ প্রোডাক্ট অ্যাপ্রুভাল প্যানেল</h2>
-          <p className="text-[13px] text-slate-500">ইউজারদের সাবমিট করা নতুন প্রোডাক্টগুলো যাচাই করে অনুমোদন বা বাতিল করুন।</p>
-        </div>
+    <div className="bg-slate-100 min-h-screen p-4 font-sans">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl p-6 shadow-md">
+        <h2 className="text-base font-extrabold text-slate-800 mb-4 pb-2 border-b">
+          📦 সেলার প্রোডাক্ট এপ্রুভাল প্যানেল ({pendingProducts.length})
+        </h2>
 
-        {/* Product List */}
-        <div className="space-y-4">
-          {loading ? (
-            <div className="text-center p-8 text-slate-500 font-bold text-xs">প্রোডাক্ট লোড হচ্ছে...</div>
-          ) : pendingProducts.length === 0 ? (
-            <div className="text-center p-8 text-slate-500 font-bold text-xs bg-white rounded-xl shadow-sm">কোনো নতুন পেন্ডিং প্রোডাক্ট নেই!</div>
-          ) : (
-            pendingProducts.map((item) => {
-              let imgUrl = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || 'https://via.placeholder.com/100');
-              
-              return (
-                <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm flex gap-4 items-center border border-slate-200">
-                  <img src={imgUrl} className="w-20 h-20 rounded-lg object-cover bg-slate-100 flex-shrink-0" alt={item.title || 'Product'} />
-                  
-                  <div className="flex-grow text-xs space-y-1">
-                    <h4 className="text-[15px] font-bold text-slate-900">{item.title}</h4>
-                    <p className="text-slate-600">মূল্য: <span className="text-[#e63946] font-bold">SAR {item.price}</span></p>
-                    <p className="text-slate-600">ক্যাটাগরি: {item.category || 'N/A'}</p>
-                    <p className="text-slate-600">বিক্রেতা: {item.sellerName || 'N/A'} {item.sellerPhone ? `(${item.sellerPhone})` : ''}</p>
-                    
-                    <div className="flex gap-2 mt-2">
-                      <button 
-                        onClick={() => approveProduct(item.id)} 
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white border-none px-3.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer"
-                      >
-                        অ্যাপ্রুভ করুন
-                      </button>
-                      <button 
-                        onClick={() => rejectProduct(item.id)} 
-                        className="bg-rose-500 hover:bg-rose-600 text-white border-none px-3.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer"
-                      >
-                        বাতিল করুন
-                      </button>
-                    </div>
+        {pendingProducts.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-10">এপ্রুভ করার মতো কোনো পেন্ডিং প্রোডাক্ট নেই।</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pendingProducts.map((item) => (
+              <div key={item.id} className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col justify-between shadow-sm">
+                
+                <div className="flex gap-3">
+                  <img src={item.imageUrl} alt={item.title} className="w-24 h-24 object-cover rounded-lg border flex-shrink-0" />
+                  <div className="space-y-1 text-xs">
+                    <h3 className="font-bold text-slate-900 line-clamp-1">{item.title}</h3>
+                    <p className="text-red-600 font-extrabold">মূল্য: ৳ {item.price}</p>
+                    <p className="text-slate-600"><b>ক্যাটাগরি:</b> {item.category}</p>
+                    <p className="text-slate-600"><b>সেলার ফোন:</b> {item.sellerPhone}</p>
+                    <p className="text-slate-500 line-clamp-2"><b>বিবরণ:</b> {item.description || 'N/A'}</p>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
 
+                <div className="flex gap-2 mt-3 pt-2 border-t">
+                  <button 
+                    onClick={() => handleApproveProduct(item)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-xs cursor-pointer transition"
+                  >
+                    ✅ Approve & Live
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteProduct(item.id)}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-xs cursor-pointer transition"
+                  >
+                    ❌ Delete
+                  </button>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

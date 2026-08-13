@@ -69,15 +69,6 @@ export default function ShopPlusPage() {
       >
         💬
       </a>
-
-      {/* Footer */}
-      <footer className="bg-[#2b2b2b] text-[#e5e5e5] p-[25px_15px] mt-[40px] text-center rounded-t-[12px] max-w-[500px] mx-auto">
-        <h3 className="text-[#ff4d4d] mb-[12px] text-[18px] font-bold">AYAAT SPORT SHOP</h3>
-        <p className="text-[13px] leading-[1.9] my-[6px] text-[#cccccc]"><b>প্রতিষ্ঠাতা:</b> Md Hanif Cox</p>
-        <p className="text-[13px] leading-[1.9] my-[6px] text-[#cccccc]"><b>ঠিকানা:</b> মাইজপাড়া, কালারমারছড়া, মহেশখালী | বাংলাদেশ</p>
-        <p className="text-[13px] leading-[1.9] my-[6px] text-[#cccccc]"><b>ফোন:</b> +8801835302525</p>
-        <p className="mt-[15px] text-[12px] text-[#aaa]">© ২০২৬ AYAAT SPORT SHOP. সর্বস্বত্ব সংরক্ষিত।</p>
-      </footer>
     </div>
   );
 }

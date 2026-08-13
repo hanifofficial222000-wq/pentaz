@@ -44,7 +44,7 @@ export default function AdminSellersPage() {
       await deleteDoc(doc(db, "pending_sellers", seller.id));
 
       alert("✅ সেলার সফলভাবে এপ্রুভ করা হয়েছে!");
-      fetchPendingSellers(); // রিফ্রেশ লিস্ট
+      fetchPendingSellers();
     } catch (err) {
       console.error("Approval Error:", err);
       alert("এপ্রুভ করতে সমস্যা হয়েছে!");

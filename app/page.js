@@ -1,11 +1,11 @@
 'use client';
-
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot, doc, query, orderBy } from 'firebase/firestore';
 import NewFeatureSection from '@/components/NewFeatureSection';
+import HomeCategories from '@/components/HomeCategories'; // 👉 নতুন মাল্টি-লেভেল ক্যাটাগরি কম্পোনেন্ট ইমপোর্ট করা হলো
 
 // ⏱️ ক্লিন ও কম্প্যাক্ট রিয়েল-টাইম কাউন্টডাউন টাইমার
 function FlashSaleTimer({ endsAt }) {
@@ -459,44 +459,8 @@ function MainContent() {
         </div>
       )}
 
-      {/* ক্যাটাগরি সেকশন */}
-      <header className="sticky top-0 bg-white z-30 border-b border-gray-100 shadow-sm">
-        
-        <div className="max-w-xl mx-auto px-3 py-2.5 bg-white border-b border-gray-100 overflow-x-auto no-scrollbar">
-          <div className="grid grid-flow-col grid-rows-2 gap-x-3.5 gap-y-2 w-max px-1">
-            
-            {mainCategories.map((cat) => (
-              <CategoryCardItem 
-                key={cat.id} 
-                cat={cat} 
-                isActive={activeCategory === cat.name} 
-                onClick={() => handleMainCategoryClick(cat.name)} 
-              />
-            ))}
-
-          </div>
-        </div>
-
-        {currentSubCategoriesList.length > 0 && (
-          <div className="bg-gray-50 border-t border-gray-100 px-3 py-2 flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
-            <button
-              onClick={() => setActiveSubCategory('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-            >
-              All ({activeCategory})
-            </button>
-            {currentSubCategoriesList.map((sub) => (
-              <button
-                key={sub.id}
-                onClick={() => setActiveSubCategory(sub.name)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeSubCategory === sub.name ? 'bg-[#e63946] text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-              >
-                {sub.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </header>
+      {/* 🌟 নতুন ট্রেন্ডওল স্টাইল ডাইনামিক ক্যাটাগরি কম্পোনেন্ট এখানে বসানো হলো */}
+      <HomeCategories />
 
       {promoBanners.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">

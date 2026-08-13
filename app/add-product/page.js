@@ -27,12 +27,10 @@ export default function SellerRegistration() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
 
-  // ইউজারের লগইন স্টেট ট্র্যাক করা
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
-        // লগইন করা ইউজারের জিমেইল বা ফোন নম্বর অটো-ফিল বা সেট করে দেওয়া
         setFormData(prev => ({
           ...prev,
           gmail: user.email || '',
@@ -50,7 +48,6 @@ export default function SellerRegistration() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ফায়ারবেস স্টোরেজে ফাইল আপলোড করার ফাংশন
   const uploadToFirebaseStorage = async (file, folderName) => {
     try {
       const fileRef = ref(storage, `${folderName}/${currentUser.uid}_${Date.now()}_${file.name}`);
@@ -59,7 +56,7 @@ export default function SellerRegistration() {
       return downloadUrl;
     } catch (error) {
       console.error("Storage Upload Error:", error);
-      throw new Error("ছবি আপলোড ব্যর্থ হয়েছে। আবার চেষ্টা করুন।");
+      throw new Error(`ছবি আপলোড ব্যর্থ হয়েছে: ${error.message}`);
     }
   };
 
@@ -77,10 +74,8 @@ export default function SellerRegistration() {
     }
 
     setUploading(true);
-    setUploadStatus('ছবিগুলো আপলোড হচ্ছে...');
 
     try {
-      // ১. ফায়ারবেস স্টোরেজে একে একে ছবি আপলোড করা
       setUploadStatus('প্রোফাইল ছবি আপলোড হচ্ছে...');
       const profileUrl = await uploadToFirebaseStorage(profileImg, 'seller_profiles');
 
@@ -90,13 +85,12 @@ export default function SellerRegistration() {
       setUploadStatus('এনআইডি কার্ড আপলোড হচ্ছে...');
       const nidUrl = await uploadToFirebaseStorage(nidImg, 'seller_nids');
 
-      setUploadStatus('ফায়ারস্টোরে তথ্য সেভ করা হচ্ছে...');
+      setUploadStatus('তথ্য সেভ করা হচ্ছে...');
       
-      // ডকুমেন্টের আইডি হিসেবে ইউজারের নিজস্ব UID ব্যবহার করা হলো (ডুপ্লিকেট এন্ট্রি এড়াতে)
       const sellerDocRef = doc(db, "pending_sellers", currentUser.uid);
 
-      // ২. ফায়ারস্টোর ডাটাবেসের 'pending_sellers' কালেকশনে ডাটা সেভ করা
       await setDoc(sellerDocRef, {
+        id: currentUser.uid,
         uid: currentUser.uid,
         ...formData,
         profileUrl,
@@ -109,7 +103,6 @@ export default function SellerRegistration() {
       setUploading(false);
       alert("🎉 আপনার রেজিস্ট্রেশন সফলভাবে সাবমিট হয়েছে! অ্যাডমিন অনুমোদন করার পর আপনি এক্সেস পাবেন।");
       
-      // ফর্ম রিসেট (জিমেইল ও নম্বর বাদে)
       setFormData(prev => ({
         ...prev,
         firstName: '',

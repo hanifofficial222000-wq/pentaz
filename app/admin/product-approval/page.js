@@ -83,9 +83,9 @@ export default function AdminPendingProductsPage() {
                   <img src={item.imageUrl} alt={item.title} className="w-24 h-24 object-cover rounded-lg border flex-shrink-0" />
                   <div className="space-y-1 text-xs">
                     <h3 className="font-bold text-slate-900 line-clamp-1">{item.title}</h3>
-                    <p className="text-red-600 font-extrabold">মূল্য: ৳ {item.price}</p>
+                    <p className="text-red-600 font-extrabold">মূল্য: {item.price}</p>
                     <p className="text-slate-600"><b>ক্যাটাগরি:</b> {item.category}</p>
-                    <p className="text-slate-600"><b>সেলার ফোন:</b> {item.sellerPhone}</p>
+                    <p className="text-slate-600"><b>সেলার ফোন:</b> {item.sellerPhone || 'N/A'}</p>
                     <p className="text-slate-500 line-clamp-2"><b>বিবরণ:</b> {item.description || 'N/A'}</p>
                   </div>
                 </div>

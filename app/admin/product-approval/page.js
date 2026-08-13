@@ -27,19 +27,18 @@ export default function AdminPendingProductsPage() {
     fetchPendingProducts();
   }, []);
 
-  // প্রোডাক্ট এপ্রুভ করার ফাংশন
   const handleApproveProduct = async (product) => {
     if (!confirm(`"${product.title}" প্রোডাক্টটি এপ্রুভ করে লাইভ করতে চান?`)) return;
 
     try {
-      // ১. মূল 'products' কালেকশনে সেভ করা
+      // মূল 'products' কালেকশনে লাইভ প্রোডাক্ট হিসেবে সেভ করা
       await setDoc(doc(db, "products", product.id), {
         ...product,
         approved: true,
         approvedAt: new Date()
       });
 
-      // ২. 'pending_products' থেকে রিমুভ করা
+      // 'pending_products' থেকে রিমুভ করা
       await deleteDoc(doc(db, "pending_products", product.id));
 
       alert("🎉 প্রোডাক্টটি সফলভাবে এপ্রুভ ও লাইভ করা হয়েছে!");
@@ -50,7 +49,6 @@ export default function AdminPendingProductsPage() {
     }
   };
 
-  // প্রোডাক্ট ডিলিট বা রিজেক্ট করার ফাংশন
   const handleDeleteProduct = async (id) => {
     if (!confirm("প্রোডাক্টটি কি ডিলিট করতে চান?")) return;
 
@@ -63,7 +61,7 @@ export default function AdminPendingProductsPage() {
     }
   };
 
-  if (loading) return <div className="text-center py-10 text-xs font-bold">লোড হচ্ছে...</div>;
+  if (loading) return <div className="text-center py-10 text-xs font-bold text-slate-500">লোড হচ্ছে...</div>;
 
   return (
     <div className="bg-slate-100 min-h-screen p-4 font-sans">
@@ -83,9 +81,9 @@ export default function AdminPendingProductsPage() {
                   <img src={item.imageUrl} alt={item.title} className="w-24 h-24 object-cover rounded-lg border flex-shrink-0" />
                   <div className="space-y-1 text-xs">
                     <h3 className="font-bold text-slate-900 line-clamp-1">{item.title}</h3>
-                    <p className="text-red-600 font-extrabold">মূল্য: {item.price}</p>
+                    <p className="text-red-600 font-extrabold">মূল্য: ৳{item.price}</p>
                     <p className="text-slate-600"><b>ক্যাটাগরি:</b> {item.category}</p>
-                    <p className="text-slate-600"><b>সেলার ফোন:</b> {item.sellerPhone || 'N/A'}</p>
+                    <p className="text-slate-600"><b>সেলার ফোন:</b> {item.sellerPhone || item.number || 'N/A'}</p>
                     <p className="text-slate-500 line-clamp-2"><b>বিবরণ:</b> {item.description || 'N/A'}</p>
                   </div>
                 </div>

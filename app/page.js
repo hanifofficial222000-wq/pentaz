@@ -51,11 +51,11 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
-// 🖼️ ক্যাটাগরি কার্ড কম্পোনেন্ট (একাধিক ছবি থাকলে অটো-প্লে হবে)
-function CategoryCardItem({ cat, isActive, onClick }) {
-  const images = cat.imageUrls && Array.isArray(cat.imageUrls) && cat.imageUrls.length > 0 
-    ? cat.imageUrls 
-    : [cat.imageUrl || 'https://via.placeholder.com/150'];
+// 🖼️ ক্যাটাগরি ও সাব-ক্যাটাগরি গোল সার্কেল কার্ড কম্পোনেন্ট (একাধিক ছবি থাকলে অটো-প্লে হবে)
+function CircularCategoryItem({ item, isActive, onClick }) {
+  const images = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0 
+    ? item.imageUrls 
+    : [item.imageUrl || item.img || 'https://via.placeholder.com/150'];
 
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
@@ -70,17 +70,17 @@ function CategoryCardItem({ cat, isActive, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center group cursor-pointer w-[66px] flex-shrink-0"
+      className="flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0"
     >
-      <div className={`w-[64px] h-[64px] rounded-full p-[2px] border-2 transition-all shadow-sm flex-shrink-0 relative overflow-hidden bg-gray-100 ${isActive ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
+      <div className={`w-[68px] h-[68px] rounded-full p-[2.5px] border-2 transition-all shadow-sm flex-shrink-0 relative overflow-hidden bg-white ${isActive ? 'border-[#e63946] scale-105 ring-2 ring-red-100' : 'border-gray-300'}`}>
         <img 
           src={images[currentImgIndex]} 
-          alt={cat.name} 
+          alt={item.name} 
           className="w-full h-full object-cover rounded-full transition-opacity duration-500" 
         />
       </div>
-      <span className="text-[10px] font-bold text-gray-800 mt-1 w-full truncate text-center">
-        {cat.name}
+      <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+        {item.name}
       </span>
     </button>
   );
@@ -101,7 +101,7 @@ function MainContent() {
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('');
   const [activeSubCategory, setActiveSubCategory] = useState('all');
   const [activeSubFilter, setActiveSubFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,7 +212,6 @@ function MainContent() {
         if (!mainCatSnap.empty) {
           const mList = mainCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setMainCategories(mList);
-          // ডিফল্টভাবে প্রথম মেইন ক্যাটাগরি সিলেক্ট করা যাতে পেজ লোড হওয়ার সাথেই সাব-ক্যাটাগরিগুলো দেখা যায়
           if (mList.length > 0) {
             setActiveCategory(mList[0].name);
           }
@@ -313,10 +312,10 @@ function MainContent() {
 
   const handleMainCategoryClick = (catName) => {
     setActiveCategory(catName);
-    setActiveSubCategory('all'); // মেইন ক্যাটাগরি পাল্টালে সাব-ক্যাটাগরি রিসেট হয়ে যাবে
+    setActiveSubCategory('all');
   };
 
-  // সাব-ক্যাটাগরি ফিল্টার করার লজিক (শুধু সিলেক্ট করা মেইন ক্যাটাগরির সাব-ক্যাটাগরিগুলো দেখাবে)
+  // নির্দিষ্ট মেইন ক্যাটাগরির আন্ডারে থাকা সাব-ক্যাটাগরিগুলো ফিল্টার করা
   const currentSubCategoriesList = subCategories.filter(
     sub => sub.mainCat?.toLowerCase().trim() === activeCategory.toLowerCase().trim()
   );
@@ -459,14 +458,14 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ১. মেইন ক্যাটাগরি: এক লাইনে গোল সার্কেল কার্ড (ALL বাটন বাদ দেওয়া হয়েছে) */}
+      {/* 🌟 ১. মেইন ক্যাটাগরি: এক লাইনে গোল সার্কেল কার্ড */}
       {mainCategories.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
             {mainCategories.map((cat) => (
-              <CategoryCardItem 
+              <CircularCategoryItem 
                 key={cat.id} 
-                cat={cat} 
+                item={cat} 
                 isActive={activeCategory.toLowerCase() === cat.name.toLowerCase()} 
                 onClick={() => handleMainCategoryClick(cat.name)} 
               />
@@ -506,23 +505,20 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ২. সাব-ক্যাটাগরি: বর্তমান সিলেক্ট করা মেইন ক্যাটাগরির আন্ডারে থাকা সাব-ক্যাটাগরিগুলো দুই লাইনে সাইড-স্ক্রোল গ্রিড আকারে শো করবে (All Sub Category বাটন বাদ) */}
+      {/* 🌟 ২. সাব-ক্যাটাগরি: এখন ২য় স্ক্রিনশটের মতো গোল সার্কেল কার্ড স্টাইলে (Horizontal Scroll) শো করবে */}
       {currentSubCategoriesList.length > 0 && (
-        <div className="max-w-xl mx-auto px-3 py-2 bg-white border-y border-gray-100">
-          <div className="text-[11px] font-bold text-gray-500 mb-1">{activeCategory} - Sub Categories:</div>
-          <div className="grid grid-flow-col grid-rows-2 gap-2 overflow-x-auto no-scrollbar py-1">
+        <div className="max-w-xl mx-auto px-3 py-3 bg-white border-y border-gray-100">
+          <div className="text-xs font-bold text-gray-500 mb-2">{activeCategory} - Sub Categories:</div>
+          <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
             {currentSubCategoriesList.map((sub) => {
               const isSubActive = activeSubCategory.toLowerCase() === sub.name.toLowerCase();
-              const subImg = sub.imageUrl || (sub.imageUrls && sub.imageUrls[0]) || 'https://via.placeholder.com/150';
               return (
-                <button
-                  key={sub.id}
-                  onClick={() => setActiveSubCategory(sub.name)}
-                  className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all flex-shrink-0 w-[130px] cursor-pointer ${isSubActive ? 'bg-red-50 border-red-500 text-red-600' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
-                >
-                  <img src={subImg} alt={sub.name} className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0" />
-                  <span className="text-[11px] font-bold truncate">{sub.name}</span>
-                </button>
+                <CircularCategoryItem 
+                  key={sub.id} 
+                  item={sub} 
+                  isActive={isSubActive} 
+                  onClick={() => setActiveSubCategory(sub.name)} 
+                />
               );
             })}
           </div>

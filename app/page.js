@@ -51,11 +51,18 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
-// 🖼️ ক্যাটাগরি ও সাব-ক্যাটাগরি গোল সার্কেল কার্ড কম্পোনেন্ট (একাধিক ছবি থাকলে অটো-প্লে হবে)
+// 🖼️ ক্যাটাগরি ও সাব-ক্যাটাগরি গোল সার্কেল কার্ড কম্পোনেন্ট
 function CircularCategoryItem({ item, isActive, onClick }) {
+  // অ্যাডমিন প্যানেলে যেভাবে ছবি/আইকন সেভ হয় (icon, imageUrl, imageUrls, image, img) তা হ্যান্ডেল করা হচ্ছে
   const images = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0 
     ? item.imageUrls 
-    : [item.imageUrl || item.img || 'https://via.placeholder.com/150'];
+    : [
+        item.icon || 
+        item.imageUrl || 
+        item.image || 
+        item.img || 
+        'https://via.placeholder.com/150?text=No+Image'
+      ];
 
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
@@ -77,6 +84,9 @@ function CircularCategoryItem({ item, isActive, onClick }) {
           src={images[currentImgIndex]} 
           alt={item.name} 
           className="w-full h-full object-cover rounded-full transition-opacity duration-500" 
+          onError={(e) => {
+            e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+          }}
         />
       </div>
       <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
@@ -100,9 +110,11 @@ function MainContent() {
   
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
+  const [childSubCategories, setChildSubCategories] = useState([]);
   
-  const [activeCategory, setActiveCategory] = useState('');
-  const [activeSubCategory, setActiveSubCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(''); // মেইন ক্যাটাগরির name বা slug
+  const [activeSubCategory, setActiveSubCategory] = useState('all'); // সাব-ক্যাটাগরির slug বা name
+  const [activeChildSubCategory, setActiveChildSubCategory] = useState('all'); // চাইল্ড সাব-ক্যাটাগরি
   const [activeSubFilter, setActiveSubFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -114,7 +126,6 @@ function MainContent() {
   const [currentTopAdIndex, setCurrentTopAdIndex] = useState(0);
   const [isTopAdTransitioning, setIsTopAdTransitioning] = useState(true);
 
-  // ফুল-পেজ পপআপ অ্যাড স্টেট
   const [showFullPopupModal, setShowFullPopupModal] = useState(false);
   const [activePopupAd, setActivePopupAd] = useState(null);
 
@@ -213,13 +224,18 @@ function MainContent() {
           const mList = mainCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setMainCategories(mList);
           if (mList.length > 0) {
-            setActiveCategory(mList[0].name);
+            setActiveCategory(mList[0].slug || mList[0].name);
           }
         }
 
         const subCatSnap = await getDocs(collection(db, 'subCategories'));
         if (!subCatSnap.empty) {
           setSubCategories(subCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
+
+        const childCatSnap = await getDocs(collection(db, 'childSubCategories'));
+        if (!childCatSnap.empty) {
+          setChildSubCategories(childCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         }
 
         const bannerSnap = await getDocs(collection(db, 'banners'));
@@ -310,31 +326,49 @@ function MainContent() {
     return () => clearInterval(topAdInterval);
   }, [topThinAds]);
 
-  const handleMainCategoryClick = (catName) => {
-    setActiveCategory(catName);
+  const handleMainCategoryClick = (catSlugOrName) => {
+    setActiveCategory(catSlugOrName);
     setActiveSubCategory('all');
+    setActiveChildSubCategory('all');
   };
 
-  // নির্দিষ্ট মেইন ক্যাটাগরির আন্ডারে থাকা সাব-ক্যাটাগরিগুলো ফিল্টার করা
-  const currentSubCategoriesList = subCategories.filter(
-    sub => sub.mainCat?.toLowerCase().trim() === activeCategory.toLowerCase().trim()
-  );
+  const handleSubCategoryClick = (subSlugOrName) => {
+    setActiveSubCategory(subSlugOrName);
+    setActiveChildSubCategory('all');
+  };
+
+  // বর্তমান মেইন ক্যাটাগরির আন্ডারে থাকা সাব-ক্যাটাগরিগুলো ফিল্টার করা
+  const currentSubCategoriesList = subCategories.filter(sub => {
+    const pSlug = (sub.mainCategorySlug || sub.mainCat || '').toLowerCase().trim();
+    return pSlug === activeCategory.toLowerCase().trim();
+  });
+
+  // বর্তমান সাব-ক্যাটাগরির আন্ডারে থাকা চাইল্ড সাব-ক্যাটাগরিগুলো ফিল্টার করা
+  const currentChildSubCategoriesList = childSubCategories.filter(child => {
+    const cSubSlug = (child.subCategorySlug || '').toLowerCase().trim();
+    return cSubSlug === activeSubCategory.toLowerCase().trim();
+  });
 
   useEffect(() => {
     let result = products.filter(p => p.approved !== false);
 
-    if (activeCategory === 'special-offers' || activeCategory === 'flash-sale') {
-      result = result.filter(p => p.isSpecialOffer || p.isFlashSale || p.category?.toLowerCase() === 'special-offers');
-    } else if (activeCategory && activeCategory !== 'all') {
+    if (activeCategory && activeCategory !== 'all') {
       result = result.filter(p => {
-        const pMain = (p.mainCategory || p.category || '').toLowerCase().trim();
+        const pMain = (p.mainCategory || p.mainCategorySlug || p.category || '').toLowerCase().trim();
         return pMain === activeCategory.toLowerCase().trim();
       });
 
       if (activeSubCategory && activeSubCategory !== 'all') {
         result = result.filter(p => {
-          const pSub = (p.subCategory || p.subcat || p.category || '').toLowerCase().trim();
+          const pSub = (p.subCategory || p.subCategorySlug || p.subcat || '').toLowerCase().trim();
           return pSub === activeSubCategory.toLowerCase().trim();
+        });
+      }
+
+      if (activeChildSubCategory && activeChildSubCategory !== 'all') {
+        result = result.filter(p => {
+          const pChild = (p.childSubCategory || p.childSubCategorySlug || '').toLowerCase().trim();
+          return pChild === activeChildSubCategory.toLowerCase().trim();
         });
       }
     }
@@ -356,14 +390,12 @@ function MainContent() {
           p.title?.toLowerCase().includes(queryStr) ||
           p.id?.toLowerCase().includes(queryStr) ||
           p.productPin?.toLowerCase().includes(queryStr) ||
-          p.category?.toLowerCase().includes(queryStr) ||
-          p.mainCategory?.toLowerCase().includes(queryStr) ||
-          p.subCategory?.toLowerCase().includes(queryStr)
+          p.category?.toLowerCase().includes(queryStr)
       );
     }
 
     setFilteredProducts(result);
-  }, [activeCategory, activeSubCategory, activeSubFilter, searchQuery, products]);
+  }, [activeCategory, activeSubCategory, activeChildSubCategory, activeSubFilter, searchQuery, products]);
 
   const toggleFavorite = (e, productId) => {
     e.stopPropagation();
@@ -381,7 +413,6 @@ function MainContent() {
   return (
     <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800 relative">
       
-      {/* ফুল ডিসপ্লে পপআপ অ্যাড মডাল */}
       {showFullPopupModal && activePopupAd && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl p-4 text-center">
@@ -458,18 +489,22 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ১. মেইন ক্যাটাগরি: এক লাইনে গোল সার্কেল কার্ড */}
+      {/* 🌟 ১. মেইন ক্যাটাগরি তালিকা */}
       {mainCategories.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
-            {mainCategories.map((cat) => (
-              <CircularCategoryItem 
-                key={cat.id} 
-                item={cat} 
-                isActive={activeCategory.toLowerCase() === cat.name.toLowerCase()} 
-                onClick={() => handleMainCategoryClick(cat.name)} 
-              />
-            ))}
+            {mainCategories.map((cat) => {
+              const catKey = cat.slug || cat.name;
+              const isActive = activeCategory.toLowerCase() === catKey.toLowerCase();
+              return (
+                <CircularCategoryItem 
+                  key={cat.id} 
+                  item={cat} 
+                  isActive={isActive} 
+                  onClick={() => handleMainCategoryClick(catKey)} 
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -505,19 +540,30 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ২. সাব-ক্যাটাগরি: এখন ২য় স্ক্রিনশটের মতো গোল সার্কেল কার্ড স্টাইলে (Horizontal Scroll) শো করবে */}
+      {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা */}
       {currentSubCategoriesList.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-y border-gray-100">
-          <div className="text-xs font-bold text-gray-500 mb-2">{activeCategory} - Sub Categories:</div>
+          <div className="text-xs font-bold text-gray-500 mb-2">Sub Categories:</div>
           <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
+            <button
+              onClick={() => handleSubCategoryClick('all')}
+              className={`flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0`}
+            >
+              <div className={`w-[68px] h-[68px] rounded-full p-[2.5px] border-2 flex items-center justify-center bg-gray-100 font-bold text-xs ${activeSubCategory === 'all' ? 'border-[#e63946] text-[#e63946]' : 'border-gray-300 text-gray-600'}`}>
+                All
+              </div>
+              <span className="text-[11px] font-bold text-gray-800 mt-1">সব</span>
+            </button>
+
             {currentSubCategoriesList.map((sub) => {
-              const isSubActive = activeSubCategory.toLowerCase() === sub.name.toLowerCase();
+              const subKey = sub.slug || sub.name;
+              const isSubActive = activeSubCategory.toLowerCase() === subKey.toLowerCase();
               return (
                 <CircularCategoryItem 
                   key={sub.id} 
                   item={sub} 
                   isActive={isSubActive} 
-                  onClick={() => setActiveSubCategory(sub.name)} 
+                  onClick={() => handleSubCategoryClick(subKey)} 
                 />
               );
             })}
@@ -525,7 +571,29 @@ function MainContent() {
         </div>
       )}
 
-      {/* ফিল্টার সেকশন (All Product, Flash Sell ইত্যাদি) */}
+      {/* 🌟 ৩. চাইল্ড সাব-ক্যাটাগরি তালিকা (যদি সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি থাকে) */}
+      {currentChildSubCategoriesList.length > 0 && (
+        <div className="max-w-xl mx-auto px-3 py-2 bg-slate-50 border-b border-gray-100">
+          <div className="text-[11px] font-bold text-gray-500 mb-1">More Options:</div>
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
+            {currentChildSubCategoriesList.map((child) => {
+              const childKey = child.slug || child.name;
+              const isChildActive = activeChildSubCategory.toLowerCase() === childKey.toLowerCase();
+              return (
+                <button
+                  key={child.id}
+                  onClick={() => setActiveChildSubCategory(childKey)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${isChildActive ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-200'}`}
+                >
+                  {child.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ফিল্টার সেকশন */}
       <div className="p-3 max-w-xl mx-auto">
         <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
           {[

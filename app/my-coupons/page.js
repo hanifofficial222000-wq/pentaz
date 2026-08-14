@@ -25,7 +25,8 @@ export default function MyCouponsPage() {
 
           snap.forEach(docSnap => {
             const data = docSnap.data();
-            // মেয়াদ ঠিক থাকলে লিস্টে যোগ করা
+            
+            // মেয়াদ যাচাই: expireDate থাকলে আজকের তারিখের সাথে তুলনা করা
             if (!data.expireDate || new Date(data.expireDate) >= now) {
               list.push({ id: docSnap.id, ...data });
             }
@@ -109,10 +110,10 @@ export default function MyCouponsPage() {
             filteredCoupons.map((item) => (
               <div 
                 key={item.id}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative transition hover:border-red-200 hover:shadow-md"
+                className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative transition hover:border-[#d9363e] hover:shadow-md"
               >
                 {/* Top Badge Section */}
-                <div className="bg-gradient-to-r from-red-500 to-rose-600 px-4 py-3 text-white flex justify-between items-center">
+                <div className="bg-gradient-to-r from-[#d9363e] to-rose-600 px-4 py-3 text-white flex justify-between items-center">
                   <span className="text-[10px] bg-black/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
                     {item.type || 'ডিসকাউন্ট অফার'}
                   </span>

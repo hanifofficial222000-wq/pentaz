@@ -8,13 +8,18 @@ export default function CategoryManagement() {
   const cloudName = "b3gsgcpl";
   const uploadPreset = "tho4ycz8";
 
+  // State for Main Category
   const [mainCatName, setMainCatName] = useState('');
   const [mainCatImageFiles, setMainCatImageFiles] = useState([]);
   const [mainCatImagePreviews, setMainCatImagePreviews] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const [parentMainCatSelect, setParentMainCatSelect] = useState('');
+  // State for Sub Category
+  const [parentMainCatSlug, setParentMainCatSlug] = useState('');
   const [subCatName, setSubCatName] = useState('');
+  const [subCatImageFiles, setSubCatImageFiles] = useState([]);
+  const [subCatImagePreviews, setSubCatImagePreviews] = useState([]);
+  const [uploadingSubImage, setUploadingSubImage] = useState(false);
   
   const [allMainCategories, setAllMainCategories] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
@@ -27,13 +32,30 @@ export default function CategoryManagement() {
     setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
   };
 
-  const handleImageChange = (e) => {
+  // Slug generator helper function
+  const createSlug = (text) => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const handleMainImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
     setMainCatImageFiles(files);
     const previews = files.map(file => URL.createObjectURL(file));
     setMainCatImagePreviews(previews);
+  };
+
+  const handleSubImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setSubCatImageFiles(files);
+    const previews = files.map(file => URL.createObjectURL(file));
+    setSubCatImagePreviews(previews);
   };
 
   const loadAllCategoriesData = async () => {
@@ -72,6 +94,7 @@ export default function CategoryManagement() {
   const handleMainCategorySubmit = async (e) => {
     e.preventDefault();
     const name = mainCatName.trim();
+    const slug = createSlug(name);
     
     if (!name) {
       alert("দয়া করে মেইন ক্যাটাগরির নাম দিন!");
@@ -90,6 +113,8 @@ export default function CategoryManagement() {
 
       await addDoc(collection(db, "mainCategories"), { 
         name, 
+        slug,
+        icon: imageUrls[0], // HomeCategories কম্পোনেন্টের জন্য icon হিসেবে সেভ হবে
         imageUrl: imageUrls[0], 
         imageUrls, 
         createdAt: serverTimestamp() 
@@ -114,19 +139,49 @@ export default function CategoryManagement() {
 
   const handleSubCategorySubmit = async (e) => {
     e.preventDefault();
-    const mainCat = parentMainCatSelect;
+    const mainCategorySlug = parentMainCatSlug;
     const name = subCatName.trim();
-    if (!mainCat || !name) return;
+    const slug = createSlug(name);
+
+    if (!mainCategorySlug || !name) {
+      alert("দয়া করে মেইন ক্যাটাগরি এবং সাব-ক্যাটাগরির নাম দিন!");
+      return;
+    }
+    if (subCatImageFiles.length === 0) {
+      alert("দয়া করে সাব-ক্যাটাগরির একটি ছবি/আইকন সিলেক্ট করুন!");
+      return;
+    }
+
+    setUploadingSubImage(true);
 
     try {
-      await addDoc(collection(db, "subCategories"), { mainCat, name, createdAt: serverTimestamp() });
+      // সাব-ক্যাটাগরির ছবি ক্লাউডিনারি তে আপলোড
+      const iconUrl = await uploadToCloudinary(subCatImageFiles[0]);
+
+      await addDoc(collection(db, "subCategories"), { 
+        mainCategorySlug, 
+        mainCat: mainCategorySlug, // ব্যাকওয়ার্ড কম্প্যাটিবিলিটির জন্য
+        name, 
+        slug,
+        icon: iconUrl, // সাব-ক্যাটাগরি আইকন
+        createdAt: serverTimestamp() 
+      });
+
       showAlert("🎉 সাব-ক্যাটাগরি সফলভাবে সেভ হয়েছে!");
-      setParentMainCatSelect('');
+      setParentMainCatSlug('');
       setSubCatName('');
+      setSubCatImageFiles([]);
+      setSubCatImagePreviews([]);
+
+      const subFileInput = document.getElementById('subCatImageInput');
+      if (subFileInput) subFileInput.value = '';
+
       await loadAllCategoriesData();
     } catch (err) {
       console.error(err);
-      alert("⚠️ সেভ করতে সমস্যা হয়েছে!");
+      alert("⚠️ সাব-ক্যাটাগরি সেভ করতে সমস্যা হয়েছে!");
+    } finally {
+      setUploadingSubImage(false);
     }
   };
 
@@ -164,9 +219,10 @@ export default function CategoryManagement() {
           </div>
         )}
 
+        {/* ১. মেইন ক্যাটাগরি ফর্ম */}
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-            📁 ১. মেইন ক্যাটাগরি যোগ করুন (একাধিক ছবি সহ)
+            📁 ১. মেইন ক্যাটাগরি যোগ করুন (আইকন/ছবিসহ)
           </h3>
           <form onSubmit={handleMainCategorySubmit} className="space-y-4">
             <div>
@@ -175,7 +231,7 @@ export default function CategoryManagement() {
                 type="text" 
                 value={mainCatName}
                 onChange={(e) => setMainCatName(e.target.value)}
-                placeholder="যেমন: Women" 
+                placeholder="যেমন: Sports" 
                 required 
                 className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-xs text-black"
               />
@@ -185,7 +241,7 @@ export default function CategoryManagement() {
               <input 
                 id="mainCatImageInput"
                 type="file" 
-                onChange={handleImageChange} 
+                onChange={handleMainImageChange} 
                 accept="image/*"
                 multiple
                 className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
@@ -221,13 +277,11 @@ export default function CategoryManagement() {
                 <span className="text-xs text-slate-400">কোনো মেইন ক্যাটাগরি নেই</span>
               ) : (
                 allMainCategories.map((cat) => {
-                  const displayImg = (cat.imageUrls && cat.imageUrls[0]) || cat.imageUrl;
-                  const totalImgs = cat.imageUrls ? cat.imageUrls.length : (cat.imageUrl ? 1 : 0);
-
+                  const displayImg = cat.icon || (cat.imageUrls && cat.imageUrls[0]) || cat.imageUrl;
                   return (
                     <span key={cat.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm">
                       {displayImg && <img src={displayImg} alt="" className="w-5 h-5 rounded-full object-cover" />}
-                      📁 {cat.name} <span className="text-[10px] text-gray-400">({totalImgs} img)</span>
+                      📁 {cat.name} <span className="text-[10px] text-gray-400">({cat.slug})</span>
                       <button type="button" onClick={() => deleteMainCat(cat.id, cat.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
                     </span>
                   );
@@ -237,23 +291,24 @@ export default function CategoryManagement() {
           </div>
         </div>
 
+        {/* ২. সাব-ক্যাটাগরি ফর্ম */}
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-            📂 ২. সাব-ক্যাটাগরি যোগ করুন
+            📂 ২. সাব-ক্যাটাগরি যোগ করুন (আইকনসহ)
           </h3>
           <form onSubmit={handleSubCategorySubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">মেইন ক্যাটাগরি সিলেক্ট করুন</label>
                 <select 
-                  value={parentMainCatSelect}
-                  onChange={(e) => setParentMainCatSelect(e.target.value)}
+                  value={parentMainCatSlug}
+                  onChange={(e) => setParentMainCatSlug(e.target.value)}
                   required 
                   className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-xs text-black"
                 >
                   <option value="" disabled>মেইন ক্যাটাগরি বেছে নিন</option>
                   {allMainCategories.map((cat) => (
-                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    <option key={cat.id} value={cat.slug}>{cat.name}</option>
                   ))}
                 </select>
               </div>
@@ -269,9 +324,34 @@ export default function CategoryManagement() {
                 />
               </div>
             </div>
-            <button type="submit" 
-                    className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 rounded-lg transition duration-200 cursor-pointer text-xs">
-              ➕ সাব-ক্যাটাগরি সেভ করুন
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">সাব-ক্যাটাগরির ছবি/আইকন</label>
+              <input 
+                id="subCatImageInput"
+                type="file" 
+                onChange={handleSubImageChange} 
+                accept="image/*"
+                required
+                className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
+              />
+              {subCatImagePreviews.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2">
+                    {subCatImagePreviews.map((src, idx) => (
+                      <img key={idx} src={src} alt="Sub Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500 shadow-sm" />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={uploadingSubImage}
+              className={`w-full text-white font-semibold py-2.5 rounded-lg transition duration-200 text-xs ${uploadingSubImage ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'}`}
+            >
+              {uploadingSubImage ? 'ছবি আপলোড ও সেভ হচ্ছে...' : '➕ সাব-ক্যাটাগরি সেভ করুন'}
             </button>
           </form>
 
@@ -284,8 +364,9 @@ export default function CategoryManagement() {
                 <span className="text-xs text-slate-400">কোনো সাব-ক্যাটাগরি নেই</span>
               ) : (
                 allSubCategories.map((sub) => (
-                  <span key={sub.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-md border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm">
-                    📂 [{sub.mainCat}] → {sub.name}
+                  <span key={sub.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm">
+                    {sub.icon && <img src={sub.icon} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                    📂 [{sub.mainCategorySlug || sub.mainCat}] → {sub.name}
                     <button type="button" onClick={() => deleteSubCat(sub.id, sub.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
                   </span>
                 ))

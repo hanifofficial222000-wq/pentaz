@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server';
-// নোড জেএস এনভায়রনমেন্টে ফায়ারবেস Admin SDK ব্যবহার করতে হয়
-import admin from 'firebase-admin';
-
-// ফায়ারবেস অ্যাডমিন একবার ইনিশিয়ালাইজ করা আছে কি না চেক করা
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
 
 export async function POST(req) {
   try {
+    // বিল্ড ক্র্যাশ এড়াতে ফায়ারবেস অ্যাডমিন ডাইনামিকালি লোড করা হলো
+    const admin = (await import('firebase-admin')).default;
+
+    // যদি আগে থেকে ইনিশিয়ালাইজ করা না থাকে, তবে ইনিশিয়ালাইজ করুন
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }),
+      });
+    }
+
     const { tokens, title, body, imageUrl } = await req.json();
 
     if (!tokens || tokens.length === 0) {

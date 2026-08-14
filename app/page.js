@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot, doc, query, orderBy } from 'firebase/firestore';
 import NewFeatureSection from '@/components/NewFeatureSection';
-import HomeCategories from '@/components/HomeCategories'; // 👉 নতুন মাল্টি-লেভেল ক্যাটাগরি কম্পোনেন্ট ইমপোর্ট করা হলো
+import HomeCategories from '@/components/HomeCategories'; // 👉 নতুন মাল্টি-লেভেল ক্যাটাগরি কম্পোনেন্ট (যা মেইন ও সাব ক্যাটাগরি হ্যান্ডেল করে)
 
 // ⏱️ ক্লিন ও কম্প্যাক্ট রিয়েল-টাইম কাউন্টডাউন টাইমার
 function FlashSaleTimer({ endsAt }) {
@@ -442,6 +442,10 @@ function MainContent() {
         </div>
       )}
 
+      {/* 👉 ১. মেইন ক্যাটাগরি কম্পোনেন্টটি এখন টপ পাতলা ব্যানারের একেবারে উপরে সেট করা হলো */}
+      <HomeCategories />
+
+      {/* 👉 ২. টপ পাতলা ব্যানার (Top Thin Ad) */}
       {topThinAds.length > 0 && (
         <div className="w-full bg-black overflow-hidden relative z-40">
           <div 
@@ -458,9 +462,6 @@ function MainContent() {
           </div>
         </div>
       )}
-
-      {/* 🌟 নতুন ট্রেন্ডওল স্টাইল ডাইনামিক ক্যাটাগরি কম্পোনেন্ট এখানে বসানো হলো */}
-      <HomeCategories />
 
       {promoBanners.length > 0 && (
         <div className="p-3 max-w-xl mx-auto">

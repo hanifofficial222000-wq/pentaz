@@ -42,8 +42,11 @@ export default function ProductOfferManagement() {
       const filtered = allProductsList.filter(item => {
         let title = item.title ? item.title.toLowerCase() : '';
         let id = item.id.toLowerCase();
+        let mainCat = item.mainCategorySlug || item.mainCategory || '';
+        let subCat = item.subCategorySlug || item.subCategory || '';
         let productPin = item.productPin ? item.productPin.toLowerCase() : item.id.slice(0, 6).toLowerCase();
-        return title.includes(query) || id.includes(query) || productPin.includes(query);
+        
+        return title.includes(query) || id.includes(query) || productPin.includes(query) || mainCat.toLowerCase().includes(query) || subCat.toLowerCase().includes(query);
       });
       setFilteredProducts(filtered);
     }
@@ -115,7 +118,7 @@ export default function ProductOfferManagement() {
         
         {/* Header */}
         <div className="bg-white p-5 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.05)] mb-5 text-center">
-          <h2 className="text-[#e63946] text-xl font-bold mb-1">🏷️ প্রোডাক্ট অফার ও ম্যানেজমেন্ট</h2>
+          <h2 className="text-[#e63946] text-xl font-bold mb-1">🏷️ প্রোডাক্ট অফার ও ম্যানেজমেন্ট (নতুন ক্যাটাগরি সিস্টেম)</h2>
           <p className="text-[13px] text-[#64748b]">এখান থেকে যেকোনো প্রোডাক্টের ছাড় সেট করতে পারবেন অথবা সম্পূর্ণ প্রোডাক্ট ডিলিট করতে পারবেন।</p>
         </div>
 
@@ -125,7 +128,7 @@ export default function ProductOfferManagement() {
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="🔍 প্রোডাক্টের নাম বা আইডি দিয়ে খুঁজুন..." 
+            placeholder="🔍 প্রোডাক্টের নাম, আইডি বা ক্যাটাগরি দিয়ে খুঁজুন..." 
             className="w-full py-3 px-4 border border-[#cbd5e1] rounded-[10px] text-[14px] outline-none bg-white text-black"
           />
         </div>
@@ -141,6 +144,10 @@ export default function ProductOfferManagement() {
               let imgUrl = (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : (item.imageUrl || 'https://via.placeholder.com/100');
               let currentDiscount = item.discount !== undefined ? item.discount : '';
               let productPin = item.productPin || item.id.slice(0, 6).toUpperCase();
+              
+              let mainCat = item.mainCategorySlug || item.mainCategory || 'N/A';
+              let subCat = item.subCategorySlug || item.subCategory || 'N/A';
+              let childCat = item.childSubCategorySlug || item.childSubCategory || '';
 
               return (
                 <div key={item.id} className="bg-white rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center gap-4 border border-slate-100">
@@ -149,6 +156,7 @@ export default function ProductOfferManagement() {
                   <div className="flex-grow">
                     <h4 className="text-[14px] font-bold text-[#0f172a] mb-1 line-clamp-1">{item.title}</h4>
                     <p className="text-[12px] text-[#475569] mb-0.5">আইডি: <b className="text-black">{productPin}</b></p>
+                    <p className="text-[12px] text-[#475569] mb-0.5">ক্যাটাগরি: <span className="text-slate-800 font-semibold">{mainCat} &gt; {subCat} {childCat ? `> ${childCat}` : ''}</span></p>
                     <p className="text-[12px] text-[#475569] mb-1">মূল্য: <span className="text-[#e63946] font-bold">SAR {item.price}</span></p>
                     
                     <div className="flex gap-2 items-center mt-2 flex-wrap">

@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function ProductManagement() {
+  const cloudName = "b3gsgcpl";
+  const uploadPreset = "tho4ycz8";
+
   const [allMainCategories, setAllMainCategories] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
   const [allChildSubCategories, setAllChildSubCategories] = useState([]);
@@ -128,16 +130,18 @@ export default function ProductManagement() {
     setColors(updated);
   };
 
-  const uploadToFirebaseStorage = async (file, folderName) => {
-    try {
-      const fileRef = ref(storage, `${folderName}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(fileRef, file);
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-      return downloadUrl;
-    } catch (error) {
-      console.error("Storage upload error:", error);
-      throw new Error(`ছবি আপলোড ব্যর্থ হয়েছে: ${error.message}`);
-    }
+  // Cloudinary Upload Helper (Category management এর আদলে তৈরি)
+  const uploadToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("Image Upload Failed");
+    return data.secure_url;
   };
 
   const handleProductSubmit = async (e) => {
@@ -151,17 +155,14 @@ export default function ProductManagement() {
 
     try {
       setUploadProgress("প্রোডাক্টের ছবি আপলোড হচ্ছে...");
-      let imageUrls = [];
-      for (let file of productImageFiles) {
-        const url = await uploadToFirebaseStorage(file, 'product_images');
-        imageUrls.push(url);
-      }
+      const imageUploadPromises = productImageFiles.map(file => uploadToCloudinary(file));
+      const imageUrls = await Promise.all(imageUploadPromises);
 
       let colorVariants = [];
       if (colors.length > 0) {
         setUploadProgress("কালার ভ্যারিয়েন্ট ছবি আপলোড হচ্ছে...");
         for (let col of colors) {
-          const colUrl = await uploadToFirebaseStorage(col.file, 'color_variant_images');
+          const colUrl = await uploadToCloudinary(col.file);
           colorVariants.push({ name: col.name, imageUrl: colUrl });
         }
       }
@@ -245,7 +246,7 @@ export default function ProductManagement() {
 
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            🛍️ নতুন প্রোডাক্ট যোগ করুন (নতুন ক্যাটাগরি সিস্টেম)
+            🛍️ নতুন প্রোডাক্ট যোগ করুন (Cloudinary সিস্টেম)
           </h3>
 
           <form onSubmit={handleProductSubmit} className="space-y-5">

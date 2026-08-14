@@ -114,17 +114,22 @@ export default function OrdersManagement() {
                         <img src={productImg} className="w-12 h-12 rounded-lg object-cover border" alt="Product" />
                         <div>
                           <h4 className="font-bold text-xs text-slate-800">{order.productTitle || 'Product'}</h4>
-                          <p className="text-[11px] text-red-600 font-bold">দাম: SAR {order.productPrice} {order.size && order.size !== 'N/A' ? `| সাইজ: ${order.size}` : ''}</p>
+                          <p className="text-[11px] text-red-600 font-bold">
+                            দাম: SAR {order.productPrice} 
+                            {order.size && order.size !== 'N/A' ? ` | সাইজ: ${order.size}` : ''}
+                            {order.selectedColor ? ` | কালার: ${order.selectedColor}` : ''}
+                          </p>
                         </div>
                       </div>
                       <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold ${statusBg}`}>{order.status || 'Pending'}</span>
                     </div>
 
                     <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-lg border">
-                      <p>📌 <b>প্রোডাক্ট পিন/আইডি:</b> <span className="text-blue-600 font-bold">#{productPin}</span></p>
+                      <p>📌 <b>প্রোডাক্ট আইডি:</b> <span className="text-blue-600 font-bold">#{productPin}</span></p>
                       <p>👤 <b>নাম:</b> {order.customerName}</p>
                       <p>📞 <b>ফোন:</b> <a href={`https://wa.me/${order.customerPhone}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold">{order.customerPhone}</a></p>
                       <p>🏠 <b>ঠিকানা:</b> {order.customerAddress}</p>
+                      {order.note && <p>💬 <b>নোট:</b> {order.note}</p>}
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">

@@ -20,9 +20,18 @@ export default function CategoryManagement() {
   const [subCatImageFiles, setSubCatImageFiles] = useState([]);
   const [subCatImagePreviews, setSubCatImagePreviews] = useState([]);
   const [uploadingSubImage, setUploadingSubImage] = useState(false);
+
+  // State for Child Sub Category (সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি)
+  const [selectedMainCatForChild, setSelectedMainCatForChild] = useState('');
+  const [selectedSubCatForChild, setSelectedSubCatForChild] = useState('');
+  const [childSubCatName, setChildSubCatName] = useState('');
+  const [childSubImageFiles, setChildSubImageFiles] = useState([]);
+  const [childSubImagePreviews, setChildSubImagePreviews] = useState([]);
+  const [uploadingChildImage, setUploadingChildImage] = useState(false);
   
   const [allMainCategories, setAllMainCategories] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
+  const [allChildSubCategories, setAllChildSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [alert, setAlert] = useState({ show: false, msg: '' });
@@ -32,7 +41,6 @@ export default function CategoryManagement() {
     setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
   };
 
-  // Slug generator helper function
   const createSlug = (text) => {
     return text
       .toLowerCase()
@@ -46,27 +54,33 @@ export default function CategoryManagement() {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     setMainCatImageFiles(files);
-    const previews = files.map(file => URL.createObjectURL(file));
-    setMainCatImagePreviews(previews);
+    setMainCatImagePreviews(files.map(file => URL.createObjectURL(file)));
   };
 
   const handleSubImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     setSubCatImageFiles(files);
-    const previews = files.map(file => URL.createObjectURL(file));
-    setSubCatImagePreviews(previews);
+    setSubCatImagePreviews(files.map(file => URL.createObjectURL(file)));
+  };
+
+  const handleChildSubImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setChildSubImageFiles(files);
+    setChildSubImagePreviews(files.map(file => URL.createObjectURL(file)));
   };
 
   const loadAllCategoriesData = async () => {
     try {
       const mainSnap = await getDocs(collection(db, "mainCategories"));
-      const mainList = mainSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setAllMainCategories(mainList);
+      setAllMainCategories(mainSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
       const subSnap = await getDocs(collection(db, "subCategories"));
-      const subList = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setAllSubCategories(subList);
+      setAllSubCategories(subSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      const childSnap = await getDocs(collection(db, "childSubCategories"));
+      setAllChildSubCategories(childSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       console.error("Error loading categories:", err);
     } finally {
@@ -91,22 +105,18 @@ export default function CategoryManagement() {
     return data.secure_url;
   };
 
+  // ১. মেইন ক্যাটাগরি সাবমিট
   const handleMainCategorySubmit = async (e) => {
     e.preventDefault();
     const name = mainCatName.trim();
     const slug = createSlug(name);
     
-    if (!name) {
-      alert("দয়া করে মেইন ক্যাটাগরির নাম দিন!");
-      return;
-    }
-    if (mainCatImageFiles.length === 0) {
-      alert("দয়া করে ক্যাটাগরির অন্তত একটি ছবি সিলেক্ট করুন!");
+    if (!name || mainCatImageFiles.length === 0) {
+      alert("দয়া করে নাম এবং ছবি দিন!");
       return;
     }
 
     setUploadingImage(true);
-
     try {
       const uploadPromises = mainCatImageFiles.map(file => uploadToCloudinary(file));
       const imageUrls = await Promise.all(uploadPromises);
@@ -114,7 +124,7 @@ export default function CategoryManagement() {
       await addDoc(collection(db, "mainCategories"), { 
         name, 
         slug,
-        icon: imageUrls[0], // HomeCategories কম্পোনেন্টের জন্য icon হিসেবে সেভ হবে
+        icon: imageUrls[0],
         imageUrl: imageUrls[0], 
         imageUrls, 
         createdAt: serverTimestamp() 
@@ -124,46 +134,38 @@ export default function CategoryManagement() {
       setMainCatName('');
       setMainCatImageFiles([]);
       setMainCatImagePreviews([]);
-      
-      const fileInput = document.getElementById('mainCatImageInput');
-      if (fileInput) fileInput.value = '';
-      
+      document.getElementById('mainCatImageInput').value = '';
       await loadAllCategoriesData();
     } catch (err) {
-      console.error("Save error:", err);
-      alert("⚠️ ছবি আপলোড বা ডেটাবেজে সেভ করতে সমস্যা হয়েছে!");
+      console.error(err);
+      alert("⚠️ মেইন ক্যাটাগরি সেভ করতে সমস্যা হয়েছে!");
     } finally {
       setUploadingImage(false);
     }
   };
 
+  // ২. সাব-ক্যাটাগরি সাবমিট
   const handleSubCategorySubmit = async (e) => {
     e.preventDefault();
     const mainCategorySlug = parentMainCatSlug;
     const name = subCatName.trim();
     const slug = createSlug(name);
 
-    if (!mainCategorySlug || !name) {
-      alert("দয়া করে মেইন ক্যাটাগরি এবং সাব-ক্যাটাগরির নাম দিন!");
-      return;
-    }
-    if (subCatImageFiles.length === 0) {
-      alert("দয়া করে সাব-ক্যাটাগরির একটি ছবি/আইকন সিলেক্ট করুন!");
+    if (!mainCategorySlug || !name || subCatImageFiles.length === 0) {
+      alert("দয়া করে সব ফিল্ড পূরণ করুন!");
       return;
     }
 
     setUploadingSubImage(true);
-
     try {
-      // সাব-ক্যাটাগরির ছবি ক্লাউডিনারি তে আপলোড
       const iconUrl = await uploadToCloudinary(subCatImageFiles[0]);
 
       await addDoc(collection(db, "subCategories"), { 
         mainCategorySlug, 
-        mainCat: mainCategorySlug, // ব্যাকওয়ার্ড কম্প্যাটিবিলিটির জন্য
+        mainCat: mainCategorySlug, 
         name, 
         slug,
-        icon: iconUrl, // সাব-ক্যাটাগরি আইকন
+        icon: iconUrl, 
         createdAt: serverTimestamp() 
       });
 
@@ -172,10 +174,7 @@ export default function CategoryManagement() {
       setSubCatName('');
       setSubCatImageFiles([]);
       setSubCatImagePreviews([]);
-
-      const subFileInput = document.getElementById('subCatImageInput');
-      if (subFileInput) subFileInput.value = '';
-
+      document.getElementById('subCatImageInput').value = '';
       await loadAllCategoriesData();
     } catch (err) {
       console.error(err);
@@ -185,11 +184,51 @@ export default function CategoryManagement() {
     }
   };
 
-  const deleteMainCat = async (id, name) => {
-    if (confirm(`মেইন ক্যাটাগরি '${name}' ডিলিট করতে চান?`)) {
+  // ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি (Child Sub-Category) সাবমিট
+  const handleChildSubCategorySubmit = async (e) => {
+    e.preventDefault();
+    const name = childSubCatName.trim();
+    const slug = createSlug(name);
+
+    if (!selectedMainCatForChild || !selectedSubCatForChild || !name || childSubImageFiles.length === 0) {
+      alert("দয়া করে মেইন ক্যাটাগরি, সাব-ক্যাটাগরি, নাম ও ছবি দিন!");
+      return;
+    }
+
+    setUploadingChildImage(true);
+    try {
+      const iconUrl = await uploadToCloudinary(childSubImageFiles[0]);
+
+      await addDoc(collection(db, "childSubCategories"), { 
+        mainCategorySlug: selectedMainCatForChild,
+        subCategorySlug: selectedSubCatForChild,
+        name, 
+        slug,
+        icon: iconUrl, 
+        createdAt: serverTimestamp() 
+      });
+
+      showAlert("🎉 চাইল্ড সাব-ক্যাটাগরি সফলভাবে সেভ হয়েছে!");
+      setSelectedMainCatForChild('');
+      setSelectedSubCatForChild('');
+      setChildSubCatName('');
+      setChildSubImageFiles([]);
+      setChildSubImagePreviews([]);
+      document.getElementById('childSubCatImageInput').value = '';
+      await loadAllCategoriesData();
+    } catch (err) {
+      console.error(err);
+      alert("⚠️ চাইল্ড সাব-ক্যাটাগরি সেভ করতে সমস্যা হয়েছে!");
+    } finally {
+      setUploadingChildImage(false);
+    }
+  };
+
+  const deleteDocItem = async (colName, id, name) => {
+    if (confirm(` '${name}' ডিলিট করতে চান?`)) {
       try {
-        await deleteDoc(doc(db, "mainCategories", id));
-        showAlert("🗑️ মেইন ক্যাটাগরি ডিলিট করা হয়েছে!");
+        await deleteDoc(doc(db, colName, id));
+        showAlert("🗑️ সফলভাবে ডিলিট করা হয়েছে!");
         await loadAllCategoriesData();
       } catch (err) {
         console.error(err);
@@ -197,17 +236,10 @@ export default function CategoryManagement() {
     }
   };
 
-  const deleteSubCat = async (id, name) => {
-    if (confirm(`সাব-ক্যাটাগরি '${name}' ডিলিট করতে চান?`)) {
-      try {
-        await deleteDoc(doc(db, "subCategories", id));
-        showAlert("🗑️ সাব-ক্যাটাগরি ডিলিট করা হয়েছে!");
-        await loadAllCategoriesData();
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  };
+  // সাব-ক্যাটাগরি ড্রপডাউন ফিল্টার (সিলেক্টেড মেইন ক্যাটাগরির আন্ডারে থাকা সাব-ক্যাটাগরিগুলো দেখানোর জন্য)
+  const filteredSubCategoriesForChild = allSubCategories.filter(
+    sub => sub.mainCategorySlug?.toLowerCase() === selectedMainCatForChild?.toLowerCase()
+  );
 
   return (
     <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans">
@@ -222,7 +254,7 @@ export default function CategoryManagement() {
         {/* ১. মেইন ক্যাটাগরি ফর্ম */}
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-            📁 ১. মেইন ক্যাটাগরি যোগ করুন (আইকন/ছবিসহ)
+            📁 ১. মেইন ক্যাটাগরি যোগ করুন
           </h3>
           <form onSubmit={handleMainCategorySubmit} className="space-y-4">
             <div>
@@ -231,13 +263,13 @@ export default function CategoryManagement() {
                 type="text" 
                 value={mainCatName}
                 onChange={(e) => setMainCatName(e.target.value)}
-                placeholder="যেমন: Sports" 
+                placeholder="যেমন: Fashion" 
                 required 
                 className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-xs text-black"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ক্যাটাগরির ছবিসমূহ (একাধিক সিলেক্ট করতে পারেন)</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">ক্যাটাগরির ছবি</label>
               <input 
                 id="mainCatImageInput"
                 type="file" 
@@ -247,54 +279,37 @@ export default function CategoryManagement() {
                 className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
               />
               {mainCatImagePreviews.length > 0 && (
-                <div className="mt-3">
-                  <span className="text-xs text-slate-500 font-semibold block mb-1">সিলেক্ট করা ছবিগুলো ({mainCatImagePreviews.length}টি):</span>
-                  <div className="flex flex-wrap gap-2">
-                    {mainCatImagePreviews.map((src, idx) => (
-                      <div key={idx} className="relative">
-                        <img src={src} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500 shadow-sm" />
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex gap-2 mt-2">
+                  {mainCatImagePreviews.map((src, idx) => (
+                    <img key={idx} src={src} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500" />
+                  ))}
                 </div>
               )}
             </div>
             <button 
               type="submit" 
               disabled={uploadingImage}
-              className={`w-full text-white font-semibold py-2.5 rounded-lg transition duration-200 text-xs ${uploadingImage ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'}`}
+              className="w-full bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-xs hover:bg-slate-900 cursor-pointer"
             >
-              {uploadingImage ? 'ছবিগুলো আপলোড ও সেভ হচ্ছে, অপেক্ষা করুন...' : '➕ মেইন ক্যাটাগরি সেভ করুন'}
+              {uploadingImage ? 'সেভ হচ্ছে...' : '➕ মেইন ক্যাটাগরি সেভ করুন'}
             </button>
           </form>
 
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500 mb-2">বর্তমান মেইন ক্যাটাগরি সমূহ:</p>
-            <div className="flex flex-wrap gap-2">
-              {loading ? (
-                <span className="text-xs text-slate-400">লোড হচ্ছে...</span>
-              ) : allMainCategories.length === 0 ? (
-                <span className="text-xs text-slate-400">কোনো মেইন ক্যাটাগরি নেই</span>
-              ) : (
-                allMainCategories.map((cat) => {
-                  const displayImg = cat.icon || (cat.imageUrls && cat.imageUrls[0]) || cat.imageUrl;
-                  return (
-                    <span key={cat.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm">
-                      {displayImg && <img src={displayImg} alt="" className="w-5 h-5 rounded-full object-cover" />}
-                      📁 {cat.name} <span className="text-[10px] text-gray-400">({cat.slug})</span>
-                      <button type="button" onClick={() => deleteMainCat(cat.id, cat.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
-                    </span>
-                  );
-                })
-              )}
-            </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {allMainCategories.map((cat) => (
+              <span key={cat.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border text-xs font-semibold text-slate-700 shadow-sm">
+                {cat.icon && <img src={cat.icon} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                📁 {cat.name}
+                <button type="button" onClick={() => deleteDocItem("mainCategories", cat.id, cat.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
+              </span>
+            ))}
           </div>
         </div>
 
         {/* ২. সাব-ক্যাটাগরি ফর্ম */}
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-            📂 ২. সাব-ক্যাটাগরি যোগ করুন (আইকনসহ)
+            📂 ২. সাব-ক্যাটাগরি যোগ করুন
           </h3>
           <form onSubmit={handleSubCategorySubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -304,9 +319,9 @@ export default function CategoryManagement() {
                   value={parentMainCatSlug}
                   onChange={(e) => setParentMainCatSlug(e.target.value)}
                   required 
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-xs text-black"
+                  className="w-full border border-slate-300 p-3 rounded-lg bg-white text-xs text-black"
                 >
-                  <option value="" disabled>মেইন ক্যাটাগরি বেছে নিন</option>
+                  <option value="" disabled>বেছে নিন</option>
                   {allMainCategories.map((cat) => (
                     <option key={cat.id} value={cat.slug}>{cat.name}</option>
                   ))}
@@ -318,15 +333,15 @@ export default function CategoryManagement() {
                   type="text" 
                   value={subCatName}
                   onChange={(e) => setSubCatName(e.target.value)}
-                  placeholder="যেমন: Jersey" 
+                  placeholder="যেমন: Dress" 
                   required 
-                  className="w-full border border-slate-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-xs text-black"
+                  className="w-full border border-slate-300 p-3 rounded-lg text-xs text-black"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">সাব-ক্যাটাগরির ছবি/আইকন</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">সাব-ক্যাটাগরি ছবি/আইকন</label>
               <input 
                 id="subCatImageInput"
                 type="file" 
@@ -336,12 +351,10 @@ export default function CategoryManagement() {
                 className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
               />
               {subCatImagePreviews.length > 0 && (
-                <div className="mt-3">
-                  <div className="flex items-center gap-2">
-                    {subCatImagePreviews.map((src, idx) => (
-                      <img key={idx} src={src} alt="Sub Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500 shadow-sm" />
-                    ))}
-                  </div>
+                <div className="flex gap-2 mt-2">
+                  {subCatImagePreviews.map((src, idx) => (
+                    <img key={idx} src={src} alt="Sub Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500" />
+                  ))}
                 </div>
               )}
             </div>
@@ -349,29 +362,112 @@ export default function CategoryManagement() {
             <button 
               type="submit" 
               disabled={uploadingSubImage}
-              className={`w-full text-white font-semibold py-2.5 rounded-lg transition duration-200 text-xs ${uploadingSubImage ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'}`}
+              className="w-full bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-xs hover:bg-slate-900 cursor-pointer"
             >
-              {uploadingSubImage ? 'ছবি আপলোড ও সেভ হচ্ছে...' : '➕ সাব-ক্যাটাগরি সেভ করুন'}
+              {uploadingSubImage ? 'সেভ হচ্ছে...' : '➕ সাব-ক্যাটাগরি সেভ করুন'}
             </button>
           </form>
 
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500 mb-2">বর্তমান সাব-ক্যাটাগরি সমূহ:</p>
-            <div className="flex flex-wrap gap-2">
-              {loading ? (
-                <span className="text-xs text-slate-400">লোড হচ্ছে...</span>
-              ) : allSubCategories.length === 0 ? (
-                <span className="text-xs text-slate-400">কোনো সাব-ক্যাটাগরি নেই</span>
-              ) : (
-                allSubCategories.map((sub) => (
-                  <span key={sub.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm">
-                    {sub.icon && <img src={sub.icon} alt="" className="w-5 h-5 rounded-full object-cover" />}
-                    📂 [{sub.mainCategorySlug || sub.mainCat}] → {sub.name}
-                    <button type="button" onClick={() => deleteSubCat(sub.id, sub.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
-                  </span>
-                ))
+          <div className="mt-4 flex flex-wrap gap-2">
+            {allSubCategories.map((sub) => (
+              <span key={sub.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border text-xs font-semibold text-slate-700 shadow-sm">
+                {sub.icon && <img src={sub.icon} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                📂 [{sub.mainCategorySlug}] → {sub.name}
+                <button type="button" onClick={() => deleteDocItem("subCategories", sub.id, sub.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি (Child Sub-Category) ফর্ম */}
+        <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+          <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            📑 ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি যোগ করুন
+          </h3>
+          <form onSubmit={handleChildSubCategorySubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">মেইন ক্যাটাগরি সিলেক্ট করুন</label>
+                <select 
+                  value={selectedMainCatForChild}
+                  onChange={(e) => {
+                    setSelectedMainCatForChild(e.target.value);
+                    setSelectedSubCatForChild(''); // রিসেট
+                  }}
+                  required 
+                  className="w-full border border-slate-300 p-3 rounded-lg bg-white text-xs text-black"
+                >
+                  <option value="" disabled>মেইন ক্যাটাগরি বেছে নিন</option>
+                  {allMainCategories.map((cat) => (
+                    <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">সাব-ক্যাটাগরি সিলেক্ট করুন</label>
+                <select 
+                  value={selectedSubCatForChild}
+                  onChange={(e) => setSelectedSubCatForChild(e.target.value)}
+                  required 
+                  className="w-full border border-slate-300 p-3 rounded-lg bg-white text-xs text-black"
+                >
+                  <option value="" disabled>আগে মেইন ক্যাটাগরি সিলেক্ট করুন</option>
+                  {filteredSubCategoriesForChild.map((sub) => (
+                    <option key={sub.id} value={sub.slug}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">চাইল্ড সাব-ক্যাটাগরির নাম</label>
+              <input 
+                type="text" 
+                value={childSubCatName}
+                onChange={(e) => setChildSubCatName(e.target.value)}
+                placeholder="যেমন: Party Dress / Casual Dress" 
+                required 
+                className="w-full border border-slate-300 p-3 rounded-lg text-xs text-black"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">ছবি/আইকন</label>
+              <input 
+                id="childSubCatImageInput"
+                type="file" 
+                onChange={handleChildSubImageChange} 
+                accept="image/*"
+                required
+                className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
+              />
+              {childSubImagePreviews.length > 0 && (
+                <div className="flex gap-2 mt-2">
+                  {childSubImagePreviews.map((src, idx) => (
+                    <img key={idx} src={src} alt="Child Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500" />
+                  ))}
+                </div>
               )}
             </div>
+
+            <button 
+              type="submit" 
+              disabled={uploadingChildImage}
+              className="w-full bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-xs hover:bg-slate-900 cursor-pointer"
+            >
+              {uploadingChildImage ? 'সেভ হচ্ছে...' : '➕ চাইল্ড সাব-ক্যাটাগরি সেভ করুন'}
+            </button>
+          </form>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {allChildSubCategories.map((child) => (
+              <span key={child.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border text-xs font-semibold text-slate-700 shadow-sm">
+                {child.icon && <img src={child.icon} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                📑 [{child.subCategorySlug}] → {child.name}
+                <button type="button" onClick={() => deleteDocItem("childSubCategories", child.id, child.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
+              </span>
+            ))}
           </div>
         </div>
 

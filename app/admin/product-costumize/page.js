@@ -8,13 +8,19 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 export default function ProductManagement() {
   const [allMainCategories, setAllMainCategories] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
+  const [allChildSubCategories, setAllChildSubCategories] = useState([]);
+  
   const [filteredSubCategories, setFilteredSubCategories] = useState([]);
+  const [filteredChildSubCategories, setFilteredChildSubCategories] = useState([]);
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [discount, setDiscount] = useState('');
+  
   const [selectedMainCat, setSelectedMainCat] = useState('');
   const [selectedSubCat, setSelectedSubCat] = useState('');
+  const [selectedChildSubCat, setSelectedChildSubCat] = useState('');
+  
   const [sizes, setSizes] = useState('');
   const [description, setDescription] = useState('');
   
@@ -51,14 +57,13 @@ export default function ProductManagement() {
     const fetchCategories = async () => {
       try {
         const mainSnap = await getDocs(collection(db, "mainCategories"));
-        const mainList = [];
-        mainSnap.forEach(d => mainList.push({ id: d.id, ...d.data() }));
-        setAllMainCategories(mainList);
+        setAllMainCategories(mainSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
         const subSnap = await getDocs(collection(db, "subCategories"));
-        const subList = [];
-        subSnap.forEach(d => subList.push({ id: d.id, ...d.data() }));
-        setAllSubCategories(subList);
+        setAllSubCategories(subSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+        const childSnap = await getDocs(collection(db, "childSubCategories"));
+        setAllChildSubCategories(childSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error("Error fetching categories:", err);
       }
@@ -67,11 +72,29 @@ export default function ProductManagement() {
   }, []);
 
   const handleMainCatChange = (e) => {
-    const mainCat = e.target.value;
-    setSelectedMainCat(mainCat);
+    const mainSlug = e.target.value;
+    setSelectedMainCat(mainSlug);
     setSelectedSubCat('');
-    const filtered = allSubCategories.filter(s => s.mainCat === mainCat);
-    setFilteredSubCategories(filtered);
+    setSelectedChildSubCat('');
+    
+    // ফিল্টার সাব-ক্যাটাগরি
+    const filteredSubs = allSubCategories.filter(
+      s => (s.mainCategorySlug || s.mainCat)?.toLowerCase() === mainSlug.toLowerCase()
+    );
+    setFilteredSubCategories(filteredSubs);
+    setFilteredChildSubCategories([]);
+  };
+
+  const handleSubCatChange = (e) => {
+    const subSlug = e.target.value;
+    setSelectedSubCat(subSlug);
+    setSelectedChildSubCat('');
+
+    // ফিল্টার চাইল্ড সাব-ক্যাটাগরি
+    const filteredChildren = allChildSubCategories.filter(
+      c => c.subCategorySlug?.toLowerCase() === subSlug.toLowerCase()
+    );
+    setFilteredChildSubCategories(filteredChildren);
   };
 
   // Handle Multiple Product Images Selection
@@ -155,8 +178,12 @@ export default function ProductManagement() {
         price: Number(price),
         discount: discount ? Number(discount) : null,
         mainCategory: selectedMainCat,
-        category: selectedSubCat,
+        mainCategorySlug: selectedMainCat,
         subCategory: selectedSubCat,
+        subCategorySlug: selectedSubCat,
+        category: selectedSubCat,
+        childSubCategory: selectedChildSubCat || null,
+        childSubCategorySlug: selectedChildSubCat || null,
         sizes: sizesArray,
         description: description.trim(),
         imageUrls: imageUrls,
@@ -182,6 +209,7 @@ export default function ProductManagement() {
       setDiscount('');
       setSelectedMainCat('');
       setSelectedSubCat('');
+      setSelectedChildSubCat('');
       setSizes('');
       setDescription('');
       setIsFlashSale(false);
@@ -193,6 +221,7 @@ export default function ProductManagement() {
       setProductImagePreviews([]);
       setColors([]);
       setFilteredSubCategories([]);
+      setFilteredChildSubCategories([]);
 
     } catch (err) {
       console.error(err);
@@ -215,7 +244,7 @@ export default function ProductManagement() {
 
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            🛍️ নতুন প্রোডাক্ট যোগ করুন (ফায়ারবেস স্টোরেজ)
+            🛍️ নতুন প্রোডাক্ট যোগ করুন (নতুন ক্যাটাগরি সিস্টেম)
           </h3>
 
           <form onSubmit={handleProductSubmit} className="space-y-5">
@@ -325,7 +354,8 @@ export default function ProductManagement() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* ক্যাটাগরি সিলেকশন সেকশন (মেইন, সাব এবং চাইল্ড সাব) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">📁 মেইন ক্যাটাগরি</label>
                 <select 
@@ -334,23 +364,38 @@ export default function ProductManagement() {
                   required 
                   className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-xs text-black"
                 >
-                  <option value="" disabled>মেইন ক্যাটাগরি সিলেক্ট করুন</option>
+                  <option value="" disabled>সিলেক্ট করুন</option>
                   {allMainCategories.map((cat) => (
-                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    <option key={cat.id} value={cat.slug || cat.name}>{cat.name}</option>
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">📂 সাব-ক্যাটাগরি</label>
                 <select 
                   value={selectedSubCat}
-                  onChange={(e) => setSelectedSubCat(e.target.value)}
+                  onChange={handleSubCatChange}
                   required 
                   className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-xs text-black"
                 >
-                  <option value="" disabled>{selectedMainCat ? "সাব-ক্যাটাগরি সিলেক্ট করুন" : "প্রথমে মেইন ক্যাটাগরি সিলেক্ট করুন"}</option>
+                  <option value="" disabled>{selectedMainCat ? "সিলেক্ট করুন" : "আগে মেইন দিন"}</option>
                   {filteredSubCategories.map((sub) => (
-                    <option key={sub.id} value={sub.name}>{sub.name}</option>
+                    <option key={sub.id} value={sub.slug || sub.name}>{sub.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">📑 চাইল্ড সাব (ঐচ্ছিক)</label>
+                <select 
+                  value={selectedChildSubCat}
+                  onChange={(e) => setSelectedChildSubCat(e.target.value)}
+                  className="w-full border border-slate-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-xs text-black"
+                >
+                  <option value="">প্রযোজ্য নয়</option>
+                  {filteredChildSubCategories.map((child) => (
+                    <option key={child.id} value={child.slug || child.name}>{child.name}</option>
                   ))}
                 </select>
               </div>

@@ -1,4 +1,4 @@
-import { db } from '../../../../../../lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface PageProps {
@@ -11,6 +11,7 @@ interface PageProps {
 export default async function SubCategoryPage({ params }: PageProps) {
   const { subSlug } = await params;
 
+  // প্রোডাক্ট ফেচ করা
   const q = query(collection(db, 'products'), where('subCategorySlug', '==', subSlug));
   const snap = await getDocs(q);
   const products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];

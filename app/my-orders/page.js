@@ -26,7 +26,7 @@ export default function MyOrdersPage() {
   // অর্ডার ফেচ করার ফাংশন
   const fetchUserOrders = useCallback(async (customPhone = null) => {
     setLoading(true);
-    setStatusMessage('অর্ডারগুলো খোঁজা হচ্ছে...');
+    setStatusMessage('অর্ডারগুলো খোঁজা হচ্ছে...');
 
     let savedPhones = JSON.parse(localStorage.getItem("userPhones") || "[]");
     let singlePhone = localStorage.getItem("userPhone");
@@ -206,7 +206,7 @@ export default function MyOrdersPage() {
 
                   <div className="font-bold text-[#d9363e] text-[13px] pt-1.5 border-t border-dashed border-slate-200 flex justify-between items-center">
                     <span className="text-slate-600 text-[11px]">সর্বমোট মূল্য:</span>
-                    <span className="text-[#d9363e] text-[14px] font-extrabold">{order.price} SAR</span>
+                    <span className="text-[#d9363e] text-[14px] font-extrabold">৳ {order.price}</span>
                   </div>
                 </div>
               </div>

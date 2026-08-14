@@ -46,11 +46,11 @@ export default function ProductManagement() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
 
-  const [alert, setAlert] = useState({ show: false, msg: '' });
-  const showAlert = (msg) => {
-    setAlert({ show: true, msg });
+  const [alert, setAlert] = useState({ show: false, msg: '', type: 'success' });
+  const showAlert = (msg, type = 'success') => {
+    setAlert({ show: true, msg, type });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
+    setTimeout(() => setAlert({ show: false, msg: '', type: 'success' }), 5000);
   };
 
   useEffect(() => {
@@ -77,7 +77,6 @@ export default function ProductManagement() {
     setSelectedSubCat('');
     setSelectedChildSubCat('');
     
-    // ফিল্টার সাব-ক্যাটাগরি
     const filteredSubs = allSubCategories.filter(
       s => (s.mainCategorySlug || s.mainCat)?.toLowerCase() === mainSlug.toLowerCase()
     );
@@ -90,14 +89,12 @@ export default function ProductManagement() {
     setSelectedSubCat(subSlug);
     setSelectedChildSubCat('');
 
-    // ফিল্টার চাইল্ড সাব-ক্যাটাগরি
     const filteredChildren = allChildSubCategories.filter(
       c => c.subCategorySlug?.toLowerCase() === subSlug.toLowerCase()
     );
     setFilteredChildSubCategories(filteredChildren);
   };
 
-  // Handle Multiple Product Images Selection
   const handleProductImagesChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
@@ -107,7 +104,6 @@ export default function ProductManagement() {
     }
   };
 
-  // Handle New Color Image Selection
   const handleNewColorImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -116,7 +112,6 @@ export default function ProductManagement() {
     }
   };
 
-  // Add Color Variant to List
   const handleAddColorVariant = () => {
     if (!newColorName.trim() || !newColorFile) {
       alert("দয়া করে কালারের নাম এবং ছবি দিন!");
@@ -128,18 +123,21 @@ export default function ProductManagement() {
     setNewColorPreview('');
   };
 
-  // Remove Color Variant
   const handleRemoveColor = (index) => {
     const updated = colors.filter((_, i) => i !== index);
     setColors(updated);
   };
 
-  // Firebase Storage Upload Helper
   const uploadToFirebaseStorage = async (file, folderName) => {
-    const fileRef = ref(storage, `${folderName}/${Date.now()}_${file.name}`);
-    const snapshot = await uploadBytes(fileRef, file);
-    const downloadUrl = await getDownloadURL(snapshot.ref);
-    return downloadUrl;
+    try {
+      const fileRef = ref(storage, `${folderName}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(fileRef, file);
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+      return downloadUrl;
+    } catch (error) {
+      console.error("Storage upload error:", error);
+      throw new Error(`ছবি আপলোড ব্যর্থ হয়েছে: ${error.message}`);
+    }
   };
 
   const handleProductSubmit = async (e) => {
@@ -159,13 +157,16 @@ export default function ProductManagement() {
         imageUrls.push(url);
       }
 
-      setUploadProgress("কালার ভ্যারিয়েন্ট ছবি আপলোড হচ্ছে...");
       let colorVariants = [];
-      for (let col of colors) {
-        const colUrl = await uploadToFirebaseStorage(col.file, 'color_variant_images');
-        colorVariants.push({ name: col.name, imageUrl: colUrl });
+      if (colors.length > 0) {
+        setUploadProgress("কালার ভ্যারিয়েন্ট ছবি আপলোড হচ্ছে...");
+        for (let col of colors) {
+          const colUrl = await uploadToFirebaseStorage(col.file, 'color_variant_images');
+          colorVariants.push({ name: col.name, imageUrl: colUrl });
+        }
       }
 
+      setUploadProgress("ডাটাবেজে সেভ হচ্ছে...");
       const sizesArray = sizes ? sizes.split(',').map(s => s.trim()).filter(s => s !== '') : [];
 
       let formattedEndsAt = null;
@@ -187,7 +188,7 @@ export default function ProductManagement() {
         sizes: sizesArray,
         description: description.trim(),
         imageUrls: imageUrls,
-        imageUrl: imageUrls[0], // Main fallback image
+        imageUrl: imageUrls[0],
         colorVariants: colorVariants,
         isFlashSale: isFlashSale,
         isSpecialOffer: isFlashSale,
@@ -203,7 +204,7 @@ export default function ProductManagement() {
         createdAt: serverTimestamp()
       });
 
-      showAlert("🎉 প্রোডাক্ট সফলভাবে পাবলিশ হয়েছে!");
+      showAlert("🎉 প্রোডাক্ট সফলভাবে পাবলিশ হয়েছে!", "success");
       setTitle('');
       setPrice('');
       setDiscount('');
@@ -224,8 +225,8 @@ export default function ProductManagement() {
       setFilteredChildSubCategories([]);
 
     } catch (err) {
-      console.error(err);
-      alert("⚠️ প্রোডাক্ট সেভ করতে সমস্যা হয়েছে: " + err.message);
+      console.error("Product submission error:", err);
+      showAlert("⚠️ সমস্যা হয়েছে: " + err.message, "error");
     } finally {
       setLoading(false);
       setUploadProgress('');
@@ -237,7 +238,7 @@ export default function ProductManagement() {
       <div className="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl space-y-8">
         
         {alert.show && (
-          <div className="p-4 rounded-xl text-center font-bold text-sm bg-green-100 text-green-700 border border-green-300">
+          <div className={`p-4 rounded-xl text-center font-bold text-sm border ${alert.type === 'error' ? 'bg-red-100 text-red-700 border-red-300' : 'bg-green-100 text-green-700 border-green-300'}`}>
             {alert.msg}
           </div>
         )}
@@ -354,7 +355,7 @@ export default function ProductManagement() {
               </div>
             </div>
 
-            {/* ক্যাটাগরি সিলেকশন সেকশন (মেইন, সাব এবং চাইল্ড সাব) */}
+            {/* ক্যাটাগরি সিলেকশন সেকশন */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">📁 মেইন ক্যাটাগরি</label>
@@ -493,7 +494,7 @@ export default function ProductManagement() {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 cursor-pointer text-xs"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 cursor-pointer text-xs disabled:opacity-50"
             >
               <span>{loading ? (uploadProgress || "⏳ আপলোড হচ্ছে...") : "🚀 প্রোডাক্ট সেভ ও পাবলিশ করুন"}</span>
             </button>

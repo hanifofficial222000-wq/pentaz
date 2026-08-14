@@ -3,15 +3,24 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
+// ক্যাটাগরি ডাটার জন্য ইন্টারফেস ডিফাইন করা হলো যাতে টাইপ এরর না আসে
+interface Category {
+  id: string;
+  slug: string;
+  name?: string;
+  icon?: string;
+  [key: string]: any; // অন্যান্য ফিল্ডের জন্য
+}
+
 export default function HomeCategories() {
-  const [mainCats, setMainCats] = useState<any[]>([]);
+  const [mainCats, setMainCats] = useState<Category[]>([]);
   const [activeMain, setActiveMain] = useState('');
-  const [subCats, setSubCats] = useState<any[]>([]);
+  const [subCats, setSubCats] = useState<Category[]>([]);
 
   // ১. ফায়ারবেস থেকে রিয়েল-টাইমে মেইন ক্যাটাগরি ফেচ করা
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'mainCategories'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Category[];
       setMainCats(data);
       if (data.length > 0 && !activeMain) {
         setActiveMain(data[0].slug);
@@ -25,7 +34,7 @@ export default function HomeCategories() {
     if (!activeMain) return;
     const q = query(collection(db, 'subCategories'), where('mainCategorySlug', '==', activeMain));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Category[];
       setSubCats(data);
     });
     return () => unsubscribe();
@@ -76,4 +85,3 @@ export default function HomeCategories() {
     </div>
   );
 }
-

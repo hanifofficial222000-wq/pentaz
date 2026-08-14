@@ -251,24 +251,50 @@ function ProductDetailsContent() {
     }
   }
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!productData) return;
     const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      setCouponMsg({ text: "⚠️ দয়া করে কুপন কোড লিখুন।", color: "text-red-600" });
+      return;
+    }
 
     let basePrice = Number(productData.price) || 0;
     if (productData.discount > 0) {
       basePrice = Math.round(basePrice - (basePrice * productData.discount) / 100);
     }
 
+    // ডাটাবেসের নিজস্ব কুপন অথবা গ্লোবাল coupons கலেকশন চেক করা
+    let isValidCoupon = false;
+    let couponDiscountPercent = 10; // ডিফল্ট ১০%
+
     if (code === (productData.coupon || "").toUpperCase()) {
+      isValidCoupon = true;
+    } else {
+      // গ্লোবাল coupons কালেকশন থেকেও ভ্যালিডেট করা যেতে পারে
+      try {
+        const q = query(collection(db, "coupons"), where("code", "==", code));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const cData = snap.docs[0].data();
+          if (cData.isActive !== false) {
+            isValidCoupon = true;
+          }
+        }
+      } catch (err) {
+        console.error("Coupon check error:", err);
+      }
+    }
+
+    if (isValidCoupon) {
       const discountVal = Math.round(basePrice * 0.10);
       setAppliedDiscount(discountVal);
       setFinalPrice(basePrice - discountVal);
-      setCouponMsg({ text: "🎉 কুপন সফলভাবে গৃহিত হয়েছে! ১০% এক্সট্রা ছাড় দেওয়া হয়েছে।", color: "text-green-600" });
+      setCouponMsg({ text: "🎉 কুপন সফলভাবে গৃহিত হয়েছে! ১০% ছাড় দেওয়া হয়েছে।", color: "text-green-600" });
     } else {
       setAppliedDiscount(0);
       setFinalPrice(basePrice);
-      setCouponMsg({ text: "❌ ভুল কুপন কোড! দয়া করে সঠিক কোড দিন।", color: "text-red-600" });
+      setCouponMsg({ text: "❌ ভুল বা মেয়াদোত্তীর্ণ কুপন কোড!", color: "text-red-600" });
     }
   };
 
@@ -507,7 +533,7 @@ function ProductDetailsContent() {
         )}
 
         {/* Coupon Section */}
-        {productData.coupon && (
+        {(productData.coupon || true) && (
           <div className="bg-[#fff8f8] border border-dashed border-[#e63946] p-3 rounded-[8px] my-4">
             <p className="text-[13px] font-bold text-[#e63946]">🎟️ আপনার কি কোনো কুপন কোড আছে?</p>
             <div className="flex gap-2 mt-1.5">
@@ -516,7 +542,7 @@ function ProductDetailsContent() {
                 value={couponCode} 
                 onChange={(e) => setCouponCode(e.target.value)}
                 placeholder="কুপন কোড লিখুন (যেমন: EID50)" 
-                className="flex-1 p-2 border border-[#ddd] rounded-[6px] text-[13px] outline-none bg-white text-black"
+                className="flex-1 p-2 border border-[#ddd] rounded-[6px] text-[13px] outline-none bg-white text-black uppercase"
               />
               <button type="button" onClick={handleApplyCoupon} className="bg-[#e63946] text-white border-none px-3.5 py-2 rounded-[6px] font-bold cursor-pointer text-[13px]">
                 প্রয়োগ করুন

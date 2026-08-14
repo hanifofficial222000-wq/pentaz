@@ -210,7 +210,12 @@ function MainContent() {
       try {
         const mainCatSnap = await getDocs(collection(db, 'mainCategories'));
         if (!mainCatSnap.empty) {
-          setMainCategories(mainCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          const mList = mainCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setMainCategories(mList);
+          // ডিফল্টভাবে প্রথম মেইন ক্যাটাগরি সিলেক্ট করা যাতে পেজ লোড হওয়ার সাথেই সাব-ক্যাটাগরিগুলো দেখা যায়
+          if (mList.length > 0) {
+            setActiveCategory(mList[0].name);
+          }
         }
 
         const subCatSnap = await getDocs(collection(db, 'subCategories'));
@@ -308,10 +313,10 @@ function MainContent() {
 
   const handleMainCategoryClick = (catName) => {
     setActiveCategory(catName);
-    setActiveSubCategory('all');
+    setActiveSubCategory('all'); // মেইন ক্যাটাগরি পাল্টালে সাব-ক্যাটাগরি রিসেট হয়ে যাবে
   };
 
-  // সাব-ক্যাটাগরি ফিল্টার করার লজিক
+  // সাব-ক্যাটাগরি ফিল্টার করার লজিক (শুধু সিলেক্ট করা মেইন ক্যাটাগরির সাব-ক্যাটাগরিগুলো দেখাবে)
   const currentSubCategoriesList = subCategories.filter(
     sub => sub.mainCat?.toLowerCase().trim() === activeCategory.toLowerCase().trim()
   );
@@ -321,13 +326,13 @@ function MainContent() {
 
     if (activeCategory === 'special-offers' || activeCategory === 'flash-sale') {
       result = result.filter(p => p.isSpecialOffer || p.isFlashSale || p.category?.toLowerCase() === 'special-offers');
-    } else if (activeCategory !== 'all') {
+    } else if (activeCategory && activeCategory !== 'all') {
       result = result.filter(p => {
         const pMain = (p.mainCategory || p.category || '').toLowerCase().trim();
         return pMain === activeCategory.toLowerCase().trim();
       });
 
-      if (activeSubCategory !== 'all') {
+      if (activeSubCategory && activeSubCategory !== 'all') {
         result = result.filter(p => {
           const pSub = (p.subCategory || p.subcat || p.category || '').toLowerCase().trim();
           return pSub === activeSubCategory.toLowerCase().trim();
@@ -454,15 +459,10 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ১. মেইন ক্যাটাগরি: এক লাইনে গোল সার্কেল কার্ড (ওপরের দিকে) */}
+      {/* 🌟 ১. মেইন ক্যাটাগরি: এক লাইনে গোল সার্কেল কার্ড (ALL বাটন বাদ দেওয়া হয়েছে) */}
       {mainCategories.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
-            <CategoryCardItem 
-              cat={{ name: 'All', imageUrl: 'https://via.placeholder.com/150?text=All' }} 
-              isActive={activeCategory === 'all'} 
-              onClick={() => handleMainCategoryClick('all')} 
-            />
             {mainCategories.map((cat) => (
               <CategoryCardItem 
                 key={cat.id} 
@@ -506,18 +506,11 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ২. সাব-ক্যাটাগরি: ফিল্টার বাটন ও মাঝের ব্যানারগুলোর ঠিক নিচে দুই লাইনে ইমেজ ও নামসহ সাইড-স্ক্রোল গ্রিড কার্ড সিস্টেম */}
-      {activeCategory !== 'all' && currentSubCategoriesList.length > 0 && (
+      {/* 🌟 ২. সাব-ক্যাটাগরি: বর্তমান সিলেক্ট করা মেইন ক্যাটাগরির আন্ডারে থাকা সাব-ক্যাটাগরিগুলো দুই লাইনে সাইড-স্ক্রোল গ্রিড আকারে শো করবে (All Sub Category বাটন বাদ) */}
+      {currentSubCategoriesList.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-2 bg-white border-y border-gray-100">
-          <div className="text-[11px] font-bold text-gray-500 mb-1">Sub Categories:</div>
+          <div className="text-[11px] font-bold text-gray-500 mb-1">{activeCategory} - Sub Categories:</div>
           <div className="grid grid-flow-col grid-rows-2 gap-2 overflow-x-auto no-scrollbar py-1">
-            <button
-              onClick={() => setActiveSubCategory('all')}
-              className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all flex-shrink-0 w-[130px] cursor-pointer ${activeSubCategory === 'all' ? 'bg-red-50 border-red-500 text-red-600' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
-            >
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0">ALL</div>
-              <span className="text-[11px] font-bold truncate">All {activeCategory}</span>
-            </button>
             {currentSubCategoriesList.map((sub) => {
               const isSubActive = activeSubCategory.toLowerCase() === sub.name.toLowerCase();
               const subImg = sub.imageUrl || (sub.imageUrls && sub.imageUrls[0]) || 'https://via.placeholder.com/150';

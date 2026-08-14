@@ -1,178 +1,188 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, updateDoc, doc, query, orderBy } from 'firebase/firestore';
 
-export default function PlaceOrderPage() {
-  const router = useRouter();
-  
-  const [custName, setCustName] = useState('');
-  const [custPhone, setCustPhone] = useState('');
-  const [productName, setProductName] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-  const [custAddress, setCustAddress] = useState('');
-  const [custSize, setCustSize] = useState('');
-  
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState({ text: '', color: '' });
+export default function OrdersManagement() {
+  const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [alert, setAlert] = useState({ show: false, msg: '' });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    const name = custName.trim();
-    const phone = custPhone.trim();
-    const prodName = productName.trim();
-    const price = Number(productPrice);
-    const address = custAddress.trim();
-    const size = custSize.trim() || 'N/A';
+  const showAlert = (msg) => {
+    setAlert({ show: true, msg });
+    setTimeout(() => setAlert({ show: false, msg: '' }), 4000);
+  };
 
-    setSubmitting(true);
-    setMessage({ text: '', color: '' });
-
+  // Load Website Orders
+  const loadWebsiteOrders = async () => {
     try {
-      // ব্রাউজারের লোকালস্টোরেজে ফোন নম্বরটি সেভ করে রাখা হলো
-      localStorage.setItem("userPhone", phone);
+      const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      const list = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      setOrders(list);
+      setFilteredOrders(list);
+    } catch (err) {
+      console.error("Error loading orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // ফায়ারবেসে ডেটা পাঠানো (অন্যান্য পেজের অর্ডার কাঠামোর সাথে সামঞ্জস্যপূর্ণ)
-      await addDoc(collection(db, "orders"), {
-        orderId: 'ORD_' + Math.floor(100000 + Math.random() * 900000),
-        customerName: name,
-        phone: phone,
-        custPhone: phone, 
-        customerPhone: phone,
-        productName: prodName,
-        productTitle: prodName,
-        price: price,
-        productPrice: price,
-        address: address,
-        customerAddress: address,
-        size: size,
-        customerSize: size,
-        color: 'N/A',
-        status: "Pending",
-        date: new Date().toLocaleDateString('bn-BD'),
-        createdAt: serverTimestamp()
+  useEffect(() => {
+    loadWebsiteOrders();
+  }, []);
+
+  // Search Filter Effect
+  useEffect(() => {
+    const queryStr = searchQuery.toLowerCase().trim();
+    if (!queryStr) {
+      setFilteredOrders(orders);
+    } else {
+      const filtered = orders.filter(order => {
+        const name = order.customerName ? order.customerName.toLowerCase() : '';
+        const phone = order.customerPhone ? order.customerPhone.toLowerCase() : '';
+        const title = order.productTitle ? order.productTitle.toLowerCase() : '';
+        const orderId = order.id.toLowerCase();
+        const pin = order.productPin ? order.productPin.toLowerCase() : '';
+
+        return name.includes(queryStr) || phone.includes(queryStr) || title.includes(queryStr) || orderId.includes(queryStr) || pin.includes(queryStr);
       });
+      setFilteredOrders(filtered);
+    }
+  }, [searchQuery, orders]);
 
-      setMessage({ text: "🎉 সফল! আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে!", color: "text-green-600" });
-      
-      setTimeout(() => {
-        router.push("/orders"); // অর্ডার ট্র্যাক পেজে রিডাইরেক্ট
-      }, 1200);
+  // Update Order Status
+  const updateOrderStatus = async (docId, newStatus) => {
+    try {
+      await updateDoc(doc(db, "orders", docId), { status: newStatus });
+      showAlert(`🎉 অর্ডার স্ট্যাটাস '${newStatus}' করা হয়েছে!`);
+      loadWebsiteOrders();
+    } catch (err) {
+      alert("⚠️ স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে!");
+    }
+  };
 
-    } catch (error) {
-      console.error("Error: ", error);
-      setMessage({ text: "⚠️ সমস্যা হয়েছে: " + error.message, color: "text-red-600" });
-      setSubmitting(false);
+  // Delete Order
+  const deleteOrder = async (docId) => {
+    if (confirm("আপনি কি সত্যিই এই অর্ডারটি ডিলিট করতে চান?")) {
+      try {
+        await deleteDoc(doc(db, "orders", docId));
+        showAlert("🗑️ অর্ডারটি ডিলিট করা হয়েছে!");
+        loadWebsiteOrders();
+      } catch (err) {
+        alert("⚠️ ডিলিট করতে সমস্যা হয়েছে!");
+      }
     }
   };
 
   return (
-    <div className="bg-[#f4f6f9] min-h-screen p-4 font-sans flex flex-col justify-center">
-      
-      <div className="max-w-[450px] w-full mx-auto bg-white p-6 rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-slate-100">
+    <div className="bg-slate-100 min-h-screen py-6 px-4 md:px-8 font-sans">
+
+      {/* Header Banner */}
+      <div className="max-w-3xl mx-auto bg-gradient-to-r from-slate-900 to-blue-600 rounded-t-2xl p-6 text-white shadow-lg relative flex items-center justify-between">
+        <div>
+          <h1 className="text-xl md:text-2xl font-extrabold tracking-wide uppercase">AYAAT SPORT SHOP</h1>
+          <p className="text-blue-200 text-xs mt-1">ওয়েবসাইট অর্ডার ম্যানেজমেন্ট সিস্টেম</p>
+        </div>
+        <Link href="/admin/control-room" className="bg-white/25 hover:bg-white/35 text-white text-xs font-bold py-2 px-3.5 rounded-xl border border-white/30 transition shadow-sm cursor-pointer no-underline">
+          <span>⚙️ কন্ট্রোল রুম</span>
+        </Link>
+      </div>
+
+      {/* Main Container */}
+      <div className="max-w-3xl mx-auto bg-white p-6 rounded-b-2xl shadow-xl space-y-6">
         
-        <div className="flex items-center justify-between mb-4">
-          <Link href="/" className="text-slate-600 hover:text-[#d9363e] text-xs font-bold transition no-underline">
-            ← হোম
-          </Link>
-          <span className="text-[11px] bg-red-50 text-[#d9363e] px-2.5 py-1 rounded-full font-bold">AYAAT SHOP</span>
+        {/* Alert Box */}
+        {alert.show && (
+          <div className="p-3 rounded-xl text-center font-bold text-xs bg-green-100 text-green-700 border border-green-300">
+            {alert.msg}
+          </div>
+        )}
+
+        {/* WEBSITE ORDERS MANAGEMENT */}
+        <div className="bg-blue-50 p-5 rounded-xl border border-blue-200 shadow-sm space-y-4">
+          <div>
+            <h3 className="text-lg font-bold text-blue-900 mb-1 flex items-center gap-2">
+              📦 ওয়েবসাইট অর্ডারসমূহ ({filteredOrders.length})
+            </h3>
+            <p className="text-xs text-blue-700">কাস্টমারদের দেওয়া অর্ডারগুলো এখানে ম্যানেজ করুন:</p>
+          </div>
+
+          {/* Search Bar */}
+          <div>
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="🔍 কাস্টমার নাম, ফোন নম্বর বা প্রোডাক্ট নাম দিয়ে খুঁজুন..." 
+              className="w-full py-2.5 px-4 border border-blue-200 rounded-xl text-xs outline-none bg-white text-black focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+
+          <div className="space-y-4">
+            {loading ? (
+              <p className="text-xs text-slate-400">অর্ডার লোড হচ্ছে...</p>
+            ) : filteredOrders.length === 0 ? (
+              <p className="text-xs text-slate-500 py-4 text-center">কোনো অর্ডার পাওয়া যায়নি।</p>
+            ) : (
+              filteredOrders.map((order) => {
+                let statusBg = 'bg-amber-100 text-amber-800';
+                if (order.status === 'Processing') statusBg = 'bg-yellow-100 text-yellow-800';
+                else if (order.status === 'Packing') statusBg = 'bg-blue-100 text-blue-800';
+                else if (order.status === 'Tracking') statusBg = 'bg-purple-100 text-purple-800';
+                else if (order.status === 'Delivered') statusBg = 'bg-green-100 text-green-700';
+
+                let productImg = (order.imageUrls && order.imageUrls.length > 0) ? order.imageUrls[0] : (order.imageUrl || order.productImage || 'https://via.placeholder.com/50');
+                let productPin = order.productPin || order.id.slice(0, 6).toUpperCase();
+
+                return (
+                  <div key={order.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <div className="flex items-center gap-3">
+                        <img src={productImg} className="w-12 h-12 rounded-lg object-cover border" alt="Product" />
+                        <div>
+                          <h4 className="font-bold text-xs text-slate-800">{order.productTitle || 'Product'}</h4>
+                          <p className="text-[11px] text-red-600 font-bold">
+                            দাম: SAR {order.productPrice} 
+                            {order.size && order.size !== 'N/A' ? ` | সাইজ: ${order.size}` : ''}
+                            {order.selectedColor ? ` | কালার: ${order.selectedColor}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold ${statusBg}`}>{order.status || 'Pending'}</span>
+                    </div>
+
+                    <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-lg border">
+                      <p>📌 <b>প্রোডাক্ট আইডি:</b> <span className="text-blue-600 font-bold">#{productPin}</span></p>
+                      <p>👤 <b>নাম:</b> {order.customerName}</p>
+                      <p>📞 <b>ফোন:</b> <a href={`https://wa.me/${order.customerPhone}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold">{order.customerPhone}</a></p>
+                      <p>🏠 <b>ঠিকানা:</b> {order.customerAddress}</p>
+                      {order.note && <p>💬 <b>নোট:</b> {order.note}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+                      <button onClick={() => updateOrderStatus(order.id, 'Processing')} className="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold py-1.5 px-2 rounded-lg transition cursor-pointer text-center">⏳ Processing</button>
+                      <button onClick={() => updateOrderStatus(order.id, 'Packing')} className="bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-semibold py-1.5 px-2 rounded-lg transition cursor-pointer text-center">📦 Packing</button>
+                      <button onClick={() => updateOrderStatus(order.id, 'Tracking')} className="bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-semibold py-1.5 px-2 rounded-lg transition cursor-pointer text-center">🚚 Tracking</button>
+                      <button onClick={() => updateOrderStatus(order.id, 'Delivered')} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold py-1.5 px-2 rounded-lg transition cursor-pointer text-center">✔️ Delivered</button>
+                    </div>
+                    <button onClick={() => deleteOrder(order.id)} className="w-full bg-red-100 hover:bg-red-200 text-red-600 text-xs font-semibold py-1.5 rounded-lg transition cursor-pointer text-center mt-1">🗑️ অর্ডার ডিলিট করুন</button>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        <h2 className="text-[#d9363e] mb-5 text-center text-[18px] font-extrabold">🛍️ অর্ডার কনফার্ম করুন</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          <div>
-            <label className="block font-bold mb-1 text-[13px] text-[#333]">আপনার নাম:</label>
-            <input 
-              type="text" 
-              value={custName}
-              onChange={(e) => setCustName(e.target.value)}
-              required 
-              placeholder="যেমন: Md Hanifa"
-              className="w-full p-2.5 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-white text-black focus:border-[#d9363e]"
-            />
-          </div>
-
-          <div>
-            <label className="block font-bold mb-1 text-[13px] text-[#333]">মোবাইল নম্বর (অর্ডার ট্র্যাক করার জন্য):</label>
-            <input 
-              type="tel" 
-              value={custPhone}
-              onChange={(e) => setCustPhone(e.target.value)}
-              required 
-              placeholder="যেমন: 01835302525"
-              className="w-full p-2.5 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-white text-black focus:border-[#d9363e]"
-            />
-          </div>
-
-          <div>
-            <label className="block font-bold mb-1 text-[13px] text-[#333]">প্রোডাক্টের নাম:</label>
-            <input 
-              type="text" 
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              required 
-              placeholder="যেমন: Real Madrid Jersey"
-              className="w-full p-2.5 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-white text-black focus:border-[#d9363e]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block font-bold mb-1 text-[13px] text-[#333]">মূল্য (৳):</label>
-              <input 
-                type="number" 
-                value={productPrice}
-                onChange={(e) => setProductPrice(e.target.value)}
-                required 
-                placeholder="যেমন: 1200"
-                className="w-full p-2.5 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-white text-black focus:border-[#d9363e]"
-              />
-            </div>
-            <div>
-              <label className="block font-bold mb-1 text-[13px] text-[#333]">সাইজ (যদি থাকে):</label>
-              <input 
-                type="text" 
-                value={custSize}
-                onChange={(e) => setCustSize(e.target.value)}
-                placeholder="যেমন: M / L / XL"
-                className="w-full p-2.5 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-white text-black focus:border-[#d9363e]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-bold mb-1 text-[13px] text-[#333]">পূর্ণ ঠিকানা:</label>
-            <textarea 
-              value={custAddress}
-              onChange={(e) => setCustAddress(e.target.value)}
-              required 
-              rows="2"
-              placeholder="আপনার এলাকার নাম, রোড, বাসা নম্বর..."
-              className="w-full p-2.5 border border-[#ddd] rounded-[10px] text-[14px] outline-none bg-white text-black focus:border-[#d9363e]"
-            ></textarea>
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={submitting}
-            className="w-full bg-[#d9363e] hover:bg-[#b52b32] text-white border-none p-3 text-[15px] font-bold rounded-[10px] cursor-pointer transition duration-200 disabled:opacity-50 shadow-sm"
-          >
-            {submitting ? "অর্ডার সেভ হচ্ছে..." : "🛒 অর্ডার প্লেস করুন"}
-          </button>
-
-          {message.text && (
-            <div className={`text-center mt-2 font-bold text-[13px] ${message.color}`}>
-              {message.text}
-            </div>
-          )}
-        </form>
-
       </div>
+
     </div>
   );
 }

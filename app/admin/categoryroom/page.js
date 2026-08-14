@@ -21,12 +21,10 @@ export default function CategoryManagement() {
   const [subCatImagePreviews, setSubCatImagePreviews] = useState([]);
   const [uploadingSubImage, setUploadingSubImage] = useState(false);
 
-  // State for Child Sub Category (সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি)
+  // State for Child Sub Category (সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি) - ছবি ছাড়া
   const [selectedMainCatForChild, setSelectedMainCatForChild] = useState('');
   const [selectedSubCatForChild, setSelectedSubCatForChild] = useState('');
   const [childSubCatName, setChildSubCatName] = useState('');
-  const [childSubImageFiles, setChildSubImageFiles] = useState([]);
-  const [childSubImagePreviews, setChildSubImagePreviews] = useState([]);
   const [uploadingChildImage, setUploadingChildImage] = useState(false);
   
   const [allMainCategories, setAllMainCategories] = useState([]);
@@ -62,13 +60,6 @@ export default function CategoryManagement() {
     if (files.length === 0) return;
     setSubCatImageFiles(files);
     setSubCatImagePreviews(files.map(file => URL.createObjectURL(file)));
-  };
-
-  const handleChildSubImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-    setChildSubImageFiles(files);
-    setChildSubImagePreviews(files.map(file => URL.createObjectURL(file)));
   };
 
   const loadAllCategoriesData = async () => {
@@ -184,27 +175,24 @@ export default function CategoryManagement() {
     }
   };
 
-  // ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি (Child Sub-Category) সাবমিট
+  // ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি (Child Sub-Category) সাবমিট - ছবি ছাড়া
   const handleChildSubCategorySubmit = async (e) => {
     e.preventDefault();
     const name = childSubCatName.trim();
     const slug = createSlug(name);
 
-    if (!selectedMainCatForChild || !selectedSubCatForChild || !name || childSubImageFiles.length === 0) {
-      alert("দয়া করে মেইন ক্যাটাগরি, সাব-ক্যাটাগরি, নাম ও ছবি দিন!");
+    if (!selectedMainCatForChild || !selectedSubCatForChild || !name) {
+      alert("দয়া করে মেইন ক্যাটাগরি, সাব-ক্যাটাগরি ও নাম দিন!");
       return;
     }
 
     setUploadingChildImage(true);
     try {
-      const iconUrl = await uploadToCloudinary(childSubImageFiles[0]);
-
       await addDoc(collection(db, "childSubCategories"), { 
         mainCategorySlug: selectedMainCatForChild,
         subCategorySlug: selectedSubCatForChild,
         name, 
         slug,
-        icon: iconUrl, 
         createdAt: serverTimestamp() 
       });
 
@@ -212,9 +200,6 @@ export default function CategoryManagement() {
       setSelectedMainCatForChild('');
       setSelectedSubCatForChild('');
       setChildSubCatName('');
-      setChildSubImageFiles([]);
-      setChildSubImagePreviews([]);
-      document.getElementById('childSubCatImageInput').value = '';
       await loadAllCategoriesData();
     } catch (err) {
       console.error(err);
@@ -379,7 +364,7 @@ export default function CategoryManagement() {
           </div>
         </div>
 
-        {/* ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি (Child Sub-Category) ফর্ম */}
+        {/* ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি (Child Sub-Category) ফর্ম - ছবি ছাড়া */}
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
             📑 ৩. সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি যোগ করুন
@@ -432,25 +417,6 @@ export default function CategoryManagement() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ছবি/আইকন</label>
-              <input 
-                id="childSubCatImageInput"
-                type="file" 
-                onChange={handleChildSubImageChange} 
-                accept="image/*"
-                required
-                className="w-full border border-slate-300 p-2 rounded-lg bg-white text-xs"
-              />
-              {childSubImagePreviews.length > 0 && (
-                <div className="flex gap-2 mt-2">
-                  {childSubImagePreviews.map((src, idx) => (
-                    <img key={idx} src={src} alt="Child Preview" className="w-12 h-12 rounded-full object-cover border-2 border-red-500" />
-                  ))}
-                </div>
-              )}
-            </div>
-
             <button 
               type="submit" 
               disabled={uploadingChildImage}
@@ -463,7 +429,6 @@ export default function CategoryManagement() {
           <div className="mt-4 flex flex-wrap gap-2">
             {allChildSubCategories.map((child) => (
               <span key={child.id} className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border text-xs font-semibold text-slate-700 shadow-sm">
-                {child.icon && <img src={child.icon} alt="" className="w-5 h-5 rounded-full object-cover" />}
                 📑 [{child.subCategorySlug}] → {child.name}
                 <button type="button" onClick={() => deleteDocItem("childSubCategories", child.id, child.name)} className="text-red-500 font-bold ml-1 cursor-pointer">✕</button>
               </span>

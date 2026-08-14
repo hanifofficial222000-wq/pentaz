@@ -1,55 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 
-// গ্লোবাল ব্যানার কম্পোনেন্ট
-export function GlobalBanner({ type = 'top', message, onClose }) {
-  const [isVisible, setIsVisible] = useState(true);
-
-  if (!isVisible) return null;
-
-  const styles = {
-    top: 'bg-[#e63946] text-white py-2 px-4 text-xs font-medium text-center',
-    bottom: 'bg-[#333] text-white py-3 px-4 text-xs rounded-xl shadow-md my-4 text-center mx-auto',
-  };
-
-  return (
-    <div className={`flex justify-between items-center max-w-[500px] mx-auto ${styles[type] || styles.top}`}>
-      <span className="flex-1">{message}</span>
-      <button 
-        onClick={() => {
-          setIsVisible(false);
-          if (onClose) onClose();
-        }} 
-        className="bg-transparent border-none text-inherit font-bold cursor-pointer text-sm ml-2 p-1"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-export default function PaymentMethodsPage({ 
-  globalTopBanner = '💳 নিরাপদ ও সহজ লেনদেনের জন্য আমাদের অফিসিয়াল পেমেন্ট মেথডগুলো দেখে নিন!', 
-  globalBottomBanner = '📢 পেমেন্ট সংক্রান্ত যেকোনো সহায়তায় আয়াাত শপের কাস্টমার কেয়ারে যোগাযোগ করুন।' 
-}) {
-  const [showTopPopup, setShowTopPopup] = useState(true);
-
+export default function PaymentMethodsPage() {
   return (
     <div className="bg-[#f4f6f9] min-h-screen p-[15px] font-sans text-[#333]">
-      
-      {/* গ্লোবাল টপ ব্যানার স্লট */}
-      {showTopPopup && (
-        <div className="mb-3">
-          <GlobalBanner 
-            type="top" 
-            message={globalTopBanner} 
-            onClose={() => setShowTopPopup(false)} 
-          />
-        </div>
-      )}
-
       <div className="max-w-[500px] mx-auto">
         
         {/* Header */}
@@ -128,10 +84,6 @@ export default function PaymentMethodsPage({
         </div>
 
       </div>
-
-      {/* গ্লোবাল বটম ব্যানার স্লট */}
-      <GlobalBanner type="bottom" message={globalBottomBanner} />
-
     </div>
   );
 }

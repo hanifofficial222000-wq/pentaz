@@ -51,9 +51,8 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
-// 🖼️ ক্যাটাগরি ও সাব-ক্যাটাগরি গোল সার্কেল কার্ড কম্পোনেন্ট
+// 🖼️ মেইন ক্যাটাগরি গোল সার্কেল কার্ড কম্পোনেন্ট
 function CircularCategoryItem({ item, isActive, onClick }) {
-  // অ্যাডমিন প্যানেলে যেভাবে ছবি/আইকন সেভ হয় (icon, imageUrl, imageUrls, image, img) তা হ্যান্ডেল করা হচ্ছে
   const images = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0 
     ? item.imageUrls 
     : [
@@ -96,6 +95,50 @@ function CircularCategoryItem({ item, isActive, onClick }) {
   );
 }
 
+// 🖼️ সাব-ক্যাটাগরি চারকোনা (Square) কার্ড কম্পোনেন্ট
+function SquareSubCategoryItem({ item, isActive, onClick }) {
+  const images = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0 
+    ? item.imageUrls 
+    : [
+        item.icon || 
+        item.imageUrl || 
+        item.image || 
+        item.img || 
+        'https://via.placeholder.com/150?text=No+Image'
+      ];
+
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentImgIndex((prev) => (prev + 1) % images.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0"
+    >
+      <div className={`w-[68px] h-[68px] rounded-xl p-[2px] border-2 transition-all shadow-sm flex-shrink-0 relative overflow-hidden bg-white ${isActive ? 'border-[#e63946] scale-105 ring-2 ring-red-100' : 'border-gray-300'}`}>
+        <img 
+          src={images[currentImgIndex]} 
+          alt={item.name} 
+          className="w-full h-full object-cover rounded-lg transition-opacity duration-500" 
+          onError={(e) => {
+            e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+          }}
+        />
+      </div>
+      <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+        {item.name}
+      </span>
+    </button>
+  );
+}
+
 function MainContent() {
   const searchParams = useSearchParams();
   const searchParamValue = searchParams.get('search');
@@ -112,9 +155,9 @@ function MainContent() {
   const [subCategories, setSubCategories] = useState([]);
   const [childSubCategories, setChildSubCategories] = useState([]);
   
-  const [activeCategory, setActiveCategory] = useState(''); // মেইন ক্যাটাগরির name বা slug
-  const [activeSubCategory, setActiveSubCategory] = useState('all'); // সাব-ক্যাটাগরির slug বা name
-  const [activeChildSubCategory, setActiveChildSubCategory] = useState('all'); // চাইল্ড সাব-ক্যাটাগরি
+  const [activeCategory, setActiveCategory] = useState(''); 
+  const [activeSubCategory, setActiveSubCategory] = useState('all'); 
+  const [activeChildSubCategory, setActiveChildSubCategory] = useState('all'); 
   const [activeSubFilter, setActiveSubFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -337,13 +380,11 @@ function MainContent() {
     setActiveChildSubCategory('all');
   };
 
-  // বর্তমান মেইন ক্যাটাগরির আন্ডারে থাকা সাব-ক্যাটাগরিগুলো ফিল্টার করা
   const currentSubCategoriesList = subCategories.filter(sub => {
     const pSlug = (sub.mainCategorySlug || sub.mainCat || '').toLowerCase().trim();
     return pSlug === activeCategory.toLowerCase().trim();
   });
 
-  // বর্তমান সাব-ক্যাটাগরির আন্ডারে থাকা চাইল্ড সাব-ক্যাটাগরিগুলো ফিল্টার করা
   const currentChildSubCategoriesList = childSubCategories.filter(child => {
     const cSubSlug = (child.subCategorySlug || '').toLowerCase().trim();
     return cSubSlug === activeSubCategory.toLowerCase().trim();
@@ -540,26 +581,31 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা */}
+      {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা (চারকোনা কার্ড ও সুন্দর অল আইকনসহ) */}
       {currentSubCategoriesList.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-y border-gray-100">
           <div className="text-xs font-bold text-gray-500 mb-2">Sub Categories:</div>
           <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
+            
+            {/* 'সব' (All) বাটন যার সাইজ অন্যান্য সাব-ক্যাটাগরি কার্ডের সাথে হুবহু এক এবং সুন্দর আইকন যুক্ত */}
             <button
               onClick={() => handleSubCategoryClick('all')}
-              className={`flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0`}
+              className="flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0"
             >
-              <div className={`w-[68px] h-[68px] rounded-full p-[2.5px] border-2 flex items-center justify-center bg-gray-100 font-bold text-xs ${activeSubCategory === 'all' ? 'border-[#e63946] text-[#e63946]' : 'border-gray-300 text-gray-600'}`}>
-                All
+              <div className={`w-[68px] h-[68px] rounded-xl p-[2px] border-2 flex flex-col items-center justify-center transition-all shadow-sm bg-white ${activeSubCategory === 'all' ? 'border-[#e63946] scale-105 ring-2 ring-red-100 text-[#e63946]' : 'border-gray-300 text-gray-500'}`}>
+                <span className="text-xl">🔥</span>
+                <span className="text-[10px] font-bold mt-0.5">All</span>
               </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1">সব</span>
+              <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+                সব
+              </span>
             </button>
 
             {currentSubCategoriesList.map((sub) => {
               const subKey = sub.slug || sub.name;
               const isSubActive = activeSubCategory.toLowerCase() === subKey.toLowerCase();
               return (
-                <CircularCategoryItem 
+                <SquareSubCategoryItem 
                   key={sub.id} 
                   item={sub} 
                   isActive={isSubActive} 
@@ -571,7 +617,7 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ৩. চাইল্ড সাব-ক্যাটাগরি তালিকা (যদি সাব-ক্যাটাগরির ভেতরে সাব-ক্যাটাগরি থাকে) */}
+      {/* 🌟 ৩. চাইল্ড সাব-ক্যাটাগরি তালিকা */}
       {currentChildSubCategoriesList.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-2 bg-slate-50 border-b border-gray-100">
           <div className="text-[11px] font-bold text-gray-500 mb-1">More Options:</div>

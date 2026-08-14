@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot, doc, query, orderBy } from 'firebase/firestore';
 import NewFeatureSection from '@/components/NewFeatureSection';
-import HomeCategories from '@/components/HomeCategories'; // 👉 নতুন মাল্টি-লেভেল ক্যাটাগরি কম্পোনেন্ট (যা মেইন ও সাব ক্যাটাগরি হ্যান্ডেল করে)
 
 // ⏱️ ক্লিন ও কম্প্যাক্ট রিয়েল-টাইম কাউন্টডাউন টাইমার
 function FlashSaleTimer({ endsAt }) {
@@ -13,7 +12,6 @@ function FlashSaleTimer({ endsAt }) {
 
   useEffect(() => {
     if (!endsAt) return;
-
     const targetTime = endsAt?.toDate ? endsAt.toDate() : new Date(endsAt);
 
     const updateTimer = () => {
@@ -53,7 +51,7 @@ function FlashSaleTimer({ endsAt }) {
   );
 }
 
-// 🖼️ ক্যাটাগরি কার্ড কম্পোনেন্ট যার ভেতরে একাধিক ছবি থাকলে অটো-প্লে হবে
+// 🖼️ ক্যাটাগরি কার্ড কম্পোনেন্ট (একাধিক ছবি থাকলে অটো-প্লে হবে)
 function CategoryCardItem({ cat, isActive, onClick }) {
   const images = cat.imageUrls && Array.isArray(cat.imageUrls) && cat.imageUrls.length > 0 
     ? cat.imageUrls 
@@ -63,18 +61,16 @@ function CategoryCardItem({ cat, isActive, onClick }) {
 
   useEffect(() => {
     if (images.length <= 1) return;
-
     const interval = setInterval(() => {
       setCurrentImgIndex((prev) => (prev + 1) % images.length);
     }, 2500);
-
     return () => clearInterval(interval);
   }, [images.length]);
 
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center group cursor-pointer w-[66px]"
+      className="flex flex-col items-center group cursor-pointer w-[66px] flex-shrink-0"
     >
       <div className={`w-[64px] h-[64px] rounded-full p-[2px] border-2 transition-all shadow-sm flex-shrink-0 relative overflow-hidden bg-gray-100 ${isActive ? 'border-[#e63946] scale-105' : 'border-gray-200'}`}>
         <img 
@@ -180,7 +176,6 @@ function MainContent() {
   }, [isDragging]);
 
   useEffect(() => {
-    // এপ্রুভড সেলার ফেচ করা
     const fetchApprovedSellers = async () => {
       try {
         const sellerSnap = await getDocs(collection(db, 'approved_sellers'));
@@ -239,7 +234,6 @@ function MainContent() {
           }
         }
 
-        // 📱 ফুল ডিসপ্লে পপআপ ফেচ করার সঠিক সিস্টেম (orderBy createdAt desc)
         const fullQuery = query(collection(db, 'fullPageAds'), orderBy('createdAt', 'desc'));
         const fullSnap = await getDocs(fullQuery);
         if (!fullSnap.empty) {
@@ -317,6 +311,7 @@ function MainContent() {
     setActiveSubCategory('all');
   };
 
+  // সাব-ক্যাটাগরি ফিল্টার করার লজিক
   const currentSubCategoriesList = subCategories.filter(
     sub => sub.mainCat?.toLowerCase().trim() === activeCategory.toLowerCase().trim()
   );
@@ -382,7 +377,7 @@ function MainContent() {
   return (
     <div className="bg-gray-50 min-h-screen pb-32 font-sans text-gray-800 relative">
       
-      {/* 📱 ফুল ডিসপ্লে পপআপ অ্যাড ডিসপ্লে মডাল */}
+      {/* ফুল ডিসপ্লে পপআপ অ্যাড মডাল */}
       {showFullPopupModal && activePopupAd && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden relative shadow-2xl p-4 text-center">
@@ -442,10 +437,6 @@ function MainContent() {
         </div>
       )}
 
-      {/* 👉 ১. মেইন ক্যাটাগরি কম্পোনেন্টটি এখন টপ পাতলা ব্যানারের একেবারে উপরে সেট করা হলো */}
-      <HomeCategories />
-
-      {/* 👉 ২. টপ পাতলা ব্যানার (Top Thin Ad) */}
       {topThinAds.length > 0 && (
         <div className="w-full bg-black overflow-hidden relative z-40">
           <div 
@@ -458,6 +449,27 @@ function MainContent() {
                   <img src={ad.imageUrl} alt="Top Ad" className="w-full max-h-[60px] object-cover mx-auto" />
                 </a>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 ১. মেইন ক্যাটাগরি: এক লাইনে গোল সার্কেল কার্ড (ওপরের দিকে) */}
+      {mainCategories.length > 0 && (
+        <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
+            <CategoryCardItem 
+              cat={{ name: 'All', imageUrl: 'https://via.placeholder.com/150?text=All' }} 
+              isActive={activeCategory === 'all'} 
+              onClick={() => handleMainCategoryClick('all')} 
+            />
+            {mainCategories.map((cat) => (
+              <CategoryCardItem 
+                key={cat.id} 
+                cat={cat} 
+                isActive={activeCategory.toLowerCase() === cat.name.toLowerCase()} 
+                onClick={() => handleMainCategoryClick(cat.name)} 
+              />
             ))}
           </div>
         </div>
@@ -494,7 +506,37 @@ function MainContent() {
         </div>
       )}
 
-      {/* ফিল্টার সেকশন */}
+      {/* 🌟 ২. সাব-ক্যাটাগরি: ফিল্টার বাটন ও মাঝের ব্যানারগুলোর ঠিক নিচে দুই লাইনে ইমেজ ও নামসহ সাইড-স্ক্রোল গ্রিড কার্ড সিস্টেম */}
+      {activeCategory !== 'all' && currentSubCategoriesList.length > 0 && (
+        <div className="max-w-xl mx-auto px-3 py-2 bg-white border-y border-gray-100">
+          <div className="text-[11px] font-bold text-gray-500 mb-1">Sub Categories:</div>
+          <div className="grid grid-flow-col grid-rows-2 gap-2 overflow-x-auto no-scrollbar py-1">
+            <button
+              onClick={() => setActiveSubCategory('all')}
+              className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all flex-shrink-0 w-[130px] cursor-pointer ${activeSubCategory === 'all' ? 'bg-red-50 border-red-500 text-red-600' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+            >
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0">ALL</div>
+              <span className="text-[11px] font-bold truncate">All {activeCategory}</span>
+            </button>
+            {currentSubCategoriesList.map((sub) => {
+              const isSubActive = activeSubCategory.toLowerCase() === sub.name.toLowerCase();
+              const subImg = sub.imageUrl || (sub.imageUrls && sub.imageUrls[0]) || 'https://via.placeholder.com/150';
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => setActiveSubCategory(sub.name)}
+                  className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all flex-shrink-0 w-[130px] cursor-pointer ${isSubActive ? 'bg-red-50 border-red-500 text-red-600' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                >
+                  <img src={subImg} alt={sub.name} className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0" />
+                  <span className="text-[11px] font-bold truncate">{sub.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ফিল্টার সেকশন (All Product, Flash Sell ইত্যাদি) */}
       <div className="p-3 max-w-xl mx-auto">
         <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
           {[
@@ -515,7 +557,7 @@ function MainContent() {
         </div>
       </div>
 
-      {/* 🌟 ভেরিফাইড সেলার/ব্র্যান্ড সার্কেল সেকশন */}
+      {/* ভেরিফাইড সেলার/ব্র্যান্ড সার্কেল সেকশন */}
       {approvedSellers.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-2 bg-white border-b border-gray-100 my-2">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">

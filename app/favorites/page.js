@@ -44,10 +44,13 @@ export default function FavoritesPage() {
         ) : (
           <div>
             {favorites.map((item, index) => {
-              const itemId = item.id || index;
+              // প্রোডাক্টের আসল আইডি খুঁজে বের করা (যদি id প্রপার্টি না থাকে তবে অন্য কোনো ফিল্ড চেক করবে)
+              const itemId = item.id || item.productId || item._id;
               const itemTitle = item.title || item.name || item.productName || item.text || 'Product';
               const itemPrice = Number(item.price || item.cost || item.productPrice || item.rate || 0);
-              const itemImage = item.image || item.img || item.imageUrl || item.photo || 'https://via.placeholder.com/100';
+              
+              // ছবির সঠিক পাথ হ্যান্ডেল করা
+              const itemImage = item.image || item.imageUrl || item.img || item.photo || (item.imageUrls && item.imageUrls[0]) || 'https://via.placeholder.com/100';
 
               return (
                 <div key={index} className="flex bg-white rounded-[10px] p-2.5 mb-2 items-center border border-[#eee] shadow-[0_2px_5px_rgba(0,0,0,0.02)] relative">
@@ -60,13 +63,13 @@ export default function FavoritesPage() {
                     ✕
                   </button>
 
-                  {/* Product Details Link */}
-                  <Link href={`/product/${itemId}`} className="flex items-center flex-grow no-underline">
+                  {/* Product Details Link - আইডি না থাকলে হোমে রিডাইরেক্ট করবে যাতে এরর না আসে */}
+                  <Link href={itemId ? `/product/${itemId}` : '/'} className="flex items-center flex-grow no-underline">
                     <img src={itemImage} alt={itemTitle} className="w-[70px] h-[70px] object-cover rounded-lg mr-2.5" />
                     <div className="flex-grow">
                       <h4 className="text-[13px] font-bold text-[#333] mb-1 hover:text-[#e63946] transition">{itemTitle}</h4>
-                      {item.id && (
-                        <p className="text-[11px] text-gray-400 mb-1">আইডি: {item.id}</p>
+                      {itemId && (
+                        <p className="text-[11px] text-gray-400 mb-1">আইডি: {itemId}</p>
                       )}
                       <div className="text-[#e63946] text-[14px] font-bold">SAR {itemPrice}</div>
                     </div>

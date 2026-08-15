@@ -111,6 +111,7 @@ export default function CartPage() {
         ) : (
           <div>
             {cart.map((item, index) => {
+              const itemId = item.id || index;
               const itemTitle = item.title || item.name || item.productName || item.text || 'Product';
               const itemPrice = Number(item.price || item.cost || item.productPrice || item.rate || 0);
               const itemImage = item.image || item.img || item.imageUrl || item.photo || 'https://via.placeholder.com/100';
@@ -120,28 +121,31 @@ export default function CartPage() {
                 <div key={index} className="flex bg-white rounded-[10px] p-2.5 mb-2 items-center border border-[#eee] shadow-[0_2px_5px_rgba(0,0,0,0.02)] relative">
                   <button 
                     onClick={() => removeFromCart(index)} 
-                    className="absolute top-2 right-2 bg-none border-none text-[#999] text-[16px] cursor-pointer"
+                    className="absolute top-2 right-2 bg-none border-none text-[#999] text-[16px] cursor-pointer z-10"
                   >
                     ✕
                   </button>
-                  <img src={itemImage} alt={itemTitle} className="w-[70px] h-[70px] object-cover rounded-lg mr-2.5" />
-                  <div className="flex-grow">
-                    <h4 className="text-[13px] font-bold text-[#333] mb-1">{itemTitle}</h4>
-                    
-                    {itemCategory && (
-                      <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded mb-1">
-                        {itemCategory}
-                      </span>
-                    )}
 
-                    <p className="text-[12px] text-[#666] mb-1">সাইজ: {item.size || 'N/A'}</p>
-                    <div className="text-[#e63946] text-[14px] font-bold">SAR {itemPrice}</div>
-                    
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <button onClick={() => changeQty(index, -1)} className="bg-[#f1f3f5] border border-[#dee2e6] w-[22px] h-[22px] font-bold cursor-pointer rounded text-black">-</button>
-                      <span className="text-black font-semibold">{item.quantity || 1}</span>
-                      <button onClick={() => changeQty(index, 1)} className="bg-[#f1f3f5] border border-[#dee2e6] w-[22px] h-[22px] font-bold cursor-pointer rounded text-black">+</button>
+                  <Link href={`/product/${itemId}`} className="flex items-center flex-grow no-underline">
+                    <img src={itemImage} alt={itemTitle} className="w-[70px] h-[70px] object-cover rounded-lg mr-2.5" />
+                    <div className="flex-grow">
+                      <h4 className="text-[13px] font-bold text-[#333] mb-1 hover:text-[#e63946] transition">{itemTitle}</h4>
+                      
+                      {itemCategory && (
+                        <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded mb-1">
+                          {itemCategory}
+                        </span>
+                      )}
+
+                      <p className="text-[12px] text-[#666] mb-1">সাইজ: {item.size || 'N/A'}</p>
+                      <div className="text-[#e63946] text-[14px] font-bold">SAR {itemPrice}</div>
                     </div>
+                  </Link>
+                    
+                  <div className="flex items-center gap-2 mt-1.5 ml-2">
+                    <button onClick={() => changeQty(index, -1)} className="bg-[#f1f3f5] border border-[#dee2e6] w-[22px] h-[22px] font-bold cursor-pointer rounded text-black">-</button>
+                    <span className="text-black font-semibold">{item.quantity || 1}</span>
+                    <button onClick={() => changeQty(index, 1)} className="bg-[#f1f3f5] border border-[#dee2e6] w-[22px] h-[22px] font-bold cursor-pointer rounded text-black">+</button>
                   </div>
                 </div>
               );
@@ -189,22 +193,23 @@ export default function CartPage() {
             <div className="text-center p-5 text-[#888] text-[13px]">কোনো পূর্ববর্তী কার্ট প্রোডাক্ট নেই।</div>
           ) : (
             previouslyAdded.map((item, index) => {
+              const itemId = item.id || index;
               const title = item.title || item.name || item.productName || item.text || 'Product';
               const price = item.price || item.cost || item.productPrice || item.rate || '0';
               const image = item.image || item.img || item.imageUrl || item.photo || 'https://via.placeholder.com/100';
 
               return (
                 <div key={index} className="flex bg-white rounded-[10px] p-2.5 mb-2 items-center border border-[#eee] justify-between">
-                  <div className="flex items-center">
+                  <Link href={`/product/${itemId}`} className="flex items-center flex-grow no-underline">
                     <img src={image} alt={title} className="w-[60px] h-[60px] object-cover rounded-md mr-2.5" />
                     <div>
-                      <h4 className="text-[13px] text-[#333] mb-0.5 font-bold">{title}</h4>
+                      <h4 className="text-[13px] text-[#333] mb-0.5 font-bold hover:text-[#e63946] transition">{title}</h4>
                       <div className="text-[#e63946] text-[13px] font-bold">SAR {price}</div>
                     </div>
-                  </div>
+                  </Link>
                   <button 
                     onClick={() => moveToCartFromPrevious(index)} 
-                    className="bg-white border border-[#e63946] text-[#e63946] px-3 py-1.5 rounded-md text-[12px] font-bold cursor-pointer hover:bg-[#e63946] hover:text-white transition"
+                    className="bg-white border border-[#e63946] text-[#e63946] px-3 py-1.5 rounded-md text-[12px] font-bold cursor-pointer hover:bg-[#e63946] hover:text-white transition ml-2"
                   >
                     Add to cart
                   </button>

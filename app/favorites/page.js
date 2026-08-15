@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function FavoritesPage() {
+  const router = useRouter();
   const [favorites, setFavorites] = useState([]);
 
   // LocalStorage থেকে ফেভারিট ডাটা লোড করা
@@ -18,6 +20,16 @@ export default function FavoritesPage() {
     updatedFavs.splice(index, 1);
     setFavorites(updatedFavs);
     localStorage.setItem('ayaat_favorites', JSON.stringify(updatedFavs));
+  };
+
+  // ফেভারিট থেকে সরাসরি কার্টে বা চেকআউটে নিয়ে যাওয়ার ফাংশন
+  const handleOrderNow = (item) => {
+    const itemId = item.id || item.productId || item._id || item.productID;
+    if (itemId) {
+      router.push(`/product/${itemId}`);
+    } else {
+      alert("প্রোডাক্ট আইডি পাওয়া যায়নি!");
+    }
   };
 
   return (
@@ -49,26 +61,39 @@ export default function FavoritesPage() {
               const itemTitle = item.title || item.name || item.productName || item.text || 'Product';
               const itemPrice = Number(item.price || item.cost || item.productPrice || item.rate || 0);
               
-              // ছবির সঠিক পাথ বা অ্যারে থেকে ইমেজ বের করার লজিক (কার্ট পেজের মতো)
-              const itemImage = item.image || item.imageUrl || item.img || item.photo || (item.imageUrls && item.imageUrls[0]) || 'https://via.placeholder.com/100';
+              // ছবির সঠিক পাথ বা অ্যারে থেকে ইমেজ বের করার শক্তিশালী লজিক
+              const itemImage = 
+                item.image || 
+                item.imageUrl || 
+                item.img || 
+                item.photo || 
+                (item.images && item.images[0]) || 
+                (item.imageUrls && item.imageUrls[0]) || 
+                'https://via.placeholder.com/100';
+
               const itemCategory = item.category || item.cat || '';
 
               return (
-                <div key={index} className="flex bg-white rounded-[10px] p-2.5 mb-2 items-center border border-[#eee] shadow-[0_2px_5px_rgba(0,0,0,0.02)] relative">
+                <div key={index} className="flex bg-white rounded-[10px] p-2.5 mb-2 items-center border border-[#eee] shadow-[0_2px_5px_rgba(0,0,0,0.02)] relative gap-2">
                   
                   {/* Remove Button */}
                   <button 
                     onClick={() => removeFavorite(index)} 
-                    className="absolute top-2 right-2 bg-none border-none text-[#999] text-[16px] cursor-pointer z-10"
+                    className="absolute top-2 right-2 bg-none border-none text-[#999] text-[16px] cursor-pointer z-10 p-1"
                   >
                     ✕
                   </button>
 
-                  {/* Product Details Link */}
+                  {/* Product Details Link (Image & Title) */}
                   <Link href={itemId ? `/product/${itemId}` : '#'} className="flex items-center flex-grow no-underline">
-                    <img src={itemImage} alt={itemTitle} className="w-[70px] h-[70px] object-cover rounded-lg mr-2.5" />
+                    <img 
+                      src={itemImage} 
+                      alt={itemTitle} 
+                      className="w-[70px] h-[70px] object-cover rounded-lg mr-2.5 shrink-0 bg-gray-100" 
+                      onError={(e) => { e.target.src = 'https://via.placeholder.com/100'; }}
+                    />
                     <div className="flex-grow">
-                      <h4 className="text-[13px] font-bold text-[#333] mb-1 hover:text-[#e63946] transition">{itemTitle}</h4>
+                      <h4 className="text-[13px] font-bold text-[#333] mb-1 hover:text-[#e63946] transition line-clamp-1">{itemTitle}</h4>
                       
                       {itemCategory && (
                         <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded mb-1">
@@ -76,13 +101,17 @@ export default function FavoritesPage() {
                         </span>
                       )}
 
-                      {itemId && (
-                        <p className="text-[11px] text-gray-400 mb-1">আইডি: {itemId}</p>
-                      )}
-
                       <div className="text-[#e63946] text-[14px] font-bold">SAR {itemPrice}</div>
                     </div>
                   </Link>
+
+                  {/* Action Button: Details / Order */}
+                  <button
+                    onClick={() => handleOrderNow(item)}
+                    className="bg-[#e63946] text-white text-[12px] font-bold px-3 py-2 rounded-lg shrink-0 cursor-pointer border-none hover:bg-[#d90429] transition"
+                  >
+                    অর্ডার করুন
+                  </button>
 
                 </div>
               );

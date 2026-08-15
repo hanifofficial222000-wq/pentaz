@@ -59,16 +59,6 @@ export default function ShopPlusPage() {
 
         </div>
       </div>
-
-      {/* WhatsApp Floating Icon */}
-      <a 
-        href="https://wa.me/8801835302525" 
-        className="fixed bottom-[20px] right-[20px] bg-[#25D366] text-white w-[45px] h-[45px] rounded-full flex items-center justify-center text-[22px] no-underline shadow-[0_4px_10px_rgba(0,0,0,0.3)] z-[1000]" 
-        target="_blank" 
-        rel="noreferrer"
-      >
-        💬
-      </a>
     </div>
   );
 }

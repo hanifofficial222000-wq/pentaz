@@ -163,6 +163,10 @@ function MainContent() {
   
   const [favorites, setFavorites] = useState([]);
 
+  // 🎛️ কন্ট্রোল ফ্ল্যাগ: মেইন ও সাব ক্যাটাগরির 'All' বাটন হাইড রাখতে চাইলে false করুন
+  const showMainAllButton = false; 
+  const showSubAllButton = false;
+
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [isPromoTransitioning, setIsPromoTransitioning] = useState(true);
 
@@ -534,6 +538,23 @@ function MainContent() {
       {mainCategories.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
+            
+            {/* মেইন ক্যাটাগরির 'All' বাটন (showMainAllButton সত্য হলে দেখাবে, না হলে হাইড থাকবে) */}
+            {showMainAllButton && (
+              <button
+                onClick={() => handleMainCategoryClick('all')}
+                className="flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0"
+              >
+                <div className={`w-[68px] h-[68px] rounded-full p-[2.5px] border-2 flex flex-col items-center justify-center transition-all shadow-sm bg-white ${activeCategory === 'all' ? 'border-[#e63946] scale-105 ring-2 ring-red-100 text-[#e63946]' : 'border-gray-300 text-gray-500'}`}>
+                  <span className="text-xl">🔥</span>
+                  <span className="text-[10px] font-bold mt-0.5">All</span>
+                </div>
+                <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+                  সব
+                </span>
+              </button>
+            )}
+
             {mainCategories.map((cat) => {
               const catKey = cat.slug || cat.name;
               const isActive = activeCategory.toLowerCase() === catKey.toLowerCase();
@@ -581,25 +602,27 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা (চারকোনা কার্ড ও সুন্দর অল আইকনসহ) */}
+      {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা */}
       {currentSubCategoriesList.length > 0 && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-y border-gray-100">
           <div className="text-xs font-bold text-gray-500 mb-2">Sub Categories:</div>
           <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
             
-            {/* 'সব' (All) বাটন যার সাইজ অন্যান্য সাব-ক্যাটাগরি কার্ডের সাথে হুবহু এক এবং সুন্দর আইকন যুক্ত */}
-            <button
-              onClick={() => handleSubCategoryClick('all')}
-              className="flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0"
-            >
-              <div className={`w-[68px] h-[68px] rounded-xl p-[2px] border-2 flex flex-col items-center justify-center transition-all shadow-sm bg-white ${activeSubCategory === 'all' ? 'border-[#e63946] scale-105 ring-2 ring-red-100 text-[#e63946]' : 'border-gray-300 text-gray-500'}`}>
-                <span className="text-xl">🔥</span>
-                <span className="text-[10px] font-bold mt-0.5">All</span>
-              </div>
-              <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
-                সব
-              </span>
-            </button>
+            {/* সাব-ক্যাটাগরির 'All' বাটন (showSubAllButton সত্য হলে দেখাবে, না হলে হাইড থাকবে) */}
+            {showSubAllButton && (
+              <button
+                onClick={() => handleSubCategoryClick('all')}
+                className="flex flex-col items-center group cursor-pointer w-[72px] flex-shrink-0"
+              >
+                <div className={`w-[68px] h-[68px] rounded-xl p-[2px] border-2 flex flex-col items-center justify-center transition-all shadow-sm bg-white ${activeSubCategory === 'all' ? 'border-[#e63946] scale-105 ring-2 ring-red-100 text-[#e63946]' : 'border-gray-300 text-gray-500'}`}>
+                  <span className="text-xl">🔥</span>
+                  <span className="text-[10px] font-bold mt-0.5">All</span>
+                </div>
+                <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+                  সব
+                </span>
+              </button>
+            )}
 
             {currentSubCategoriesList.map((sub) => {
               const subKey = sub.slug || sub.name;

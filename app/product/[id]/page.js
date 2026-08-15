@@ -8,7 +8,7 @@ import {
   doc, getDoc, collection, getDocs, addDoc, query, where, serverTimestamp 
 } from 'firebase/firestore';
 
-// ⏱️ রিয়েল-টাইম ফ্ল্যাশ সেল কাউন্টডাউন টাইমার কম্পোনেন্ট
+// ⏱️ রিয়েল-टाइम ফ্ল্যাশ সেল কাউন্টডাউন টাইমার কম্পোনেন্ট
 function FlashSaleTimer({ endsAt }) {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
 
@@ -58,7 +58,6 @@ function FlashSaleTimer({ endsAt }) {
 }
 
 function ProductDetailsContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   
   const [productId, setProductId] = useState(null);
@@ -93,6 +92,7 @@ function ProductDetailsContent() {
   const [cNumber, setCNumber] = useState('');
   const [cAddress, setCAddress] = useState('');
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [orderSuccessMsg, setOrderSuccessMsg] = useState('');
 
   // Reviews State
   const [reviews, setReviews] = useState([]);
@@ -363,6 +363,8 @@ function ProductDetailsContent() {
     if (!productData) return;
 
     setSubmittingOrder(true);
+    setOrderSuccessMsg('');
+
     try {
       let productImg = mainImage || (imageUrls.length > 0 ? imageUrls[0] : '');
       let productPin = productData.productPin || (productId ? productId.slice(0, 6).toUpperCase() : '');
@@ -391,11 +393,15 @@ function ProductDetailsContent() {
         createdAt: serverTimestamp()
       });
 
-      alert("অভিনন্দন! আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে।");
-      router.push('/orders');
+      // পেজ পরিবর্তন বা রিফ্রেশ না করে সফল মেসেজ দেখানো এবং ইনপুট খালি করা
+      setOrderSuccessMsg("অভিনন্দন! আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে। 🎉");
+      setCName('');
+      setCNumber('');
+      setCAddress('');
     } catch (err) {
       console.error(err);
       alert("অর্ডার করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।");
+    } finally {
       setSubmittingOrder(false);
     }
   };
@@ -559,6 +565,11 @@ function ProductDetailsContent() {
 
         {/* Order Inputs */}
         <div className="space-y-3.5 my-4">
+          {orderSuccessMsg && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-[8px] text-[14px] font-bold text-center">
+              {orderSuccessMsg}
+            </div>
+          )}
           <div>
             <label className="font-bold block mb-1 text-[14px] text-[#333]">Your Name:</label>
             <input type="text" value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Enter full name" className="w-full p-3 border border-[#ddd] rounded-[8px] text-[15px] outline-none bg-white text-black focus:border-[#e63946]" />

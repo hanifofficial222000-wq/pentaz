@@ -264,14 +264,11 @@ function ProductDetailsContent() {
       basePrice = Math.round(basePrice - (basePrice * productData.discount) / 100);
     }
 
-    // ডাটাবেসের নিজস্ব কুপন অথবা গ্লোবাল coupons கலেকশন চেক করা
     let isValidCoupon = false;
-    let couponDiscountPercent = 10; // ডিফল্ট ১০%
 
     if (code === (productData.coupon || "").toUpperCase()) {
       isValidCoupon = true;
     } else {
-      // গ্লোবাল coupons কালেকশন থেকেও ভ্যালিডেট করা যেতে পারে
       try {
         const q = query(collection(db, "coupons"), where("code", "==", code));
         const snap = await getDocs(q);
@@ -416,7 +413,7 @@ function ProductDetailsContent() {
   }
 
   return (
-    <div className="bg-[#f5f5f5] min-h-screen p-2.5 pb-[100px] font-sans text-black">
+    <div className="bg-[#f5f5f5] min-h-screen p-2.5 pb-[160px] font-sans text-black">
       <div className="max-w-[600px] mx-auto bg-white rounded-[10px] p-[15px]">
         
         <Link href="/" className="text-[#333] no-underline text-[14px] inline-block mb-2.5 font-bold hover:text-[#e63946]">
@@ -623,8 +620,8 @@ function ProductDetailsContent() {
 
       </div>
 
-      {/* Bottom Sticky Action Buttons */}
-      <div className="fixed bottom-3.5 left-3.5 right-3.5 z-50 max-w-[600px] mx-auto flex gap-2">
+      {/* Bottom Sticky Action Buttons - Placed above the bottom navbar */}
+      <div className="fixed bottom-[65px] left-3.5 right-3.5 z-40 max-w-[600px] mx-auto flex gap-2">
         <button type="button" onClick={handleAddToCart} className="flex-1 bg-[#ff9f43] hover:bg-[#f39c12] text-white text-center p-3.5 rounded-[10px] border-none font-bold text-[15px] cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition">
           🛒 কার্টে যোগ করুন
         </button>

@@ -105,8 +105,9 @@ export default function RootLayout({ children }) {
         <div className="w-full max-w-md min-h-screen bg-white shadow-2xl overflow-hidden flex flex-col justify-between relative">
           
           <div className="flex-grow">
-            <div className="bg-white border-b border-gray-200 py-2 px-3 flex items-center justify-between gap-2 sticky top-0 z-50 shadow-sm">
-              <Link href="/" className="font-extrabold text-[#e63946] text-xs no-underline flex-shrink-0">
+            {/* 🌟 হেডার অংশে রঙিন গ্রেডিয়েন্ট ব্যাকগ্রাউন্ড এবং টেক্সট সাদা করা হয়েছে */}
+            <div className="bg-gradient-to-r from-red-600 via-rose-500 to-pink-600 border-b border-red-700/20 py-2.5 px-3 flex items-center justify-between gap-2 sticky top-0 z-50 shadow-md">
+              <Link href="/" className="font-extrabold text-white text-xs no-underline flex-shrink-0 drop-shadow-sm">
                 {t.shopName}
               </Link>
 
@@ -116,9 +117,9 @@ export default function RootLayout({ children }) {
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                   placeholder={t.searchPlaceholder}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-full py-1 pl-3 pr-7 text-[10px] text-gray-800 outline-none focus:border-[#e63946] transition-all"
+                  className="w-full bg-white/90 backdrop-blur-sm border border-white/40 rounded-full py-1 pl-3 pr-7 text-[10px] text-gray-800 placeholder:text-gray-500 outline-none focus:bg-white focus:ring-2 focus:ring-white/50 transition-all shadow-inner"
                 />
-                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e63946] text-[10px] cursor-pointer">
+                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600 text-[10px] cursor-pointer">
                   🔍
                 </button>
               </form>
@@ -126,7 +127,7 @@ export default function RootLayout({ children }) {
               <select 
                 value={currentLang} 
                 onChange={handleLanguageChange} 
-                className="p-1 rounded-md border border-gray-300 text-[11px] font-bold bg-white text-[#e63946] cursor-pointer outline-none flex-shrink-0"
+                className="p-1 rounded-md border border-white/40 text-[11px] font-bold bg-white/90 backdrop-blur-sm text-red-600 cursor-pointer outline-none flex-shrink-0 shadow-sm"
               >
                 <option value="bn">🇧🇩 বাংলা</option>
                 <option value="en">🇬🇧 English</option>

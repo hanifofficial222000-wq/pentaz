@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -21,16 +20,6 @@ export default function FavoritesPage() {
     updatedFavs.splice(index, 1);
     setFavorites(updatedFavs);
     localStorage.setItem('ayaat_favorites', JSON.stringify(updatedFavs));
-  };
-
-  // ফেভারিট থেকে সরাসরি কার্টে বা চেকআউটে নিয়ে যাওয়ার ফাংশন
-  const handleOrderNow = (item) => {
-    const itemId = item.id || item.productId || item._id || item.productID;
-    if (itemId) {
-      router.push(`/product/${itemId}`);
-    } else {
-      alert("প্রোডাক্ট আইডি পাওয়া যায়নি!");
-    }
   };
 
   return (
@@ -57,12 +46,12 @@ export default function FavoritesPage() {
         ) : (
           <div>
             {favorites.map((item, index) => {
-              // প্রোডাক্টের আইডি নিখুঁতভাবে পাওয়ার জন্য বিভিন্ন প্রপার্টি চেক করা হচ্ছে
-              const itemId = item.id || item.productId || item._id || item.productID;
-              const itemTitle = item.title || item.name || item.productName || item.text || 'Product';
-              const itemPrice = Number(item.price || item.cost || item.productPrice || item.rate || 0);
+              // ফায়ারস্টোর আইডি বা যেকোনো প্রপার্টি থেকে আইডি তুলে আনা
+              const itemId = item.id || item.productId || item._id;
+              const itemTitle = item.title || item.name || item.productName || 'Product';
+              const itemPrice = Number(item.price || item.cost || item.rate || 0);
               
-              // ছবির সঠিক পাথ বা অ্যারে থেকে ইমেজ বের করার শক্তিশালী লজিক
+              // সব ধরনের ইমেজ প্রপার্টি হ্যান্ডেল করার শক্তিশালী লজিক
               const itemImage = 
                 item.image || 
                 item.imageUrl || 
@@ -85,7 +74,7 @@ export default function FavoritesPage() {
                     ✕
                   </button>
 
-                  {/* Product Details Link (Image & Title) */}
+                  {/* Product Details Link - ফায়ারস্টোর আইডি থাকলে সরাসরি `/product/[id]` এ নিয়ে যাবে */}
                   <Link href={itemId ? `/product/${itemId}` : '#'} className="flex items-center flex-grow no-underline">
                     <img 
                       src={itemImage} 
@@ -105,14 +94,6 @@ export default function FavoritesPage() {
                       <div className="text-[#e63946] text-[14px] font-bold">SAR {itemPrice}</div>
                     </div>
                   </Link>
-
-                  {/* Action Button: Details / Order */}
-                  <button
-                    onClick={() => handleOrderNow(item)}
-                    className="bg-[#e63946] text-white text-[12px] font-bold px-3 py-2 rounded-lg shrink-0 cursor-pointer border-none hover:bg-[#d90429] transition"
-                  >
-                    অর্ডার করুন
-                  </button>
 
                 </div>
               );

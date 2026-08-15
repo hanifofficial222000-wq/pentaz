@@ -542,27 +542,6 @@ function DashboardContent() {
         )}
 
       </div>
-
-      {/* Global Bottom Navigation Bar Support */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto bg-white border-t border-gray-200 py-2 px-4 flex justify-around items-center z-50 shadow-lg">
-        <button onClick={() => router.push('/')} className="flex flex-col items-center text-xs font-bold text-gray-600 hover:text-[#e63946] bg-transparent border-none cursor-pointer">
-          <span className="text-lg">🏠</span>
-          <span>Home</span>
-        </button>
-        <button onClick={() => router.push('/cart')} className="flex flex-col items-center text-xs font-bold text-gray-600 hover:text-[#e63946] bg-transparent border-none cursor-pointer">
-          <span className="text-lg">🛒</span>
-          <span>Cart</span>
-        </button>
-        <button onClick={() => router.push('/orders')} className="flex flex-col items-center text-xs font-bold text-gray-600 hover:text-[#e63946] bg-transparent border-none cursor-pointer">
-          <span className="text-lg">📦</span>
-          <span>Orders</span>
-        </button>
-        <button onClick={() => router.push('/profile')} className="flex flex-col items-center text-xs font-bold text-[#e63946] bg-transparent border-none cursor-pointer">
-          <span className="text-lg">👤</span>
-          <span>Profile</span>
-        </button>
-      </div>
-
     </div>
   );
 }

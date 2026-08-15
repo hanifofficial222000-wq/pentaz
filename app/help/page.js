@@ -70,17 +70,6 @@ export default function HelpCenterPage() {
 
         </div>
       </div>
-
-      {/* WhatsApp Floating Button */}
-      <a 
-        href="https://wa.me/8801835302525" 
-        className="fixed bottom-5 right-5 bg-[#25D366] text-white w-[45px] h-[45px] rounded-full flex items-center justify-center text-[22px] no-underline shadow-[0_4px_10px_rgba(0,0,0,0.3)] z-[1000]" 
-        target="_blank" 
-        rel="noopener noreferrer"
-      >
-        💬
-      </a>
-
       {/* Footer */}
       <footer className="bg-[#2b2b2b] text-[#e5e5e5] p-[25px_15px] mt-[40px] text-center rounded-t-[12px]">
         <h3 className="text-[#ff4d4d] mb-3 text-[18px] font-bold">AYAAT SPORT SHOP</h3>

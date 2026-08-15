@@ -23,75 +23,72 @@ export default function FavoritesPage() {
   };
 
   return (
-    <div className="bg-[#f8f9fa] min-h-screen pb-[50px] text-[#333] font-sans">
+    <div className="bg-slate-100 min-h-screen pb-12 text-slate-800 font-sans">
       
       {/* Header */}
-      <div className="bg-white p-4 text-center text-[16px] font-bold text-[#e63946] border-b border-[#eee]">
+      <div className="bg-white p-4 text-center text-base font-bold text-red-600 border-b border-slate-200 shadow-xs">
         ❤️ আমার পছন্দের তালিকা (Favorites)
       </div>
 
-      <div className="max-w-[600px] mx-auto p-2.5">
+      <div className="max-w-[600px] mx-auto p-3">
         
         {favorites.length === 0 ? (
-          <div className="bg-white rounded-[10px] p-[30px_15px] text-center border border-[#eee] shadow-[0_2px_5px_rgba(0,0,0,0.02)] mb-4">
-            <div className="w-[70px] h-[70px] bg-[#fff5f5] rounded-full flex items-center justify-center mx-auto mb-4 text-[#e63946] text-[28px]">
+          <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 shadow-xs mt-4">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600 text-2xl">
               ❤️
             </div>
-            <h3 className="text-[16px] mb-1.5 text-[#333]">কোনো পছন্দের প্রোডাক্ট নেই</h3>
-            <p className="text-[#666] text-[14px] mb-5">আপনার পছন্দের তালিকাটি বর্তমানে খালি রয়েছে।</p>
-            <Link href="/" className="inline-block w-full bg-[#e63946] text-white text-center p-3 rounded-lg no-underline font-bold text-[15px]">
+            <h3 className="text-base font-bold mb-1 text-slate-800">কোনো পছন্দের প্রোডাক্ট নেই</h3>
+            <p className="text-slate-500 text-sm mb-6">আপনার পছন্দের তালিকাটি বর্তমানে খালি রয়েছে।</p>
+            <Link href="/" className="inline-block w-full bg-red-600 hover:bg-red-700 text-white text-center py-3 rounded-xl font-bold text-sm transition shadow-md">
               শপিং চালিয়ে যান
             </Link>
           </div>
         ) : (
-          <div>
+          <div className="space-y-3 mt-3">
             {favorites.map((item, index) => {
-              // ফায়ারস্টোর আইডি বা যেকোনো প্রপার্টি থেকে আইডি তুলে আনা
+              // প্রোডাক্ট ম্যানেজমেন্ট কোড অনুযায়ী সঠিক আইডি ও প্রপার্টি ম্যাচিং
               const itemId = item.id || item.productId || item._id;
-              const itemTitle = item.title || item.name || item.productName || 'Product';
-              const itemPrice = Number(item.price || item.cost || item.rate || 0);
+              const itemTitle = item.title || item.name || 'Product';
+              const itemPrice = Number(item.price || 0);
               
-              // সব ধরনের ইমেজ প্রপার্টি হ্যান্ডেল করার শক্তিশালী লজিক
+              // প্রোডাক্ট ম্যানেজমেন্টে imageUrls অ্যারে অথবা imageUrl সেভ হয়, তা হ্যান্ডেল করার লজিক
               const itemImage = 
-                item.image || 
                 item.imageUrl || 
-                item.img || 
-                item.photo || 
-                (item.images && item.images[0]) || 
                 (item.imageUrls && item.imageUrls[0]) || 
+                item.image || 
                 'https://via.placeholder.com/100';
 
-              const itemCategory = item.category || item.cat || '';
+              const itemCategory = item.subCategory || item.category || item.mainCategory || '';
 
               return (
-                <div key={index} className="flex bg-white rounded-[10px] p-2.5 mb-2 items-center border border-[#eee] shadow-[0_2px_5px_rgba(0,0,0,0.02)] relative gap-2">
+                <div key={index} className="flex bg-white rounded-xl p-3 items-center border border-slate-200 shadow-xs relative gap-3">
                   
                   {/* Remove Button */}
                   <button 
                     onClick={() => removeFavorite(index)} 
-                    className="absolute top-2 right-2 bg-none border-none text-[#999] text-[16px] cursor-pointer z-10 p-1"
+                    className="absolute top-2 right-2 bg-slate-100 hover:bg-red-100 hover:text-red-600 text-slate-400 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition cursor-pointer"
                   >
                     ✕
                   </button>
 
-                  {/* Product Details Link - ফায়ারস্টোর আইডি থাকলে সরাসরি `/product/[id]` এ নিয়ে যাবে */}
+                  {/* Product Details Link */}
                   <Link href={itemId ? `/product/${itemId}` : '#'} className="flex items-center flex-grow no-underline">
                     <img 
                       src={itemImage} 
                       alt={itemTitle} 
-                      className="w-[70px] h-[70px] object-cover rounded-lg mr-2.5 shrink-0 bg-gray-100" 
+                      className="w-16 h-16 object-cover rounded-xl border border-slate-100 mr-3 shrink-0 bg-slate-50" 
                       onError={(e) => { e.target.src = 'https://via.placeholder.com/100'; }}
                     />
-                    <div className="flex-grow">
-                      <h4 className="text-[13px] font-bold text-[#333] mb-1 hover:text-[#e63946] transition line-clamp-1">{itemTitle}</h4>
+                    <div className="flex-grow pr-6">
+                      <h4 className="text-xs font-bold text-slate-800 mb-1 hover:text-red-600 transition line-clamp-1">{itemTitle}</h4>
                       
                       {itemCategory && (
-                        <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded mb-1">
+                        <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded-md mb-1">
                           {itemCategory}
                         </span>
                       )}
 
-                      <div className="text-[#e63946] text-[14px] font-bold">SAR {itemPrice}</div>
+                      <div className="text-red-600 text-sm font-bold">SAR {itemPrice}</div>
                     </div>
                   </Link>
 

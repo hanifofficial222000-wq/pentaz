@@ -150,6 +150,9 @@ export default function ShopAssistantPage() {
               Send
             </button>
           </form>
+
+        </div>
+      </div>
     </div>
   );
 }

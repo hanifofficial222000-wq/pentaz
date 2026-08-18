@@ -95,7 +95,7 @@ function CircularCategoryItem({ item, isActive, onClick }) {
   );
 }
 
-// 🖼️ সাব-ক্যাটাগরি চারকোনা (Square) কার্ড কম্পোনেন্ট (এখন ২ লাইনে দেখানোর জন্য স্টাইল আপডেট করা হয়েছে)
+// 🖼️ সাব-ক্যাটাগরি চারকোনা (Square) কার্ড কম্পোনেন্ট (২ লাইনে দেখানোর জন্য গ্রিড কন্টেইনারে ব্যবহার করা হয়েছে)
 function SquareSubCategoryItem({ item, isActive, onClick }) {
   const images = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0 
     ? item.imageUrls 
@@ -155,7 +155,7 @@ function MainContent() {
   const [subCategories, setSubCategories] = useState([]);
   const [childSubCategories, setChildSubCategories] = useState([]);
   
-  const [activeCategory, setActiveCategory] = useState('all'); // ডিফল্ট 'all' করা হয়েছে যাতে প্রথমে সব দেখায় বা অল সিলেক্ট থাকে
+  const [activeCategory, setActiveCategory] = useState('all'); 
   const [activeSubCategory, setActiveSubCategory] = useState('all'); 
   const [activeChildSubCategory, setActiveChildSubCategory] = useState('all'); 
   const [activeSubFilter, setActiveSubFilter] = useState('all');
@@ -163,7 +163,6 @@ function MainContent() {
   
   const [favorites, setFavorites] = useState([]);
 
-  // 🎛️ কন্ট্রোল ফ্ল্যাগ: মেইন ও সাব ক্যাটাগরির 'All' বাটন আনহাইড (true) করা হয়েছে
   const showMainAllButton = true; 
   const showSubAllButton = true;
 
@@ -270,7 +269,6 @@ function MainContent() {
         if (!mainCatSnap.empty) {
           const mList = mainCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setMainCategories(mList);
-          // প্রথম ক্যাটাগরি ডিফল্ট সিলেক্ট করার পরিবর্তে 'all' রাখা হয়েছে যাতে অল বাটন কাজ করে
         }
 
         const subCatSnap = await getDocs(collection(db, 'subCategories'));
@@ -383,7 +381,7 @@ function MainContent() {
   };
 
   const currentSubCategoriesList = subCategories.filter(sub => {
-    if (activeCategory === 'all') return true; // সব ক্যাটাগরি সিলেক্ট থাকলে সব সাব-ক্যাটাগরি দেখাবে অথবা নির্দিষ্ট মেইন ক্যাটাগরির ফিল্টার হবে
+    if (activeCategory === 'all') return true; 
     const pSlug = (sub.mainCategorySlug || sub.mainCat || '').toLowerCase().trim();
     return pSlug === activeCategory.toLowerCase().trim();
   });
@@ -539,7 +537,6 @@ function MainContent() {
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
             
-            {/* মেইন ক্যাটাগরির 'All' বাটন */}
             {showMainAllButton && (
               <button
                 onClick={() => handleMainCategoryClick('all')}
@@ -602,13 +599,12 @@ function MainContent() {
         </div>
       )}
 
-      {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা */}
+      {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা (২ লাইন গ্রিড লেআউট) */}
       {(currentSubCategoriesList.length > 0 || showSubAllButton) && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-y border-gray-100">
           <div className="text-xs font-bold text-gray-500 mb-2">Sub Categories:</div>
-          <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
+          <div className="grid grid-rows-2 grid-flow-col gap-x-4 gap-y-3 overflow-x-auto no-scrollbar py-1">
             
-            {/* সাব-ক্যাটাগরির 'All' বাটন */}
             {showSubAllButton && (
               <button
                 onClick={() => handleSubCategoryClick('all')}

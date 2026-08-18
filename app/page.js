@@ -95,7 +95,7 @@ function CircularCategoryItem({ item, isActive, onClick }) {
   );
 }
 
-// 🖼️ সাব-ক্যাটাগরি চারকোনা (Square) কার্ড কম্পোনেন্ট
+// 🖼️ সাব-ক্যাটাগরি চারকোনা (Square) কার্ড কম্পোনেন্ট (এখন ২ লাইনে দেখানোর জন্য স্টাইল আপডেট করা হয়েছে)
 function SquareSubCategoryItem({ item, isActive, onClick }) {
   const images = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0 
     ? item.imageUrls 
@@ -132,7 +132,7 @@ function SquareSubCategoryItem({ item, isActive, onClick }) {
           }}
         />
       </div>
-      <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+      <span className="text-[11px] font-bold text-gray-800 mt-1 w-full text-center line-clamp-2 leading-tight h-[28px]">
         {item.name}
       </span>
     </button>
@@ -155,7 +155,7 @@ function MainContent() {
   const [subCategories, setSubCategories] = useState([]);
   const [childSubCategories, setChildSubCategories] = useState([]);
   
-  const [activeCategory, setActiveCategory] = useState(''); 
+  const [activeCategory, setActiveCategory] = useState('all'); // ডিফল্ট 'all' করা হয়েছে যাতে প্রথমে সব দেখায় বা অল সিলেক্ট থাকে
   const [activeSubCategory, setActiveSubCategory] = useState('all'); 
   const [activeChildSubCategory, setActiveChildSubCategory] = useState('all'); 
   const [activeSubFilter, setActiveSubFilter] = useState('all');
@@ -163,9 +163,9 @@ function MainContent() {
   
   const [favorites, setFavorites] = useState([]);
 
-  // 🎛️ কন্ট্রোল ফ্ল্যাগ: মেইন ও সাব ক্যাটাগরির 'All' বাটন হাইড রাখতে চাইলে false করুন
-  const showMainAllButton = false; 
-  const showSubAllButton = false;
+  // 🎛️ কন্ট্রোল ফ্ল্যাগ: মেইন ও সাব ক্যাটাগরির 'All' বাটন আনহাইড (true) করা হয়েছে
+  const showMainAllButton = true; 
+  const showSubAllButton = true;
 
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [isPromoTransitioning, setIsPromoTransitioning] = useState(true);
@@ -270,9 +270,7 @@ function MainContent() {
         if (!mainCatSnap.empty) {
           const mList = mainCatSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setMainCategories(mList);
-          if (mList.length > 0) {
-            setActiveCategory(mList[0].slug || mList[0].name);
-          }
+          // প্রথম ক্যাটাগরি ডিফল্ট সিলেক্ট করার পরিবর্তে 'all' রাখা হয়েছে যাতে অল বাটন কাজ করে
         }
 
         const subCatSnap = await getDocs(collection(db, 'subCategories'));
@@ -385,11 +383,13 @@ function MainContent() {
   };
 
   const currentSubCategoriesList = subCategories.filter(sub => {
+    if (activeCategory === 'all') return true; // সব ক্যাটাগরি সিলেক্ট থাকলে সব সাব-ক্যাটাগরি দেখাবে অথবা নির্দিষ্ট মেইন ক্যাটাগরির ফিল্টার হবে
     const pSlug = (sub.mainCategorySlug || sub.mainCat || '').toLowerCase().trim();
     return pSlug === activeCategory.toLowerCase().trim();
   });
 
   const currentChildSubCategoriesList = childSubCategories.filter(child => {
+    if (activeSubCategory === 'all') return false;
     const cSubSlug = (child.subCategorySlug || '').toLowerCase().trim();
     return cSubSlug === activeSubCategory.toLowerCase().trim();
   });
@@ -539,7 +539,7 @@ function MainContent() {
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
             
-            {/* মেইন ক্যাটাগরির 'All' বাটন (showMainAllButton সত্য হলে দেখাবে, না হলে হাইড থাকবে) */}
+            {/* মেইন ক্যাটাগরির 'All' বাটন */}
             {showMainAllButton && (
               <button
                 onClick={() => handleMainCategoryClick('all')}
@@ -603,12 +603,12 @@ function MainContent() {
       )}
 
       {/* 🌟 ২. সাব-ক্যাটাগরি তালিকা */}
-      {currentSubCategoriesList.length > 0 && (
+      {(currentSubCategoriesList.length > 0 || showSubAllButton) && (
         <div className="max-w-xl mx-auto px-3 py-3 bg-white border-y border-gray-100">
           <div className="text-xs font-bold text-gray-500 mb-2">Sub Categories:</div>
           <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
             
-            {/* সাব-ক্যাটাগরির 'All' বাটন (showSubAllButton সত্য হলে দেখাবে, না হলে হাইড থাকবে) */}
+            {/* সাব-ক্যাটাগরির 'All' বাটন */}
             {showSubAllButton && (
               <button
                 onClick={() => handleSubCategoryClick('all')}
@@ -618,7 +618,7 @@ function MainContent() {
                   <span className="text-xl">🔥</span>
                   <span className="text-[10px] font-bold mt-0.5">All</span>
                 </div>
-                <span className="text-[11px] font-bold text-gray-800 mt-1 w-full truncate text-center">
+                <span className="text-[11px] font-bold text-gray-800 mt-1 w-full text-center line-clamp-2 leading-tight h-[28px]">
                   সব
                 </span>
               </button>
